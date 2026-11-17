@@ -1,0 +1,157 @@
+import React from 'react';
+import { User, Calendar, Hash, HeartPulse, Scale, RefreshCw } from 'lucide-react';
+
+export const PatientInfoBar = ({ patient, onChange, onReset }) => {
+  const handleInputChange = (field, value) => {
+    onChange({ ...patient, [field]: value });
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-3.5 sm:p-4 mb-4 transition-all">
+      {/* Top Header */}
+      <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></div>
+          <span className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+            <User className="w-3.5 h-3.5 text-teal-600" /> Patient Information (রোগীর তথ্য)
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={onReset}
+          className="text-[11px] text-slate-500 hover:text-rose-600 flex items-center gap-1 transition-colors px-2 py-1 rounded-md hover:bg-rose-50 font-medium cursor-pointer"
+          title="Reset Patient Details"
+        >
+          <RefreshCw className="w-3 h-3" /> New Patient
+        </button>
+      </div>
+
+      {/* Robust Responsive Grid - Avoids Narrow Column Squishing */}
+      <div className="grid grid-cols-12 gap-2.5 sm:gap-3 text-xs">
+        
+        {/* Row 1: Patient Name (Wider) */}
+        <div className="col-span-12 sm:col-span-6">
+          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+            Patient Name * (রোগীর নাম)
+          </label>
+          <input
+            type="text"
+            value={patient.name}
+            onChange={(e) => handleInputChange('name', e.target.value)}
+            placeholder="e.g. মোঃ করিম উদ্দিন"
+            className="w-full px-3 py-2 bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 rounded-lg text-slate-900 font-medium focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+          />
+        </div>
+
+        {/* Row 1: Age & Age Unit (Unified Input Group) */}
+        <div className="col-span-6 sm:col-span-3">
+          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+            Age (বয়স)
+          </label>
+          <div className="flex rounded-lg border border-slate-200 bg-slate-50 focus-within:ring-2 focus-within:ring-teal-500 focus-within:border-teal-500 focus-within:bg-white overflow-hidden">
+            <input
+              type="text"
+              value={patient.age}
+              onChange={(e) => handleInputChange('age', e.target.value)}
+              placeholder="35"
+              className="w-full px-2.5 py-2 bg-transparent text-slate-900 font-medium text-center focus:outline-hidden"
+            />
+            <select
+              value={patient.ageUnit || 'Y'}
+              onChange={(e) => handleInputChange('ageUnit', e.target.value)}
+              className="bg-slate-100 border-l border-slate-200 px-2 py-2 text-slate-700 font-medium text-[11px] focus:outline-hidden cursor-pointer"
+            >
+              <option value="Y">Yrs</option>
+              <option value="M">Mos</option>
+              <option value="D">Days</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Row 1: Gender */}
+        <div className="col-span-6 sm:col-span-3">
+          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+            Gender (লিঙ্গ)
+          </label>
+          <div className="flex h-[38px] rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+            {[
+              { key: 'Male', label: 'Male (পু.)', short: 'M' },
+              { key: 'Female', label: 'Female (মহি.)', short: 'F' }
+            ].map((g) => (
+              <button
+                key={g.key}
+                type="button"
+                onClick={() => handleInputChange('gender', g.key)}
+                className={`flex-1 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                  patient.gender === g.key
+                    ? 'bg-teal-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {g.short}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Row 2: Date */}
+        <div className="col-span-6 sm:col-span-3">
+          <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center gap-1">
+            <Calendar className="w-3 h-3 text-slate-400" /> Date (তারিখ)
+          </label>
+          <input
+            type="date"
+            value={patient.date}
+            onChange={(e) => handleInputChange('date', e.target.value)}
+            className="w-full px-2.5 py-2 bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-teal-500"
+          />
+        </div>
+
+        {/* Row 2: Rx ID */}
+        <div className="col-span-6 sm:col-span-3">
+          <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center gap-1">
+            <Hash className="w-3 h-3 text-slate-400" /> Rx / ID No.
+          </label>
+          <input
+            type="text"
+            value={patient.rxId}
+            onChange={(e) => handleInputChange('rxId', e.target.value)}
+            placeholder="RX-1001"
+            className="w-full px-2.5 py-2 bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 rounded-lg font-mono text-xs font-semibold focus:ring-2 focus:ring-teal-500"
+          />
+        </div>
+
+        {/* Row 2: Weight */}
+        <div className="col-span-6 sm:col-span-3">
+          <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center gap-1">
+            <Scale className="w-3 h-3 text-slate-400" /> Wt (ওজন)
+          </label>
+          <input
+            type="text"
+            value={patient.weight}
+            onChange={(e) => handleInputChange('weight', e.target.value)}
+            placeholder="e.g. 65 kg"
+            className="w-full px-2.5 py-2 bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 rounded-lg text-center font-medium focus:ring-2 focus:ring-teal-500"
+          />
+        </div>
+
+        {/* Row 2: BP */}
+        <div className="col-span-6 sm:col-span-3">
+          <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center gap-1">
+            <HeartPulse className="w-3 h-3 text-rose-500" /> BP (রক্তচাপ)
+          </label>
+          <input
+            type="text"
+            value={patient.bp}
+            onChange={(e) => handleInputChange('bp', e.target.value)}
+            placeholder="120/80"
+            className="w-full px-2.5 py-2 bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 rounded-lg text-center font-medium focus:ring-2 focus:ring-teal-500"
+          />
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+export default PatientInfoBar;

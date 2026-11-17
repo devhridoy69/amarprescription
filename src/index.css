@@ -1,0 +1,202 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --app-font: 'Hind Siliguri', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  * {
+    box-sizing: border-box;
+    font-family: var(--app-font);
+  }
+  body {
+    background-color: #f8fafc;
+    color: #1e293b;
+    font-family: var(--app-font);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  input, select, textarea, button {
+    font-family: var(--app-font);
+  }
+}
+
+/* Dark Mode Overrides */
+.dark {
+  color-scheme: dark;
+}
+.dark body {
+  background-color: #0f172a;
+  color: #f1f5f9;
+}
+.dark .bg-slate-50,
+.dark .bg-slate-100 {
+  background-color: #1e293b !important;
+}
+.dark .bg-slate-50\/70,
+.dark .bg-slate-50\/50,
+.dark .bg-slate-50\/40 {
+  background-color: rgba(30, 41, 59, 0.7) !important;
+}
+.dark .bg-white {
+  background-color: #1e293b !important;
+  color: #f8fafc;
+}
+.dark .border-slate-200,
+.dark .border-slate-200\/80,
+.dark .border-slate-200\/60,
+.dark .border-slate-200\/90,
+.dark .border-slate-100 {
+  border-color: #334155 !important;
+}
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-slate-700 {
+  color: #f1f5f9 !important;
+}
+.dark .text-slate-600,
+.dark .text-slate-500 {
+  color: #94a3b8 !important;
+}
+.dark .text-slate-400 {
+  color: #64748b !important;
+}
+.dark input:not([type="checkbox"]),
+.dark select,
+.dark textarea {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+.dark input:focus,
+.dark select:focus,
+.dark textarea:focus {
+  border-color: #0d9488 !important;
+}
+.dark .bg-white\/95,
+.dark .bg-white\/90 {
+  background-color: rgba(15, 23, 42, 0.95) !important;
+}
+
+/* Ensure the A4 Prescription Paper itself stays crisp white with black text for medical accuracy and readability */
+.dark .prescription-paper {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+}
+.dark .prescription-paper .text-slate-900,
+.dark .prescription-paper .text-slate-800,
+.dark .prescription-paper .text-slate-700,
+.dark .prescription-paper .text-teal-900,
+.dark .prescription-paper .text-teal-950 {
+  color: #0f172a !important;
+}
+.dark .prescription-paper .text-slate-600,
+.dark .prescription-paper .text-slate-500 {
+  color: #475569 !important;
+}
+.dark .prescription-paper .text-slate-400 {
+  color: #94a3b8 !important;
+}
+.dark .prescription-paper .bg-slate-50,
+.dark .prescription-paper .bg-slate-100\/90,
+.dark .prescription-paper .bg-slate-100 {
+  background-color: #f8fafc !important;
+}
+.dark .prescription-paper .border-slate-200,
+.dark .prescription-paper .border-slate-200\/80 {
+  border-color: #e2e8f0 !important;
+}
+.dark .prescription-paper input {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+.fraction-vertical {
+  display: inline-flex;
+  flex-direction: column;
+  vertical-align: middle;
+  text-align: center;
+  line-height: 0.95;
+  font-size: 0.8em;
+  margin: 0 0.2em;
+  font-weight: 700;
+}
+
+.fraction-vertical .numerator {
+  border-bottom: 1.5px solid currentColor;
+  padding-bottom: 1px;
+  display: block;
+  font-size: 0.85em;
+  line-height: 0.8;
+}
+
+.fraction-vertical .denominator {
+  padding-top: 1.5px;
+  display: block;
+  font-size: 0.85em;
+  line-height: 0.8;
+}
+
+/* Print Specific Rules for Medical Prescription A4 */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 12mm 8mm 12mm;
+  }
+  
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .prescription-paper {
+    box-shadow: none !important;
+    border: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Make sure fraction divider lines remain dark and visible in print */
+  .numerator {
+    border-bottom: 1.5px solid #000000 !important;
+  }
+
+  /* Force page breaks cleanly */
+  .page-break {
+    page-break-after: always;
+    break-after: page;
+  }
+}
+
+@media screen {
+  .print-only {
+    display: none !important;
+  }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

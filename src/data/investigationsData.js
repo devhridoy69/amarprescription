@@ -1,0 +1,63 @@
+// Common Medical Investigations / Lab Tests
+export const COMMON_INVESTIGATIONS = [
+  // Blood Tests
+  'CBC with ESR',
+  'Blood Grouping & Rh Factor',
+  'RBS (Random Blood Sugar)',
+  'FBS (Fasting Blood Sugar)',
+  '2 hrs ABF (After Breakfast)',
+  'HbA1c',
+  'Serum Creatinine',
+  'Serum Uric Acid',
+  'Lipid Profile (Fasting)',
+  'SGPT (ALT)',
+  'SGOT (AST)',
+  'Serum Bilirubin',
+  'Serum Electrolytes (Na+, K+, Cl-)',
+  'Serum Calcium & Vit D3',
+  'Thyroid Profile (TSH, FT4)',
+  'CRP (C-Reactive Protein)',
+  'Dengue NS1 Antigen',
+  'Dengue Antibody (IgG & IgM)',
+  'Widal Test',
+  'Serum Ferritin',
+  
+  // Urine & Stool
+  'Urine R/M/E',
+  'Urine for C/S',
+  'Urine for Microalbumin',
+  'Stool R/M/E',
+  'Stool for O.B.T.',
+  
+  // Radiology & Imaging
+  'Chest X-Ray P/A View',
+  'X-Ray Lumbo-Sacral Spine (B/V)',
+  'X-Ray Cervical Spine (B/V)',
+  'X-Ray of Affected Joint',
+  'USG of Whole Abdomen',
+  'USG of KUB & Prostate',
+  'USG of Thyroid Gland',
+  'ECG (12 Leads)',
+  'Echocardiography (2D & Color Doppler)',
+  'Endoscopy of Upper GI Tract',
+  'Colonoscopy',
+];
+
+export const COMMON_DIAGNOSES = [
+  'Acute Viral Fever / Upper Respiratory Tract Infection (URTI)',
+  'Acute Tonsillitis / Pharyngitis',
+  'Acid Peptic Disease (APD) / GERD',
+  'Essential Hypertension (HTN)',
+  'Type 2 Diabetes Mellitus (T2DM)',
+  'Acute Gastroenteritis (AGE) / Diarrhea',
+  'Urinary Tract Infection (UTI)',
+  'Bronchial Asthma / Acute Exacerbation',
+  'Allergic Rhinitis / Dermatitis',
+  'Lumbar Spondylosis / Low Back Pain',
+  'Osteoarthritis of Knees',
+  'Iron Deficiency Anemia',
+  'Migraine / Tension Headache',
+  'Dyslipidemia',
+  'Enteric Fever (Typhoid)',
+  'Dengue Fever',
+];
