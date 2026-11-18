@@ -483,9 +483,22 @@ export function App() {
         />
       ) : !currentUser ? (
         /* 2. STRICT SECURITY GATE: If user is not logged in, DO NOT RENDER any dashboard, editor, or prescription UI! */
-        <div className="min-h-screen w-full flex items-center justify-center bg-slate-900 p-4 relative overflow-hidden">
-          {/* Subtle background glow */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 p-4 relative overflow-hidden">
+          
+          {/* Animated Medical Gradient Mesh Background */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {/* Ambient Background Grid */}
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-35"></div>
+
+            {/* Glowing Animated Blobs */}
+            <div className="absolute -top-32 -left-32 w-96 h-96 bg-teal-500/20 rounded-full blur-3xl animate-blob-1"></div>
+            <div className="absolute -bottom-32 -right-32 w-[28rem] h-[28rem] bg-emerald-500/15 rounded-full blur-3xl animate-blob-2"></div>
+            <div className="absolute top-1/3 right-1/4 w-80 h-80 bg-cyan-500/15 rounded-full blur-3xl animate-blob-3"></div>
+            <div className="absolute bottom-1/4 left-1/4 w-72 h-72 bg-teal-600/10 rounded-full blur-3xl animate-blob-1"></div>
+
+            {/* Subtle Center Spotlight behind modal */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[34rem] h-[34rem] bg-teal-400/10 rounded-full blur-3xl"></div>
+          </div>
 
           <AuthModal
             isOpen={true}
@@ -647,6 +660,7 @@ export function App() {
         onClose={() => setIsDoctorModalOpen(false)}
         doctor={doctor}
         onSave={handleSaveDoctor}
+        currentUser={currentUser}
       />
 
       {/* 1-Click Clinical Templates Modal */}

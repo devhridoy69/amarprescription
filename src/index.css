@@ -271,3 +271,40 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Floating Particle / Pulse Animation for Auth Background */
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -40px) scale(1.08);
+  }
+  66% {
+    transform: translate(-25px, 25px) scale(0.95);
+  }
+}
+
+@keyframes floatReverse {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(-35px, 35px) scale(1.05);
+  }
+  66% {
+    transform: translate(30px, -30px) scale(0.92);
+  }
+}
+
+.animate-blob-1 {
+  animation: floatSlow 14s ease-in-out infinite;
+}
+
+.animate-blob-2 {
+  animation: floatReverse 18s ease-in-out infinite;
+}
+
+.animate-blob-3 {
+  animation: floatSlow 20s ease-in-out infinite reverse;
+}

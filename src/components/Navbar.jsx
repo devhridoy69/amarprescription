@@ -178,15 +178,10 @@ export const Navbar = ({
 
           {/* User Account / Admin Badge / Registration Menu */}
           {adminUser ? (
-            <button
-              type="button"
-              onClick={onOpenAdminPanel}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-teal-400 border border-teal-500/40 rounded-xl text-xs font-black shadow-md hover:bg-slate-800 transition-all cursor-pointer animate-pulse"
-              title="ওপেন এডমিন প্যানেল"
-            >
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-teal-400 border border-teal-500/40 rounded-xl text-xs font-bold shadow-xs">
               <ShieldAlert className="w-4 h-4 text-rose-400" />
               <span>Admin Panel</span>
-            </button>
+            </div>
           ) : currentUser ? (
             <div className="flex items-center gap-1.5 bg-teal-50 dark:bg-teal-950/70 border border-teal-200 dark:border-teal-800 py-1 px-2.5 rounded-xl">
               <div className="w-6 h-6 rounded-lg bg-teal-600 text-white flex items-center justify-center text-xs font-bold shadow-2xs">

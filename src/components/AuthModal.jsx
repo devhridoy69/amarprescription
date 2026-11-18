@@ -147,9 +147,15 @@ export const AuthModal = ({
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
               আমার প্রেসক্রিপশন
             </h2>
-            <p className="text-[11px] text-teal-700 font-bold tracking-wider uppercase mt-0.5">
-              Doctor Authentication Portal
-            </p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-[10px] font-bold text-teal-800 tracking-wider uppercase">
+                Powered By Ayan Tech
+              </span>
+              <span className="text-[9px] text-slate-300">•</span>
+              <span className="text-[10px] text-slate-500 font-medium">
+                Doctor Portal
+              </span>
+            </div>
           </div>
 
           {/* Mode Switcher Tabs (Login / Register) */}

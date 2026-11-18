@@ -573,13 +573,18 @@ export const AdminPanelModal = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">লগইন পাসওয়ার্ড (Password)</label>
+                  <label className="block font-bold text-slate-700 mb-1 flex items-center gap-1">
+                    <Key className="w-3.5 h-3.5 text-teal-600" />
+                    <span>লগইন পাসওয়ার্ড (Change Password)</span>
+                  </label>
                   <input
                     type="text"
                     value={editFormData.password_hash}
                     onChange={(e) => setEditFormData({ ...editFormData, password_hash: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-mono"
+                    placeholder="পাসওয়ার্ড লিখুন"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-mono text-xs focus:ring-2 focus:ring-teal-500 font-bold text-teal-900"
                   />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">এডমিন চাইলে এখান থেকে সরাসরি ইউজারের পাসওয়ার্ড পরিবর্তন করতে পারবেন।</span>
                 </div>
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">BMDC Reg. No.</label>

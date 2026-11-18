@@ -440,6 +440,54 @@ export async function adminUpdateUserStatus(userId, phone, newStatus, newValidUn
   return adminUpdateUserFullDetails(userId, phone, updateData);
 }
 
+export async function updateUserPassword(phone, currentPassword, newPassword) {
+  if (!phone || !currentPassword || !newPassword) {
+    return { success: false, error: 'সবগুলো ঘর পূরণ করুন।' };
+  }
+  if (newPassword.length < 6) {
+    return { success: false, error: 'নতুন পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।' };
+  }
+
+  const cleanPhone = phone.trim().replace(/\s+/g, '');
+
+  // 1. Verify in Supabase or local
+  try {
+    const { data, error } = await supabase
+      .from('doctor_users')
+      .select('*')
+      .eq('phone', cleanPhone)
+      .maybeSingle();
+
+    if (!error && data) {
+      if (data.password_hash !== currentPassword) {
+        return { success: false, error: 'বর্তমান পাসওয়ার্ডটি সঠিক নয়।' };
+      }
+
+      const { error: updateErr } = await supabase
+        .from('doctor_users')
+        .update({ password_hash: newPassword })
+        .eq('phone', cleanPhone);
+
+      if (updateErr) {
+        return { success: false, error: updateErr.message || 'পাসওয়ার্ড পরিবর্তন ব্যর্থ হয়েছে।' };
+      }
+    }
+  } catch (e) {}
+
+  // 2. Also update local storage users mirror
+  const localList = getLocalUsers();
+  const idx = localList.findIndex(u => u.phone === cleanPhone);
+  if (idx >= 0) {
+    if (localList[idx].password_hash !== currentPassword) {
+      return { success: false, error: 'বর্তমান পাসওয়ার্ডটি সঠিক নয়।' };
+    }
+    localList[idx].password_hash = newPassword;
+    saveLocalUsers(localList);
+  }
+
+  return { success: true };
+}
+
 export async function adminDeleteUser(userId, phone) {
   // Delete from localStorage
   const localList = getLocalUsers().filter(u => u.id !== userId && u.phone !== phone);
