@@ -5,7 +5,13 @@ import {
   X, Phone, Award, Stethoscope, AlertTriangle, Key, LogOut,
   Sliders, UserCheck, UserX, FileText, ChevronRight, Edit3, Save, Sparkles, Building, Lock
 } from 'lucide-react';
-import { adminFetchAllUsers, adminUpdateUserStatus, adminUpdateUserFullDetails, adminDeleteUser } from '../lib/supabase';
+import { 
+  adminFetchAllUsers, 
+  adminUpdateUserStatus, 
+  adminUpdateUserFullDetails, 
+  adminDeleteUser,
+  updateAdminMasterPassword 
+} from '../lib/supabase';
 
 export const AdminPanelModal = ({ 
   isOpen, 
@@ -23,6 +29,16 @@ export const AdminPanelModal = ({
   // Modal Sub-state: Edit Doctor Details
   const [editingDoctor, setEditingDoctor] = useState(null);
   const [editFormData, setEditFormData] = useState({});
+
+  // Modal Sub-state: Admin Change Password
+  const [isAdminPassModalOpen, setIsAdminPassModalOpen] = useState(false);
+  const [adminPassForm, setAdminPassForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [adminPassLoading, setAdminPassLoading] = useState(false);
+  const [adminPassError, setAdminPassError] = useState('');
 
   const loadUsers = async () => {
     setLoading(true);
@@ -113,6 +129,40 @@ export const AdminPanelModal = ({
     loadUsers();
   };
 
+  const handleAdminPasswordSubmit = async (e) => {
+    e.preventDefault();
+    setAdminPassError('');
+
+    if (!adminPassForm.currentPassword) {
+      setAdminPassError('অনুগ্রহ করে বর্তমান এডমিন পাসওয়ার্ড দিন।');
+      return;
+    }
+    if (!adminPassForm.newPassword || adminPassForm.newPassword.length < 4) {
+      setAdminPassError('নতুন পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে।');
+      return;
+    }
+    if (adminPassForm.newPassword !== adminPassForm.confirmPassword) {
+      setAdminPassError('নতুন পাসওয়ার্ড এবং কনফার্ম পাসওয়ার্ড মিলছে না!');
+      return;
+    }
+
+    setAdminPassLoading(true);
+    try {
+      const res = await updateAdminMasterPassword(adminPassForm.currentPassword, adminPassForm.newPassword);
+      if (res.success) {
+        showToast('এডমিন পাসওয়ার্ড সফলভাবে পরিবর্তন করা হয়েছে!');
+        setIsAdminPassModalOpen(false);
+        setAdminPassForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      } else {
+        setAdminPassError(res.error || 'পাসওয়ার্ড পরিবর্তন ব্যর্থ হয়েছে।');
+      }
+    } catch (err) {
+      setAdminPassError('একটি সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
+    } finally {
+      setAdminPassLoading(false);
+    }
+  };
+
   const filteredUsers = useMemo(() => {
     return users.filter(u => {
       const q = searchTerm.toLowerCase();
@@ -163,6 +213,18 @@ export const AdminPanelModal = ({
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setAdminPassError('');
+                setAdminPassForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                setIsAdminPassModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-teal-300 border border-teal-500/30 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs hover:border-teal-400"
+              title="এডমিন পাসওয়ার্ড পরিবর্তন করুন"
+            >
+              <Lock className="w-3.5 h-3.5 text-teal-400" />
+              <span>এডমিন পাসওয়ার্ড (Change Key)</span>
+            </button>
             <button
               onClick={loadUsers}
               className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
@@ -695,6 +757,122 @@ export const AdminPanelModal = ({
                 </button>
               </div>
 
+            </form>
+
+          </div>
+        </div>
+      )}
+
+      {/* Admin Change Password Modal */}
+      {isAdminPassModalOpen && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center border border-teal-500/30">
+                  <Key className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-white">এডমিন পাসওয়ার্ড পরিবর্তন</h3>
+                  <p className="text-[11px] text-slate-400">Master Super Admin Security Key</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAdminPassModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleAdminPasswordSubmit} className="p-6 space-y-4">
+              {adminPassError && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{adminPassError}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  বর্তমান এডমিন পাসওয়ার্ড (Current Password) *
+                </label>
+                <div className="relative">
+                  <input
+                    type="password"
+                    required
+                    value={adminPassForm.currentPassword}
+                    onChange={(e) => setAdminPassForm({ ...adminPassForm, currentPassword: e.target.value })}
+                    placeholder="বর্তমান পাসওয়ার্ড লিখুন (Default: admin)"
+                    className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-teal-500 focus:bg-white"
+                  />
+                  <Lock className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">প্রথমবার পরিবর্তন করলে ডিফল্ট পাসওয়ার্ড <span className="font-mono font-bold text-slate-600">admin</span> দিন।</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  নতুন পাসওয়ার্ড (New Password) *
+                </label>
+                <div className="relative">
+                  <input
+                    type="password"
+                    required
+                    minLength={4}
+                    value={adminPassForm.newPassword}
+                    onChange={(e) => setAdminPassForm({ ...adminPassForm, newPassword: e.target.value })}
+                    placeholder="কমপক্ষে ৪ অক্ষরের নতুন পাসওয়ার্ড দিন"
+                    className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-teal-500 focus:bg-white"
+                  />
+                  <Key className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  কনফার্ম নতুন পাসওয়ার্ড (Confirm New Password) *
+                </label>
+                <div className="relative">
+                  <input
+                    type="password"
+                    required
+                    minLength={4}
+                    value={adminPassForm.confirmPassword}
+                    onChange={(e) => setAdminPassForm({ ...adminPassForm, confirmPassword: e.target.value })}
+                    placeholder="নতুন পাসওয়ার্ডটি পুনরায় লিখুন"
+                    className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-teal-500 focus:bg-white"
+                  />
+                  <Key className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                </div>
+              </div>
+
+              <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsAdminPassModalOpen(false)}
+                  disabled={adminPassLoading}
+                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-50 cursor-pointer disabled:opacity-50"
+                >
+                  বাতিল (Cancel)
+                </button>
+                <button
+                  type="submit"
+                  disabled={adminPassLoading}
+                  className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {adminPassLoading ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Save className="w-3.5 h-3.5" />
+                  )}
+                  <span>{adminPassLoading ? 'সংরক্ষণ হচ্ছে...' : 'পাসওয়ার্ড পরিবর্তন করুন'}</span>
+                </button>
+              </div>
             </form>
 
           </div>

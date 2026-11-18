@@ -5,19 +5,97 @@ const SUPABASE_ANON_KEY = 'sb_publishable_7YSDaB3i3DTb3RzI4xULbQ_983WvEm3';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Master Admin Credentials: Entering these into regular login directly opens Admin Panel
+// Master Admin Credentials: Default fallback credentials
 export const MASTER_ADMIN_CREDENTIALS = {
   phone: '01780960370', // Ayan Tech Official Phone
   password: 'admin'       // Secret admin key (also supports 'admin123' & 'ayan7809')
 };
 
+const ADMIN_PASS_STORAGE_KEY = 'amar_rx_custom_admin_pass';
+
+export function getCustomAdminPassword() {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(ADMIN_PASS_STORAGE_KEY);
+}
+
 export function isMasterAdmin(phone, password) {
   const cleanPhone = (phone || '').trim().replace(/\s+/g, '');
   const pass = (password || '').trim();
-  return (
-    (cleanPhone === '01780960370' || cleanPhone === 'admin' || cleanPhone === '01700000000') &&
-    (pass === 'admin' || pass === 'admin123' || pass === 'ayan7809')
-  );
+  const customPass = getCustomAdminPassword();
+
+  const isPhoneAdmin = (cleanPhone === '01780960370' || cleanPhone === 'admin' || cleanPhone === '01700000000');
+  if (!isPhoneAdmin) return false;
+
+  // If a custom password has been set, check against it
+  if (customPass && pass === customPass) {
+    return true;
+  }
+
+  // Fallback defaults for safety / recovery
+  return (pass === 'admin' || pass === 'admin123' || pass === 'ayan7809');
+}
+
+/**
+ * Updates Master Admin password in localStorage and synchronizes with doctor_users if table exists
+ */
+export async function updateAdminMasterPassword(currentPassword, newPassword) {
+  const cleanCurrent = (currentPassword || '').trim();
+  const cleanNew = (newPassword || '').trim();
+
+  if (!cleanNew || cleanNew.length < 4) {
+    return { success: false, error: 'নতুন পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে।' };
+  }
+
+  // Validate current password
+  const customPass = getCustomAdminPassword();
+  const isCurrentValid = customPass 
+    ? (cleanCurrent === customPass) 
+    : (cleanCurrent === 'admin' || cleanCurrent === 'admin123' || cleanCurrent === 'ayan7809');
+
+  if (!isCurrentValid) {
+    return { success: false, error: 'বর্তমান এডমিন পাসওয়ার্ডটি সঠিক নয়।' };
+  }
+
+  // 1. Store in localStorage
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(ADMIN_PASS_STORAGE_KEY, cleanNew);
+  }
+
+  // 2. Also attempt to sync to Supabase doctor_users under official admin phone
+  try {
+    const adminPhone = '01780960370';
+    const { data: existingAdmin } = await supabase
+      .from('doctor_users')
+      .select('id, phone')
+      .eq('phone', adminPhone)
+      .maybeSingle();
+
+    if (existingAdmin) {
+      await supabase
+        .from('doctor_users')
+        .update({ password_hash: cleanNew })
+        .eq('phone', adminPhone);
+    } else {
+      await supabase
+        .from('doctor_users')
+        .insert([{
+          id: 'admin_master_ayan',
+          phone: adminPhone,
+          full_name: 'Master Super Admin',
+          specialty: 'System Administrator',
+          degrees: 'Dev Admin',
+          bmdc_reg_no: 'ADMIN-01',
+          status: 'approved',
+          password_hash: cleanNew,
+          has_watermark: false,
+          created_at: new Date().toISOString()
+        }]);
+    }
+  } catch (e) {
+    console.warn('Admin password supabase sync note:', e);
+  }
+
+  return { success: true };
 }
 
 /**
