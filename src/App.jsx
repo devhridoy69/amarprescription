@@ -8,6 +8,8 @@ import PrescriptionPreview from './components/PrescriptionPreview';
 import DoctorProfileModal from './components/DoctorProfileModal';
 import TemplatesModal from './components/TemplatesModal';
 import DashboardModal from './components/DashboardModal';
+import AuthModal from './components/AuthModal';
+import AdminPanelModal from './components/AdminPanelModal';
 import MobileSectionTabs from './components/MobileSectionTabs';
 import { DEFAULT_DOCTOR } from './data/defaultDoctor';
 import { PRESCRIPTION_TEMPLATES } from './data/templatesData';
@@ -15,16 +17,50 @@ import { FONT_PAIR_PRESETS } from './data/fontPresets';
 import { fetchPrescriptionsFromCloud, savePrescriptionToCloud, deletePrescriptionFromCloud } from './lib/supabase';
 
 export function App() {
-  // Load doctor profile from localStorage or default
-  const [doctor, setDoctor] = useState(() => {
+  // Check remember me validity (1 month = 30 days) on initial mount
+  const [currentUser, setCurrentUser] = useState(() => {
     try {
-      const saved = localStorage.getItem('amar_rx_doctor');
+      const saved = localStorage.getItem('amar_rx_current_user');
       if (saved) {
-        return { ...DEFAULT_DOCTOR, ...JSON.parse(saved) };
+        const parsed = JSON.parse(saved);
+        if (parsed.expiresAt && Date.now() > parsed.expiresAt) {
+          localStorage.removeItem('amar_rx_current_user');
+          return null; // Expired 1 month session
+        }
+        return parsed;
       }
     } catch (e) {
-      // fallback
+      return null;
     }
+    return null;
+  });
+
+  // Doctor state: initialize from user account if logged in, else default
+  const [doctor, setDoctor] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem('amar_rx_current_user');
+      if (savedUser) {
+        const u = JSON.parse(savedUser);
+        return {
+          ...DEFAULT_DOCTOR,
+          name: u.full_name || DEFAULT_DOCTOR.name,
+          degrees: u.degrees || DEFAULT_DOCTOR.degrees,
+          specialty: u.specialty || DEFAULT_DOCTOR.specialty,
+          bmdcReg: u.bmdc_reg || DEFAULT_DOCTOR.bmdcReg,
+          phone: u.phone || DEFAULT_DOCTOR.phone,
+          workplace: u.workplace || DEFAULT_DOCTOR.workplace,
+          chamberName: u.chamber_name || DEFAULT_DOCTOR.chamberName,
+          chamberAddress: u.chamber_address || DEFAULT_DOCTOR.chamberAddress,
+          visitingHours: u.visiting_hours || DEFAULT_DOCTOR.visitingHours,
+          appointmentPhone: u.appointment_phone || DEFAULT_DOCTOR.appointmentPhone,
+          has_watermark: u.has_watermark !== false
+        };
+      }
+      const savedDoc = localStorage.getItem('amar_rx_doctor');
+      if (savedDoc) {
+        return { ...DEFAULT_DOCTOR, ...JSON.parse(savedDoc) };
+      }
+    } catch (e) {}
     return DEFAULT_DOCTOR;
   });
 
@@ -54,58 +90,74 @@ export function App() {
   const [isDoctorModalOpen, setIsDoctorModalOpen] = useState(false);
   const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+  const [adminUser, setAdminUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('amar_rx_admin_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [editingRecordId, setEditingRecordId] = useState(null); // Track if currently editing a saved record
   const [saveStatusFeedback, setSaveStatusFeedback] = useState(null); // 'saved' | 'updated' | 'error'
   const [viewMode, setViewMode] = useState('split'); // 'split' | 'editor' | 'preview'
   const [mobileTab, setMobileTab] = useState('medicines'); // 'patient' | 'clinical' | 'medicines' | 'advice'
 
+  // Separate local storage records key per logged-in doctor
+  const getDoctorStorageKey = (phone) => {
+    return phone ? `amar_rx_records_${phone.replace(/\s+/g, '')}` : 'amar_rx_records';
+  };
+
   // Patient Prescription Records / History (localStorage + Supabase Cloud Sync)
   const [patientRecords, setPatientRecords] = useState(() => {
     try {
-      const saved = localStorage.getItem('amar_rx_records');
+      const savedUser = localStorage.getItem('amar_rx_current_user');
+      const phone = savedUser ? JSON.parse(savedUser).phone : null;
+      const key = getDoctorStorageKey(phone);
+      const saved = localStorage.getItem(key);
       if (saved) return JSON.parse(saved);
-    } catch (e) {
-      // fallback
-    }
+    } catch (e) {}
     return [];
   });
 
-  // Sync with Supabase cloud on initial load
+  // Sync with Supabase cloud when user logs in or initial load
   useEffect(() => {
     async function loadCloudRecords() {
+      if (!currentUser && !adminUser) {
+        setPatientRecords([]);
+        return;
+      }
       try {
-        const cloudData = await fetchPrescriptionsFromCloud();
+        const cloudData = await fetchPrescriptionsFromCloud(currentUser?.phone);
         if (cloudData && cloudData.length > 0) {
-          // Merge local & cloud records, avoiding duplicates
-          setPatientRecords(prev => {
-            const existingIds = new Set(prev.map(p => String(p.id)));
-            const newFromCloud = cloudData.filter(c => !existingIds.has(String(c.id)));
-            const merged = [...newFromCloud, ...prev];
-            try {
-              localStorage.setItem('amar_rx_records', JSON.stringify(merged));
-            } catch (e) {}
-            return merged;
-          });
+          const docKey = getDoctorStorageKey(currentUser?.phone);
+          setPatientRecords(cloudData);
+          try {
+            localStorage.setItem(docKey, JSON.stringify(cloudData));
+          } catch (e) {}
         }
       } catch (err) {
         console.warn('Initial cloud sync notice:', err);
       }
     }
     loadCloudRecords();
-  }, []);
+  }, [currentUser, adminUser]);
 
-  // Save records to localStorage and async backup to Supabase
+  // Save records to doctor's separate localStorage and async backup to Supabase
   const saveRecordsToStorage = (records, recordToSync = null) => {
     setPatientRecords(records);
+    const docKey = getDoctorStorageKey(currentUser?.phone);
     try {
-      localStorage.setItem('amar_rx_records', JSON.stringify(records));
+      localStorage.setItem(docKey, JSON.stringify(records));
     } catch (e) {
       console.error('Failed to save patient records to storage:', e);
     }
 
-    // Async push to Supabase cloud
+    // Async push to Supabase cloud tagged with doctor's phone
     if (recordToSync) {
-      savePrescriptionToCloud(recordToSync).catch(err => {
+      savePrescriptionToCloud(recordToSync, currentUser?.phone).catch(err => {
         console.warn('Cloud sync error:', err);
       });
     }
@@ -347,25 +399,108 @@ export function App() {
     window.print();
   };
 
+  const handleLoginSuccess = (userData, remember = true) => {
+    // 1 Month = 30 days validity if remember me checked, else 1 day session
+    const validityDurationMs = remember 
+      ? 30 * 24 * 60 * 60 * 1000 
+      : 24 * 60 * 60 * 1000;
+
+    const sessionUser = {
+      ...userData,
+      rememberMe: remember,
+      expiresAt: Date.now() + validityDurationMs
+    };
+
+    setCurrentUser(sessionUser);
+    try {
+      localStorage.setItem('amar_rx_current_user', JSON.stringify(sessionUser));
+    } catch (e) {}
+    
+    // Auto populate doctor profile with registered doctor details
+    if (userData.full_name) {
+      setDoctor(prev => ({
+        ...prev,
+        name: userData.full_name,
+        degrees: userData.degrees || prev.degrees,
+        specialty: userData.specialty || prev.specialty,
+        bmdcReg: userData.bmdc_reg || prev.bmdcReg,
+        phone: userData.phone || prev.phone,
+        workplace: userData.workplace || prev.workplace,
+        chamberName: userData.chamber_name || prev.chamberName,
+        chamberAddress: userData.chamber_address || prev.chamberAddress,
+        visitingHours: userData.visiting_hours || prev.visitingHours,
+        appointmentPhone: userData.appointment_phone || prev.appointmentPhone,
+        has_watermark: userData.has_watermark !== false
+      }));
+    }
+  };
+
+  const handleAdminLoginSuccess = (adminData, remember = true) => {
+    const sessionAdmin = {
+      ...adminData,
+      expiresAt: Date.now() + (30 * 24 * 60 * 60 * 1000)
+    };
+    setAdminUser(sessionAdmin);
+    setIsAdminPanelOpen(true);
+    try {
+      localStorage.setItem('amar_rx_admin_user', JSON.stringify(sessionAdmin));
+    } catch (e) {}
+  };
+
+  const handleAdminLogout = () => {
+    setAdminUser(null);
+    setIsAdminPanelOpen(false);
+    try {
+      localStorage.removeItem('amar_rx_admin_user');
+    } catch (e) {}
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setAdminUser(null);
+    setPatientRecords([]);
+    setDoctor(DEFAULT_DOCTOR);
+    try {
+      localStorage.removeItem('amar_rx_current_user');
+      localStorage.removeItem('amar_rx_admin_user');
+    } catch (e) {}
+  };
+
   return (
     <div className="min-h-screen bg-slate-100/70 text-slate-800 flex flex-col font-sans">
       
-      {/* Top Navbar */}
-      <Navbar
-        viewMode={viewMode}
-        onSetViewMode={setViewMode}
-        onOpenDashboard={() => setIsDashboardOpen(true)}
-        onOpenDoctorSettings={() => setIsDoctorModalOpen(true)}
-        onOpenTemplates={() => setIsTemplatesModalOpen(true)}
-        onNewPrescription={handleNewPrescription}
-        onPrint={handlePrint}
-        darkMode={darkMode}
-        onToggleDarkMode={toggleDarkMode}
-        selectedFontId={selectedFontId}
-        onSelectFontId={handleSelectFontId}
-        fontPresets={FONT_PAIR_PRESETS}
-        savedCount={patientRecords.length}
-      />
+      {/* If Admin is logged in, show dedicated Admin Panel View ONLY */}
+      {adminUser ? (
+        <AdminPanelModal
+          isOpen={true}
+          onClose={handleAdminLogout}
+          adminUser={adminUser}
+          onAdminLogout={handleAdminLogout}
+          darkMode={darkMode}
+        />
+      ) : (
+        <>
+          {/* Top Navbar */}
+          <Navbar
+            viewMode={viewMode}
+            onSetViewMode={setViewMode}
+            onOpenDashboard={() => setIsDashboardOpen(true)}
+            onOpenDoctorSettings={() => setIsDoctorModalOpen(true)}
+            onOpenTemplates={() => setIsTemplatesModalOpen(true)}
+            onNewPrescription={handleNewPrescription}
+            onPrint={handlePrint}
+            darkMode={darkMode}
+            onToggleDarkMode={toggleDarkMode}
+            selectedFontId={selectedFontId}
+            onSelectFontId={handleSelectFontId}
+            fontPresets={FONT_PAIR_PRESETS}
+            savedCount={patientRecords.length}
+            currentUser={currentUser}
+            adminUser={adminUser}
+            onOpenAdminPanel={() => setIsAdminPanelOpen(true)}
+            onOpenAuth={() => setIsAuthModalOpen(true)}
+            onLogout={handleLogout}
+          />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 lg:p-6">
@@ -516,6 +651,18 @@ export function App() {
         darkMode={darkMode}
         activeEditingRecordId={editingRecordId}
       />
+
+      {/* Doctor Authentication (Mandatory Gate: User MUST Login or Register to use) */}
+      <AuthModal
+        isOpen={isAuthModalOpen || (!currentUser && !adminUser)}
+        onClose={() => setIsAuthModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+        onAdminLoginSuccess={handleAdminLoginSuccess}
+        isForced={!currentUser && !adminUser}
+      />
+
+        </>
+      )}
 
     </div>
   );

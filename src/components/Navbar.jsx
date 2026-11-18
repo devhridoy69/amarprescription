@@ -2,7 +2,7 @@ import React from 'react';
 import { 
   Printer, Sparkles, Settings, RotateCcw, LayoutTemplate, 
   Eye, Edit3, Columns, Heart, Stethoscope, Sun, Moon, Type,
-  LayoutDashboard
+  LayoutDashboard, User, LogIn, LogOut, ShieldCheck, ShieldAlert
 } from 'lucide-react';
 
 export const Navbar = ({ 
@@ -18,7 +18,12 @@ export const Navbar = ({
   selectedFontId,
   onSelectFontId,
   fontPresets = [],
-  savedCount = 0
+  savedCount = 0,
+  currentUser = null,
+  adminUser = null,
+  onOpenAdminPanel = () => {},
+  onOpenAuth = () => {},
+  onLogout = () => {}
 }) => {
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-2xs no-print transition-all">
@@ -170,6 +175,51 @@ export const Navbar = ({
             <Settings className="w-3.5 h-3.5" />
             <span className="hidden lg:inline">Doctor Profile</span>
           </button>
+
+          {/* User Account / Admin Badge / Registration Menu */}
+          {adminUser ? (
+            <button
+              type="button"
+              onClick={onOpenAdminPanel}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-teal-400 border border-teal-500/40 rounded-xl text-xs font-black shadow-md hover:bg-slate-800 transition-all cursor-pointer animate-pulse"
+              title="ওপেন এডমিন প্যানেল"
+            >
+              <ShieldAlert className="w-4 h-4 text-rose-400" />
+              <span>Admin Panel</span>
+            </button>
+          ) : currentUser ? (
+            <div className="flex items-center gap-1.5 bg-teal-50 dark:bg-teal-950/70 border border-teal-200 dark:border-teal-800 py-1 px-2.5 rounded-xl">
+              <div className="w-6 h-6 rounded-lg bg-teal-600 text-white flex items-center justify-center text-xs font-bold shadow-2xs">
+                {currentUser.full_name ? currentUser.full_name.charAt(0).toUpperCase() : 'D'}
+              </div>
+              <div className="hidden sm:block text-left">
+                <span className="block text-[11px] font-bold text-teal-900 dark:text-teal-200 leading-tight truncate max-w-[100px]">
+                  {currentUser.full_name || 'Dr. Logged In'}
+                </span>
+                <span className="block text-[9px] text-teal-600 dark:text-teal-400 font-mono">
+                  {currentUser.phone}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={onLogout}
+                className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors cursor-pointer ml-1"
+                title="লগআউট করুন"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={onOpenAuth}
+              className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all cursor-pointer animate-in fade-in"
+              title="ডাক্তার লগইন বা নতুন রেজিস্ট্রেশন মেনু"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>লগইন / রেজিস্টার</span>
+            </button>
+          )}
 
           {/* Dark / Light Mode Toggle Switch */}
           <button

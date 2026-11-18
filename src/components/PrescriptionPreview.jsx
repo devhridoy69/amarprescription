@@ -425,7 +425,8 @@ export const PrescriptionPreview = ({
                 {doctor.emergencyNote}
               </p>
             )}
-            {doctor.showAyanTechBranding !== false && (
+            {/* Watermark Branding: Exclusively controlled by Admin via doctor.has_watermark */}
+            {(doctor.has_watermark !== false && doctor.showAyanTechBranding !== false) && (
               <div className="flex items-center justify-center gap-2 font-medium text-slate-500 pt-0.5">
                 <img src="/logo.png" alt="আমার প্রেসক্রিপশন" className="h-4 w-auto object-contain inline-block" />
                 <span>•</span>

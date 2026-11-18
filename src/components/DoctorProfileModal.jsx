@@ -223,30 +223,12 @@ export const DoctorProfileModal = ({ isOpen, onClose, doctor, onSave }) => {
             </div>
           </div>
 
-          {/* Branding Toggle */}
-          <div className="bg-teal-50/70 p-3.5 rounded-xl border border-teal-100 flex items-center justify-between">
-            <div>
-              <span className="font-semibold text-teal-900 text-xs block">Amar Prescription Brand Watermark</span>
-              <span className="text-[11px] text-teal-700">"Amar Prescription (আমার প্রেসক্রিপশন) By Ayan Tech" in footer</span>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                name="showAyanTechBranding"
-                checked={formData.showAyanTechBranding}
-                onChange={handleChange}
-                className="sr-only peer"
-              />
-              <div className="w-9 h-5 bg-slate-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-teal-600"></div>
-            </label>
-          </div>
-
           {/* Submit Actions */}
           <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-100 rounded-lg text-xs font-medium transition-colors"
+              className="px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-100 rounded-lg text-xs font-medium transition-colors cursor-pointer"
             >
               Cancel
             </button>
