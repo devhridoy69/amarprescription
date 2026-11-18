@@ -479,23 +479,17 @@ export const AuthModal = ({
                 </div>
               </div>
 
-              <div className="pt-2 flex items-center gap-3">
+              <div className="pt-2 flex items-center justify-center">
                 <button
                   type="button"
                   onClick={() => {
                     setMode('login');
                     setErrorMessage('');
                   }}
-                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  className="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition-all shadow-md hover:shadow-lg cursor-pointer flex items-center justify-center gap-2"
                 >
-                  লগইন পেজে যান
-                </button>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex-1 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer"
-                >
-                  ঠিক আছে (Close)
+                  <LogIn className="w-4 h-4" />
+                  <span>ঠিক আছে, লগইন পেজে যান</span>
                 </button>
               </div>
 
