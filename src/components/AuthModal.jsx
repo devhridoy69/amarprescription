@@ -412,14 +412,6 @@ export const AuthModal = ({
                 </div>
               </div>
 
-              {/* Notice of admin approval */}
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900 flex items-start gap-2">
-                <Clock className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
-                <span>
-                  <strong>লক্ষণীয়:</strong> রেজিস্ট্রেশন সম্পন্ন হওয়ার পর অ্যাকাউন্টটি অ্যাডমিন অনুমোদনের (Admin Approval) জন্য সংরক্ষিত থাকবে। অনুমোদনের পর আপনি লগইন করতে পারবেন।
-                </span>
-              </div>
-
               <div className="pt-2">
                 <button
                   type="submit"
@@ -455,35 +447,35 @@ export const AuthModal = ({
             </form>
           )}
 
-          {/* ======================= TAB 3: PENDING APPROVAL NOTICE ======================= */}
+          {/* ======================= TAB 3: REGISTRATION SUCCESS & CONTACT NOTICE ======================= */}
           {mode === 'pending_notice' && (
             <div className="py-3 text-center space-y-4 animate-in zoom-in-95 duration-200">
               
-              <div className="w-16 h-16 rounded-full bg-amber-50 border-2 border-amber-400 text-amber-600 mx-auto flex items-center justify-center shadow-xs">
-                <Clock className="w-8 h-8 animate-spin" style={{ animationDuration: '8s' }} />
+              <div className="w-16 h-16 rounded-full bg-teal-50 border-2 border-teal-500 text-teal-600 mx-auto flex items-center justify-center shadow-xs">
+                <CheckCircle2 className="w-9 h-9" />
               </div>
 
               <div className="space-y-1">
                 <h3 className="text-lg font-black text-slate-900">
-                  এডমিন অনুমোদনের অপেক্ষায় রয়েছে
+                  রেজিস্ট্রেশন সফল হয়েছে
                 </h3>
                 <p className="text-xs font-mono font-bold text-teal-800 bg-teal-50 px-3 py-1 rounded-full inline-block border border-teal-200">
                   {registeredPhone}
                 </p>
               </div>
 
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-left space-y-2 text-xs text-slate-600">
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-left space-y-2.5 text-xs text-slate-700">
                 <div className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>আপনার রেজিস্ট্রেশন আবেদনটি সফলভাবে ডাটাবেসে জমা হয়েছে।</span>
+                  <span className="leading-relaxed">
+                    ধন্যবাদ স্যার। সফলভাবে রেজিস্ট্রেশন সম্পন্ন করার জন্য আপনাকে অভিনন্দন। আমাদের প্রতিনিধি খুব শীঘ্রই আপনার সাথে যোগাযোগ করবেন।
+                  </span>
                 </div>
                 <div className="flex items-start gap-2">
-                  <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                  <span>নিরাপত্তা নিশ্চিতকরণের জন্য অ্যাডমিন প্যানেল থেকে অনুমোদন প্রদান করা হবে।</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
-                  <span>অনুমোদন সম্পন্ন হলে আপনার এই ফোন নম্বর ও পাসওয়ার্ড দিয়ে সাথে সাথে লগইন করতে পারবেন।</span>
+                  <Phone className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
+                  <span className="leading-relaxed">
+                    যেকোনো জরুরি প্রয়োজনে আমাদের সাথে হোয়াটসঅ্যাপে যোগাযোগ করতে পারেন অথবা সরাসরি কল করতে পারেন এই নম্বরে: <strong className="font-mono text-teal-900 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200 font-bold">01780-960370</strong>
+                  </span>
                 </div>
               </div>
 
