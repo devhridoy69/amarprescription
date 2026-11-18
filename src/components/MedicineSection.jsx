@@ -221,6 +221,16 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
     }));
   };
 
+  // Quick Drop / ফোঁটা selector handler
+  const handleSelectDropDose = (dropCount, unitLabel = 'ড্রপ (Drop)') => {
+    setCurrentMed(prev => ({
+      ...prev,
+      type: 'Drop',
+      unit: unitLabel,
+      dosage: `${dropCount}+${dropCount}+${dropCount}`
+    }));
+  };
+
   // Move medicine up / down
   const moveMed = (index, direction) => {
     const targetIndex = index + direction;
@@ -418,9 +428,9 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
             </span>
           </div>
 
-          {/* Fractions Row with 1 Up and 2 Down Stacked Fraction */}
+          {/* Fractions Row with 1 Up and 2 Down Stacked Fraction & Custom Fraction Box */}
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-medium text-slate-500 mr-1">Fractions:</span>
+            <span className="text-[11px] font-medium text-slate-500 mr-1">Fractions / ডোজ:</span>
             
             {/* Special Highlighted 1/2 Option */}
             <button
@@ -458,6 +468,58 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
                 ) : (
                   frac.label
                 )}
+              </button>
+            ))}
+
+            {/* Custom Dosage / Fraction Input Box */}
+            <div className="inline-flex items-center gap-1 ml-auto sm:ml-2 bg-slate-50 px-2 py-1 rounded-lg border border-slate-300">
+              <span className="text-[11px] font-semibold text-slate-600">কাস্টম ডোজ:</span>
+              <input
+                type="text"
+                value={currentMed.dosage}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const isFrac = val.includes('/');
+                  setCurrentMed({
+                    ...currentMed,
+                    dosage: val,
+                    isFraction: isFrac
+                  });
+                }}
+                placeholder="যেমন: 5 drops বা 1/2+0+1/2"
+                className="w-32 sm:w-40 px-2 py-0.5 bg-white border border-slate-300 rounded text-xs font-bold text-teal-900 focus:ring-1 focus:ring-teal-500"
+                title="ডোজ বেশি হলে বা ড্রপের সংখ্যা কাস্টম লিখতে এখানে টাইপ করুন"
+              />
+            </div>
+          </div>
+
+          {/* Special Drop (ড্রপ / ফোঁটা) Quick Presets Bar */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-1.5 pb-0.5 border-t border-slate-100 bg-sky-50/60 -mx-3 px-3 rounded-md">
+            <span className="text-[11px] font-bold text-sky-900 flex items-center gap-1 mr-1">
+              <span>💧 Drop (ড্রপ / ফোঁটা পরিমাণ):</span>
+            </span>
+            {[
+              { count: '1', label: '১ ফোঁটা (1 Drop)' },
+              { count: '2', label: '২ ফোঁটা (2 Drops)' },
+              { count: '3', label: '৩ ফোঁটা (3 Drops)' },
+              { count: '4', label: '৪ ফোঁটা (4 Drops)' },
+              { count: '5', label: '৫ ফোঁটা (5 Drops)' },
+              { count: '8', label: '৮ ফোঁটা (8 Drops)' },
+              { count: '10', label: '১০ ফোঁটা (10 Drops)' },
+              { count: '15', label: '১৫ ফোঁটা (15 Drops)' },
+            ].map(dp => (
+              <button
+                key={dp.count}
+                type="button"
+                onClick={() => handleSelectDropDose(dp.count, 'ফোঁটা (Drop)')}
+                className={`px-2 py-0.5 rounded text-[11px] font-medium border transition-all cursor-pointer ${
+                  currentMed.type === 'Drop' && currentMed.dosage === `${dp.count}+${dp.count}+${dp.count}`
+                    ? 'bg-sky-700 text-white border-sky-800 font-bold shadow-2xs'
+                    : 'bg-white text-sky-900 border-sky-200 hover:bg-sky-100'
+                }`}
+                title={`প্রতি বেলা ${dp.label}`}
+              >
+                {dp.count} ফোঁটা
               </button>
             ))}
           </div>
@@ -522,6 +584,19 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
                 {u.isFraction ? renderWithFractions(u.short, 'sm') : u.short}
               </button>
             ))}
+
+            {/* Custom Unit Input Box */}
+            <div className="inline-flex items-center gap-1 ml-auto sm:ml-2 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-300">
+              <span className="text-[11px] font-semibold text-slate-600">কাস্টম পরিমাপ:</span>
+              <input
+                type="text"
+                value={currentMed.unit}
+                onChange={(e) => setCurrentMed({ ...currentMed, unit: e.target.value })}
+                placeholder="যেমন: ফোঁটা বা চামচ"
+                className="w-28 sm:w-32 px-1.5 py-0.5 bg-white border border-slate-300 rounded text-xs font-semibold text-teal-900 focus:ring-1 focus:ring-teal-500"
+                title="নিজের মতো পরিমাপের একক লিখতে এখানে টাইপ করুন"
+              />
+            </div>
           </div>
         </div>
 
