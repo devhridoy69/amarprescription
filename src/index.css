@@ -193,26 +193,12 @@
     display: none !important;
   }
 
-  /* Reset grid layouts in print so preview takes 100% width cleanly */
+  /* Reset outer application container in print so preview takes 100% width cleanly */
   main {
     max-width: 100% !important;
     width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
-  }
-
-  .grid {
-    display: block !important;
-  }
-
-  .lg\:col-span-6,
-  .xl\:col-span-6 {
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-
-  .sticky {
-    position: static !important;
   }
 
   .print-only {
