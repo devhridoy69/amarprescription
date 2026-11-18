@@ -20,13 +20,13 @@
   }
 }
 
-/* Dark Mode Overrides */
+/* Dark Mode Overrides - Premium Refined Aesthetic */
 .dark {
   color-scheme: dark;
 }
 .dark body {
-  background-color: #0f172a;
-  color: #f1f5f9;
+  background-color: #0b1120;
+  color: #e2e8f0;
 }
 .dark .bg-slate-50,
 .dark .bg-slate-100 {
@@ -35,11 +35,45 @@
 .dark .bg-slate-50\/70,
 .dark .bg-slate-50\/50,
 .dark .bg-slate-50\/40 {
-  background-color: rgba(30, 41, 59, 0.7) !important;
+  background-color: rgba(30, 41, 59, 0.75) !important;
 }
 .dark .bg-white {
   background-color: #1e293b !important;
   color: #f8fafc;
+}
+.dark .bg-teal-50,
+.dark .bg-teal-50\/80,
+.dark .bg-teal-50\/40,
+.dark .bg-teal-50\/90 {
+  background-color: rgba(13, 148, 136, 0.15) !important;
+}
+.dark .text-teal-900,
+.dark .text-teal-950 {
+  color: #5eead4 !important;
+}
+.dark .text-teal-800,
+.dark .text-teal-700 {
+  color: #2dd4bf !important;
+}
+.dark .border-teal-100,
+.dark .border-teal-100\/80,
+.dark .border-teal-200,
+.dark .border-teal-200\/60 {
+  border-color: rgba(45, 212, 191, 0.25) !important;
+}
+.dark .bg-sky-50,
+.dark .bg-sky-50\/60,
+.dark .bg-sky-50\/90 {
+  background-color: rgba(14, 165, 233, 0.15) !important;
+}
+.dark .text-sky-900,
+.dark .text-sky-950 {
+  color: #7dd3fc !important;
+}
+.dark .border-sky-100,
+.dark .border-sky-200,
+.dark .border-sky-200\/80 {
+  border-color: rgba(56, 189, 248, 0.25) !important;
 }
 .dark .border-slate-200,
 .dark .border-slate-200\/80,
@@ -60,7 +94,7 @@
 .dark .text-slate-400 {
   color: #64748b !important;
 }
-.dark input:not([type="checkbox"]),
+.dark input:not([type="checkbox"]):not([type="range"]),
 .dark select,
 .dark textarea {
   background-color: #0f172a !important;
@@ -135,36 +169,87 @@
   line-height: 0.8;
 }
 
-/* Print Specific Rules for Medical Prescription A4 */
+/* Print Specific Rules for Medical Prescription A4 & Letter */
 @media print {
   @page {
-    size: A4 portrait;
-    margin: 8mm 12mm 8mm 12mm;
+    margin: 0mm !important; /* Zero margin from printer, internal paper container handles perfect padding */
   }
   
-  body {
+  html, body {
     background: #ffffff !important;
     color: #000000 !important;
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
   }
 
-  .no-print {
+  /* Hide editor and navigation elements during print */
+  .no-print,
+  nav,
+  header {
     display: none !important;
+  }
+
+  /* Reset grid layouts in print so preview takes 100% width cleanly */
+  main {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .grid {
+    display: block !important;
+  }
+
+  .lg\:col-span-6,
+  .xl\:col-span-6 {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .sticky {
+    position: static !important;
   }
 
   .print-only {
     display: block !important;
   }
 
+  /* Full paper layout with guaranteed padding so text never touches paper edges */
   .prescription-paper {
     box-shadow: none !important;
     border: none !important;
+    border-radius: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
+    height: auto !important;
     min-height: auto !important;
-    padding: 0 !important;
+    box-sizing: border-box !important;
+    padding: 8mm 12mm 6mm 12mm !important;
     margin: 0 !important;
+    transform: none !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .prescription-footer {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Force background colors and exact border rendering */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   /* Make sure fraction divider lines remain dark and visible in print */

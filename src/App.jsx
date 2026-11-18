@@ -78,7 +78,7 @@ export function App() {
     setDarkMode(prev => !prev);
   };
 
-  // Multi-Font Typography State with localStorage persistence
+  // Multi-Font Typography State with localStorage persistence (Default: Noto Sans Bengali + Noto Sans)
   const [selectedFontId, setSelectedFontId] = useState(() => {
     try {
       const saved = localStorage.getItem('amar_rx_font_id');
@@ -88,7 +88,7 @@ export function App() {
     } catch (e) {
       // fallback
     }
-    return 'hind-inter';
+    return 'noto-noto'; // Default font: Noto Sans Bengali + Noto Sans
   });
 
   const selectedFont = FONT_PAIR_PRESETS.find(f => f.id === selectedFontId) || FONT_PAIR_PRESETS[0];
@@ -104,7 +104,7 @@ export function App() {
     setSelectedFontId(fontId);
   };
 
-  // Print pad settings (Blank Header/Footer for pre-printed pads & Multi-page)
+  // Print pad settings (Blank Header/Footer for pre-printed pads, Paper size A4/Letter, Scale, Multi-page)
   const [printSettings, setPrintSettings] = useState(() => {
     const saved = localStorage.getItem('amar_rx_print_settings');
     if (saved) {
@@ -119,7 +119,9 @@ export function App() {
       headerHeightMm: 45, // height of blank header space in mm
       showFooter: true, // true = print software/emergency footer, false = blank space
       footerHeightMm: 25, // height of blank footer space in mm
-      pageCount: 1 // 1 or 2 pages
+      pageCount: 1, // 1 or 2 pages
+      paperSize: 'A4', // 'A4' or 'Letter'
+      scale: 100 // zoom/scale percentage: 80 to 120%
     };
   });
 
@@ -226,7 +228,7 @@ export function App() {
         )}
 
         {/* Dynamic Responsive Layout */}
-        <div className={`grid gap-6 ${
+        <div className={`grid gap-6 print:block print:w-full ${
           viewMode === 'split' 
             ? 'grid-cols-1 lg:grid-cols-12' 
             : 'grid-cols-1'
@@ -295,10 +297,10 @@ export function App() {
 
           {/* RIGHT: Live A4 Prescription Preview (WYSIWYG) */}
           {(viewMode === 'preview' || viewMode === 'split') && (
-            <div className={`${
+            <div className={`print:w-full print:max-w-full print:block ${
               viewMode === 'split' ? 'lg:col-span-6 xl:col-span-6' : 'max-w-[210mm] mx-auto w-full'
             }`}>
-              <div className="sticky top-20">
+              <div className="sticky top-20 print:static">
                 <PrescriptionPreview
                   doctor={doctor}
                   patient={patient}

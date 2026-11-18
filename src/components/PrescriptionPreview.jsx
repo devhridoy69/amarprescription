@@ -36,12 +36,19 @@ export const PrescriptionPreview = ({
     headerHeightMm: printSettings?.headerHeightMm ?? 45,
     showFooter: printSettings?.showFooter ?? true,
     footerHeightMm: printSettings?.footerHeightMm ?? 25,
-    pageCount: printSettings?.pageCount ?? 1
+    pageCount: printSettings?.pageCount ?? 1,
+    paperSize: printSettings?.paperSize ?? 'A4', // 'A4' (210x297mm) or 'Letter' (216x279mm)
+    scale: printSettings?.scale ?? 100 // 80% to 120%
   };
 
   const handlePrint = () => {
     window.print();
   };
+
+  // Dimensions based on paperSize for Screen display
+  const paperDimensions = settings.paperSize === 'Letter' 
+    ? { maxW: '215.9mm', minH: '279.4mm', name: 'US Letter (8.5 x 11 in)' }
+    : { maxW: '210mm', minH: '297mm', name: 'A4 (210 x 297 mm)' };
 
   // Helper to paginate medicines if doctor has chosen 2 pages or wants auto/manual split
   const isMultiPage = settings.pageCount > 1;
@@ -53,8 +60,12 @@ export const PrescriptionPreview = ({
     return (
       <div 
         key={`page-${pageNumber}`}
-        style={selectedFont ? { fontFamily: selectedFont.fontFamily } : {}}
-        className={`prescription-paper bg-white w-full max-w-[210mm] min-h-[297mm] shadow-xl rounded-xl border border-slate-200/80 p-5 sm:p-7 md:p-9 flex flex-col justify-between text-slate-800 transition-all text-xs print:p-0 print:border-none print:shadow-none print:rounded-none relative ${
+        style={{
+          ...(selectedFont ? { fontFamily: selectedFont.fontFamily } : {}),
+          maxWidth: paperDimensions.maxW,
+          minHeight: paperDimensions.minH,
+        }}
+        className={`prescription-paper bg-white w-full shadow-xl rounded-xl border border-slate-200/80 p-6 sm:p-8 md:p-9 flex flex-col justify-between text-slate-800 transition-all text-xs print:border-none print:shadow-none print:rounded-none relative ${
           !isLastPage ? 'mb-8 print:mb-0 print:page-break' : ''
         }`}
       >
@@ -403,15 +414,15 @@ export const PrescriptionPreview = ({
 
         {/* FOOTER: Software Branding & Chamber Emergency Note OR Blank space */}
         {settings.showFooter ? (
-          <div className="pt-4 mt-6 border-t border-slate-200 text-center space-y-1 text-[10px] text-slate-500">
+          <div className="prescription-footer pt-2 mt-auto border-t border-slate-200 text-center space-y-0.5 text-[10px] text-slate-500 pb-1">
             {doctor.emergencyNote && (
               <p className="text-slate-600 font-medium">
                 {doctor.emergencyNote}
               </p>
             )}
             {doctor.showAyanTechBranding !== false && (
-              <div className="flex items-center justify-center gap-2 font-medium text-slate-500 pt-1">
-                <img src="/logo.png" alt="আমার প্রেসক্রিপশন" className="h-4.5 w-auto object-contain inline-block" />
+              <div className="flex items-center justify-center gap-2 font-medium text-slate-500 pt-0.5">
+                <img src="/logo.png" alt="আমার প্রেসক্রিপশন" className="h-4 w-auto object-contain inline-block" />
                 <span>•</span>
                 <span className="font-bold text-teal-800">Developed By Ayan Tech 01780960370</span>
               </div>
@@ -421,7 +432,7 @@ export const PrescriptionPreview = ({
           /* Blank Footer Space for hospital/chamber pre-printed footer */
           <div 
             style={{ height: `${settings.footerHeightMm}mm` }} 
-            className="w-full border-t border-dashed border-teal-200/60 flex items-center justify-center text-slate-400 text-[10px] no-print bg-slate-50/50 rounded-lg mt-3"
+            className="w-full border-t border-dashed border-teal-200/60 flex items-center justify-center text-slate-400 text-[10px] no-print bg-slate-50/50 rounded-lg mt-auto"
           >
             <span>ফাঁকা ফুটার স্পেস ({settings.footerHeightMm}mm) — প্যাডের নিজস্ব ফুটার প্রিন্ট থাকবে</span>
           </div>
@@ -441,6 +452,51 @@ export const PrescriptionPreview = ({
   return (
     <div className="w-full flex flex-col items-center">
       
+      {/* Dynamic @page CSS injected directly based on doctor's selected Paper Size */}
+      <style>{`
+        @media print {
+          @page {
+            size: ${settings.paperSize === 'Letter' ? 'letter' : 'A4'} portrait;
+            margin: 0mm;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            height: auto !important;
+          }
+          .prescription-paper {
+            width: 100% !important;
+            max-width: 100% !important;
+            height: auto !important;
+            min-height: auto !important;
+            box-sizing: border-box !important;
+            padding: 8mm 12mm 6mm 12mm !important; /* Compact, safe medical margin */
+            margin: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+            transform: none !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          /* Strictly prevent accidental 2nd page when 1 page is chosen */
+          .prescription-paper:last-child {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+          }
+          .prescription-footer {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `}</style>
+
       {/* Floating Action & Customization Toolbar (Screen Only) */}
       <div className="no-print w-full flex flex-col gap-2.5 mb-4 bg-white/95 backdrop-blur-md p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-xs">
         
@@ -482,7 +538,7 @@ export const PrescriptionPreview = ({
 
         {/* Dropdown Customizer Bar for Header/Footer & Multi-Page */}
         {showConfig && (
-          <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs bg-slate-50/70 p-3 rounded-xl">
+          <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs bg-slate-50/70 p-3 rounded-xl">
             
             {/* 1. Header Toggle & Gap (Faka Header) */}
             <div className="space-y-1.5 bg-white p-2.5 rounded-lg border border-slate-200">
@@ -580,6 +636,68 @@ export const PrescriptionPreview = ({
               </div>
               <p className="text-[10px] text-slate-400">
                 {settings.pageCount === 1 ? '১ পাতায় সম্পূর্ণ প্রেসক্রিপশন' : 'বেশি ওষুধ থাকলে ২ পাতায় বিভক্ত হবে'}
+              </p>
+            </div>
+
+            {/* 4. Paper Size: A4 vs Letter */}
+            <div className="space-y-1.5 bg-white p-2.5 rounded-lg border border-slate-200">
+              <span className="font-bold text-slate-700 flex items-center gap-1">
+                <FileText className="w-3.5 h-3.5 text-teal-600" />
+                Paper Size (কাগজের সাইজ)
+              </span>
+              <div className="flex rounded-md border border-slate-200 bg-slate-50 p-0.5">
+                {['A4', 'Letter'].map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => onUpdatePrintSettings({ ...settings, paperSize: size })}
+                    className={`flex-1 py-1 text-xs font-bold rounded transition-all cursor-pointer ${
+                      settings.paperSize === size
+                        ? 'bg-teal-600 text-white shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {size} {size === 'A4' ? '(210×297mm)' : '(8.5×11in)'}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-slate-400">
+                {settings.paperSize === 'A4' ? 'বাংলাদেশ ও এশিয়ায় স্ট্যান্ডার্ড A4 সাইজ' : 'ইউএস লেটার সাইজ প্রিন্ট পেপার'}
+              </p>
+            </div>
+
+            {/* 5. Custom Page Scale / Zoom */}
+            <div className="space-y-1.5 bg-white p-2.5 rounded-lg border border-slate-200">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-700 flex items-center gap-1">
+                  <Sliders className="w-3.5 h-3.5 text-teal-600" />
+                  Custom Scale (পৃষ্ঠা স্কেল):
+                </span>
+                <span className="text-[11px] font-bold text-teal-700 font-mono">
+                  {settings.scale}%
+                </span>
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="range"
+                  min="80"
+                  max="120"
+                  step="2"
+                  value={settings.scale}
+                  onChange={(e) => onUpdatePrintSettings({ ...settings, scale: Number(e.target.value) })}
+                  className="w-full accent-teal-600 cursor-pointer"
+                />
+                <button
+                  type="button"
+                  onClick={() => onUpdatePrintSettings({ ...settings, scale: 100 })}
+                  className="px-1.5 py-0.5 text-[10px] bg-slate-100 hover:bg-slate-200 rounded text-slate-600 cursor-pointer shrink-0"
+                  title="Reset to 100%"
+                >
+                  Reset
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400">
+                প্যাডে লেখা বড়/ছোট করতে ৮০% থেকে ১২০% স্কেল করুন
               </p>
             </div>
 
