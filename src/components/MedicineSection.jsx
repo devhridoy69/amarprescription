@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useTransition } from 'react';
 import { 
   Pill, Plus, Trash2, Search, ArrowUp, ArrowDown, Sparkles, 
-  Coffee, HelpCircle, Check, X, Layers, Clock
+  Coffee, HelpCircle, Check, X, Layers, Clock, Database, Loader2
 } from 'lucide-react';
 import { 
   COMMON_MEDICINES, 
@@ -11,6 +11,7 @@ import {
   INSTRUCTION_PRESETS, 
   DURATION_PRESETS 
 } from '../data/medicinesData';
+import { searchMedicinesOnline } from '../lib/supabase';
 import { StackedFraction, renderWithFractions } from './StackedFraction';
 
 export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, onReorderMedicines, onUpdateMedicine }) => {
@@ -18,6 +19,10 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
   const [searchTerm, setSearchTerm] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
+
+  // Supabase search states
+  const [onlineSuggestions, setOnlineSuggestions] = useState([]);
+  const [isSearchingOnline, setIsSearchingOnline] = useState(false);
 
   const [currentMed, setCurrentMed] = useState({
     type: 'Tab',
@@ -34,15 +39,56 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
 
   const searchInputRef = useRef(null);
   const suggestionsRef = useRef(null);
+  const debounceTimerRef = useRef(null);
 
-  // Filtered medicine suggestions
-  const filteredSuggestions = COMMON_MEDICINES.filter((item) => {
+  // Filtered local medicine suggestions
+  const localSuggestions = COMMON_MEDICINES.filter((item) => {
+    const term = searchTerm.toLowerCase();
     const matchesSearch = 
-      item.brandName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.genericName.toLowerCase().includes(searchTerm.toLowerCase());
+      item.brandName.toLowerCase().includes(term) ||
+      item.genericName.toLowerCase().includes(term);
     const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
     return matchesSearch && matchesCategory;
-  }).slice(0, 15);
+  }).slice(0, 8);
+
+  // Debounced search to Supabase (21,000+ medicines)
+  useEffect(() => {
+    if (!searchTerm || searchTerm.trim().length < 2) {
+      setOnlineSuggestions([]);
+      setIsSearchingOnline(false);
+      return;
+    }
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(async () => {
+      setIsSearchingOnline(true);
+      try {
+        const results = await searchMedicinesOnline(searchTerm.trim(), 20);
+        setOnlineSuggestions(results);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setIsSearchingOnline(false);
+      }
+    }, 180);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [searchTerm]);
+
+  // Merge suggestions: prioritize matching online 21k medicines, then local
+  const combinedSuggestions = React.useMemo(() => {
+    if (onlineSuggestions.length > 0) {
+      return onlineSuggestions;
+    }
+    return localSuggestions;
+  }, [onlineSuggestions, localSuggestions]);
 
   // Handle outside click for suggestions dropdown
   useEffect(() => {
@@ -60,16 +106,35 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Normalize Type string for select dropdown
+  const normalizeType = (rawType = '') => {
+    const t = rawType.toLowerCase();
+    if (t.includes('tab')) return 'Tab';
+    if (t.includes('cap')) return 'Cap';
+    if (t.includes('syp') || t.includes('susp') || t.includes('syrup')) return 'Syp';
+    if (t.includes('drop')) return 'Drop';
+    if (t.includes('inj')) return 'Inj';
+    if (t.includes('inhal')) return 'Inhaler';
+    if (t.includes('sachet')) return 'Sachet';
+    if (t.includes('oint') || t.includes('cream') || t.includes('gel')) return 'Ointment';
+    return rawType || 'Tab';
+  };
+
   // Quick select a medicine from database
   const handleSelectMedicine = (med) => {
+    const medType = normalizeType(med.type);
+    const defaultUnit = medType === 'Cap' ? 'Capsule' : 
+                        medType === 'Syp' ? 'চামচ (Spoon)' :
+                        medType === 'Drop' ? 'ফোঁটা (Drop)' : 'Tablet';
+
     setCurrentMed({
-      type: med.type || 'Tab',
+      type: medType,
       brandName: med.brandName,
       genericName: med.genericName,
       strength: med.strength || '',
       dosage: med.defaultDosage || '1+0+1',
-      unit: med.defaultUnit || 'Tablet',
-      instruction: med.defaultInstruction || 'খাবার পরে',
+      unit: med.defaultUnit || defaultUnit,
+      instruction: med.defaultInstruction || 'খাবার পরে (After meal)',
       duration: med.defaultDuration || '৭ দিন',
       isFraction: med.defaultDosage?.includes('1/2') || med.defaultUnit?.includes('১/২') || false,
       fractionDetail: med.defaultDosage?.includes('1/2') ? { num: 1, den: 2, label: '1/2' } : null
@@ -230,8 +295,11 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
           {/* Medicine Search & Name Input */}
           <div className="col-span-12 sm:col-span-6 relative">
             <label className="block text-[11px] font-medium text-slate-600 mb-1 flex items-center justify-between">
-              <span>Medicine Name * (ব্র্যান্ডের নাম)</span>
-              <span className="text-[10px] text-teal-600">১২০+ ঔষধ তালিকাভুক্ত</span>
+              <span>Medicine Name * (ব্র্যান্ড বা জেনেরিকের নাম)</span>
+              <span className="text-[10px] text-teal-600 font-semibold flex items-center gap-1">
+                <Database className="w-3 h-3 text-teal-600 inline" />
+                ২১,০০০+ লাইভ ডেটাবেজ
+              </span>
             </label>
             <div className="relative">
               <input
@@ -244,60 +312,81 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
                   setShowSuggestions(true);
                 }}
                 onFocus={() => setShowSuggestions(true)}
-                placeholder="Type 1-2 letters (e.g. Napa, Seclo, Maxpro, Cef-3)..."
-                className="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                placeholder="Type 1-2 letters (e.g. Napa, Seclo, Maxpro, Cef-3, Ace)..."
+                className="w-full pl-8 pr-8 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
               />
               <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5" />
-              {currentMed.brandName && (
+              
+              {isSearchingOnline ? (
+                <Loader2 className="w-4 h-4 text-teal-600 animate-spin absolute right-2.5 top-2.5" />
+              ) : currentMed.brandName ? (
                 <button
                   type="button"
                   onClick={() => {
                     setCurrentMed({ ...currentMed, brandName: '', genericName: '', strength: '' });
                     setSearchTerm('');
                   }}
-                  className="absolute right-2 top-2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
-              )}
+              ) : null}
             </div>
 
             {/* Suggestions Dropdown */}
             {showSuggestions && (
               <div 
                 ref={suggestionsRef}
-                className="absolute z-30 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-64 overflow-y-auto"
+                className="absolute z-30 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-72 overflow-y-auto"
               >
-                <div className="p-2 border-b border-slate-100 flex items-center justify-between bg-slate-50 text-[11px] text-slate-500">
-                  <span>ক্লিক করে সিলেক্ট করুন (দ্রুত ইনপুট)</span>
-                  <span className="font-semibold text-teal-700">{filteredSuggestions.length} টি পাওয়া গেছে</span>
+                <div className="p-2 border-b border-slate-100 flex items-center justify-between bg-slate-50 text-[11px] text-slate-500 sticky top-0 z-10">
+                  <span className="flex items-center gap-1">
+                    <Database className="w-3 h-3 text-teal-600" />
+                    <span>ক্লিক করে সিলেক্ট করুন (Supabase 21k+ DB)</span>
+                  </span>
+                  <span className="font-semibold text-teal-700">
+                    {combinedSuggestions.length} টি পাওয়া গেছে
+                  </span>
                 </div>
-                {filteredSuggestions.length > 0 ? (
-                  filteredSuggestions.map((item) => (
+                {combinedSuggestions.length > 0 ? (
+                  combinedSuggestions.map((item, idx) => (
                     <button
-                      key={item.id}
+                      key={item.id ? `med-${item.id}-${idx}` : `med-idx-${idx}`}
                       type="button"
                       onClick={() => handleSelectMedicine(item)}
-                      className="w-full text-left px-3 py-2 hover:bg-teal-50/80 transition-colors flex items-center justify-between border-b border-slate-50 last:border-none cursor-pointer"
+                      className="w-full text-left px-3 py-2 hover:bg-teal-50/90 transition-colors flex items-center justify-between border-b border-slate-50 last:border-none cursor-pointer group"
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800">
-                          {item.type}
+                      <div className="flex items-center gap-2 max-w-[70%]">
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800 whitespace-nowrap">
+                          {normalizeType(item.type)}
                         </span>
-                        <div>
-                          <span className="font-semibold text-xs text-slate-800">{item.brandName}</span>
-                          <span className="text-[11px] text-slate-500 ml-1.5 font-normal">({item.genericName})</span>
+                        <div className="truncate">
+                          <span className="font-semibold text-xs text-slate-900 group-hover:text-teal-900">
+                            {item.brandName}
+                          </span>
+                          {item.genericName && (
+                            <span className="text-[11px] text-slate-500 ml-1.5 font-normal truncate">
+                              ({item.genericName})
+                            </span>
+                          )}
+                          {item.company && (
+                            <span className="block text-[10px] text-slate-400 truncate">
+                              {item.company}
+                            </span>
+                          )}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-[11px] font-medium text-teal-700 block">{item.strength}</span>
-                        <span className="text-[10px] text-slate-400">{item.defaultDosage}</span>
+                      <div className="text-right whitespace-nowrap pl-2">
+                        <span className="text-[11px] font-bold text-teal-700 block">{item.strength || ''}</span>
+                        {item.defaultDosage && (
+                          <span className="text-[10px] text-slate-400">{item.defaultDosage}</span>
+                        )}
                       </div>
                     </button>
                   ))
                 ) : (
                   <div className="p-3 text-center text-xs text-slate-500">
-                    তালিকাভুক্ত নেই, আপনি সরাসরি নতুন নাম টাইপ করতে পারেন
+                    {isSearchingOnline ? 'খোঁজা হচ্ছে...' : 'কোনো তথ্য পাওয়া যায়নি, আপনি সরাসরি নতুন নাম টাইপ করতে পারেন'}
                   </div>
                 )}
               </div>
