@@ -1,12 +1,14 @@
 import React from 'react';
 import { 
   Printer, Sparkles, Settings, RotateCcw, LayoutTemplate, 
-  Eye, Edit3, Columns, Heart, Stethoscope, Sun, Moon, Type
+  Eye, Edit3, Columns, Heart, Stethoscope, Sun, Moon, Type,
+  LayoutDashboard
 } from 'lucide-react';
 
 export const Navbar = ({ 
   viewMode, 
   onSetViewMode, 
+  onOpenDashboard,
   onOpenDoctorSettings, 
   onOpenTemplates, 
   onNewPrescription,
@@ -15,7 +17,8 @@ export const Navbar = ({
   onToggleDarkMode,
   selectedFontId,
   onSelectFontId,
-  fontPresets = []
+  fontPresets = [],
+  savedCount = 0
 }) => {
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-2xs no-print transition-all">
@@ -111,6 +114,22 @@ export const Navbar = ({
         {/* Right Actions */}
         <div className="flex items-center gap-1.5 sm:gap-2">
           
+          {/* Dashboard / History Button */}
+          <button
+            type="button"
+            onClick={onOpenDashboard}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white dark:bg-teal-600 dark:hover:bg-teal-700 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+            title="Dashboard, Patient History & Follow-ups"
+          >
+            <LayoutDashboard className="w-3.5 h-3.5 text-teal-400 dark:text-white" />
+            <span className="hidden sm:inline">Dashboard</span>
+            {savedCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-teal-500 text-white text-[10px] font-bold">
+                {savedCount}
+              </span>
+            )}
+          </button>
+
           {/* Multi-Font Selector Dropdown */}
           <div className="relative flex items-center">
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition-all">
@@ -176,14 +195,15 @@ export const Navbar = ({
             <RotateCcw className="w-4 h-4" />
           </button>
 
-          {/* Print Button */}
+          {/* Print and Save Button */}
           <button
             type="button"
             onClick={onPrint}
             className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer"
+            title="Print Prescription & Save to Database"
           >
             <Printer className="w-4 h-4" />
-            <span>Print / PDF</span>
+            <span>Print and Save</span>
           </button>
 
         </div>

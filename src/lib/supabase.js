@@ -65,3 +65,89 @@ export async function searchMedicinesOnline(query, limit = 20) {
     return [];
   }
 }
+
+/**
+ * Fetch all prescriptions from Supabase cloud
+ */
+export async function fetchPrescriptionsFromCloud(limit = 100) {
+  try {
+    const { data, error } = await supabase
+      .from('prescriptions')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.warn('Supabase fetch prescriptions error:', error);
+      return null;
+    }
+
+    return (data || []).map(row => ({
+      ...row.full_data,
+      id: row.id,
+      date: row.date,
+      diagnosis: row.diagnosis,
+      nextVisit: row.next_visit,
+      syncedWithCloud: true
+    }));
+  } catch (err) {
+    console.error('Failed to fetch prescriptions from Supabase:', err);
+    return null;
+  }
+}
+
+/**
+ * Save / Upsert a single prescription to Supabase cloud
+ */
+export async function savePrescriptionToCloud(record) {
+  if (!record || !record.id) return false;
+
+  try {
+    const payload = {
+      id: String(record.id),
+      date: record.date || new Date().toISOString().split('T')[0],
+      rx_id: record.patient?.rxId || record.rxId || null,
+      patient_name: record.patient?.name || null,
+      patient_age: record.patient?.age ? `${record.patient.age} ${record.patient.ageUnit || 'Y'}` : null,
+      patient_gender: record.patient?.gender || null,
+      diagnosis: record.diagnosis || null,
+      next_visit: record.nextVisit || null,
+      full_data: record
+    };
+
+    const { error } = await supabase
+      .from('prescriptions')
+      .upsert(payload, { onConflict: 'id' });
+
+    if (error) {
+      console.warn('Supabase save prescription error:', error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Failed to save prescription to Supabase:', err);
+    return false;
+  }
+}
+
+/**
+ * Delete a prescription from Supabase cloud
+ */
+export async function deletePrescriptionFromCloud(recordId) {
+  if (!recordId) return false;
+  try {
+    const { error } = await supabase
+      .from('prescriptions')
+      .delete()
+      .eq('id', String(recordId));
+
+    if (error) {
+      console.warn('Supabase delete error:', error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('Failed to delete prescription from Supabase:', err);
+    return false;
+  }
+}

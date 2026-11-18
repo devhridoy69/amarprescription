@@ -1,7 +1,7 @@
 import React from 'react';
 import { User, Calendar, Hash, HeartPulse, Scale, RefreshCw } from 'lucide-react';
 
-export const PatientInfoBar = ({ patient, onChange, onReset }) => {
+export const PatientInfoBar = ({ patient, onChange, onReset, isEditing = false, onCancelEdit = null }) => {
   const handleInputChange = (field, value) => {
     onChange({ ...patient, [field]: value });
   };
@@ -11,19 +11,36 @@ export const PatientInfoBar = ({ patient, onChange, onReset }) => {
       {/* Top Header */}
       <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></div>
+          <div className={`w-2 h-2 rounded-full ${isEditing ? 'bg-amber-500 animate-pulse' : 'bg-teal-500 animate-pulse'}`}></div>
           <span className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
             <User className="w-3.5 h-3.5 text-teal-600" /> Patient Information (রোগীর তথ্য)
           </span>
+          {isEditing && (
+            <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold border border-amber-300">
+              এডিটিং মোড (Re-editing)
+            </span>
+          )}
         </div>
-        <button
-          type="button"
-          onClick={onReset}
-          className="text-[11px] text-slate-500 hover:text-rose-600 flex items-center gap-1 transition-colors px-2 py-1 rounded-md hover:bg-rose-50 font-medium cursor-pointer"
-          title="Reset Patient Details"
-        >
-          <RefreshCw className="w-3 h-3" /> New Patient
-        </button>
+        <div className="flex items-center gap-2">
+          {isEditing && onCancelEdit && (
+            <button
+              type="button"
+              onClick={onCancelEdit}
+              className="text-[11px] text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-md font-semibold transition-colors cursor-pointer"
+              title="এডিটিং শেষ করে নতুন প্রেসক্রিপশনে যান"
+            >
+              Cancel Edit
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onReset}
+            className="text-[11px] text-slate-500 hover:text-rose-600 flex items-center gap-1 transition-colors px-2 py-1 rounded-md hover:bg-rose-50 font-medium cursor-pointer"
+            title="Reset Patient Details"
+          >
+            <RefreshCw className="w-3 h-3" /> New Patient
+          </button>
+        </div>
       </div>
 
       {/* Robust Responsive Grid - Avoids Narrow Column Squishing */}

@@ -7,10 +7,12 @@ import AdviceSection from './components/AdviceSection';
 import PrescriptionPreview from './components/PrescriptionPreview';
 import DoctorProfileModal from './components/DoctorProfileModal';
 import TemplatesModal from './components/TemplatesModal';
+import DashboardModal from './components/DashboardModal';
 import MobileSectionTabs from './components/MobileSectionTabs';
 import { DEFAULT_DOCTOR } from './data/defaultDoctor';
 import { PRESCRIPTION_TEMPLATES } from './data/templatesData';
 import { FONT_PAIR_PRESETS } from './data/fontPresets';
+import { fetchPrescriptionsFromCloud, savePrescriptionToCloud, deletePrescriptionFromCloud } from './lib/supabase';
 
 export function App() {
   // Load doctor profile from localStorage or default
@@ -51,8 +53,157 @@ export function App() {
   // UI Modals & Views
   const [isDoctorModalOpen, setIsDoctorModalOpen] = useState(false);
   const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false);
+  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+  const [editingRecordId, setEditingRecordId] = useState(null); // Track if currently editing a saved record
+  const [saveStatusFeedback, setSaveStatusFeedback] = useState(null); // 'saved' | 'updated' | 'error'
   const [viewMode, setViewMode] = useState('split'); // 'split' | 'editor' | 'preview'
   const [mobileTab, setMobileTab] = useState('medicines'); // 'patient' | 'clinical' | 'medicines' | 'advice'
+
+  // Patient Prescription Records / History (localStorage + Supabase Cloud Sync)
+  const [patientRecords, setPatientRecords] = useState(() => {
+    try {
+      const saved = localStorage.getItem('amar_rx_records');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      // fallback
+    }
+    return [];
+  });
+
+  // Sync with Supabase cloud on initial load
+  useEffect(() => {
+    async function loadCloudRecords() {
+      try {
+        const cloudData = await fetchPrescriptionsFromCloud();
+        if (cloudData && cloudData.length > 0) {
+          // Merge local & cloud records, avoiding duplicates
+          setPatientRecords(prev => {
+            const existingIds = new Set(prev.map(p => String(p.id)));
+            const newFromCloud = cloudData.filter(c => !existingIds.has(String(c.id)));
+            const merged = [...newFromCloud, ...prev];
+            try {
+              localStorage.setItem('amar_rx_records', JSON.stringify(merged));
+            } catch (e) {}
+            return merged;
+          });
+        }
+      } catch (err) {
+        console.warn('Initial cloud sync notice:', err);
+      }
+    }
+    loadCloudRecords();
+  }, []);
+
+  // Save records to localStorage and async backup to Supabase
+  const saveRecordsToStorage = (records, recordToSync = null) => {
+    setPatientRecords(records);
+    try {
+      localStorage.setItem('amar_rx_records', JSON.stringify(records));
+    } catch (e) {
+      console.error('Failed to save patient records to storage:', e);
+    }
+
+    // Async push to Supabase cloud
+    if (recordToSync) {
+      savePrescriptionToCloud(recordToSync).catch(err => {
+        console.warn('Cloud sync error:', err);
+      });
+    }
+  };
+
+  // Helper to save or update current prescription into history
+  const saveCurrentPrescriptionToHistory = () => {
+    if (!patient.name && medicines.length === 0 && !diagnosis) {
+      return null; // Blank prescription, no need to auto-save
+    }
+
+    const currentRecordId = editingRecordId || ('rec-' + (patient.rxId || Date.now()));
+
+    const newRecord = {
+      id: currentRecordId,
+      date: patient.date || new Date().toISOString().split('T')[0],
+      timestamp: Date.now(),
+      patient: { ...patient },
+      complaints: [...complaints],
+      vitals: { ...vitals },
+      diagnosis,
+      investigations: [...investigations],
+      medicines: [...medicines],
+      adviceList: [...adviceList],
+      nextVisit,
+      specialNote,
+      isFollowUpDone: false,
+      followUpDate: nextVisit ? patient.date : null
+    };
+
+    const existingIdx = patientRecords.findIndex(r => 
+      r.id === currentRecordId || 
+      (r.patient?.rxId && patient.rxId && r.patient.rxId === patient.rxId)
+    );
+
+    let updated;
+    if (existingIdx >= 0) {
+      updated = [...patientRecords];
+      updated[existingIdx] = { ...updated[existingIdx], ...newRecord };
+    } else {
+      updated = [newRecord, ...patientRecords];
+    }
+
+    setEditingRecordId(currentRecordId);
+    saveRecordsToStorage(updated, newRecord);
+    return newRecord;
+  };
+
+  // Load a historic prescription into editor for Re-Editing
+  const handleLoadPrescription = (record) => {
+    if (!record) return;
+    setEditingRecordId(record.id);
+    if (record.patient) setPatient(record.patient);
+    if (record.complaints) setComplaints(record.complaints);
+    if (record.vitals) setVitals(record.vitals);
+    setDiagnosis(record.diagnosis || '');
+    if (record.investigations) setInvestigations(record.investigations);
+    if (record.medicines) setMedicines(record.medicines);
+    if (record.adviceList) setAdviceList(record.adviceList);
+    setNextVisit(record.nextVisit || '');
+    setSpecialNote(record.specialNote || '');
+  };
+
+  // 1-Click direct reprint from history
+  const handleReprintPrescription = (record) => {
+    handleLoadPrescription(record);
+    setTimeout(() => {
+      window.print();
+    }, 150);
+  };
+
+  // Delete a patient record from history and Supabase cloud
+  const handleDeleteRecord = (recordId) => {
+    const updated = patientRecords.filter(r => r.id !== recordId);
+    setPatientRecords(updated);
+    try {
+      localStorage.setItem('amar_rx_records', JSON.stringify(updated));
+    } catch (e) {}
+    deletePrescriptionFromCloud(recordId);
+
+    // If currently editing this record, reset editing state
+    if (editingRecordId === recordId) {
+      setEditingRecordId(null);
+    }
+  };
+
+  // Toggle follow-up complete/pending status
+  const handleToggleFollowUpStatus = (recordId) => {
+    let toggledRecord = null;
+    const updated = patientRecords.map(r => {
+      if (r.id === recordId) {
+        toggledRecord = { ...r, isFollowUpDone: !r.isFollowUpDone };
+        return toggledRecord;
+      }
+      return r;
+    });
+    saveRecordsToStorage(updated, toggledRecord);
+  };
 
   // Dark Mode State with localStorage persistence
   const [darkMode, setDarkMode] = useState(() => {
@@ -162,34 +313,37 @@ export function App() {
     setNextVisit(tpl.nextVisit || '');
   };
 
-  // Reset entire prescription for new patient
+  // Reset entire prescription for new patient (Auto-saves current to history if has data)
   const handleNewPrescription = () => {
-    if (confirm('নতুন প্রেসক্রিপশন শুরু করবেন? বর্তমান ডাটা ক্লিয়ার হবে।')) {
-      setPatient({
-        name: '',
-        age: '',
-        ageUnit: 'Y',
-        gender: 'Male',
-        date: new Date().toISOString().split('T')[0],
-        rxId: 'RX-' + Math.floor(1000 + Math.random() * 9000),
-        weight: '',
-        bp: ''
-      });
-      setComplaints([]);
-      setVitals({ bp: '', pulse: '', temp: '', weight: '', spo2: '', rbs: '' });
-      setDiagnosis('');
-      setInvestigations([]);
-      setMedicines([]);
-      setAdviceList([
-        'প্রচুর পরিমাণে বিশুদ্ধ পানি পান করুন',
-        'ভরা পেটে ওষুধ সেবন করবেন'
-      ]);
-      setNextVisit('৭ দিন পর');
-      setSpecialNote('');
+    // If current prescription has patient name or medicines, save to history before reset
+    if (patient.name || medicines.length > 0) {
+      saveCurrentPrescriptionToHistory();
     }
+
+    setEditingRecordId(null);
+    setPatient({
+      name: '',
+      age: '',
+      ageUnit: 'Y',
+      gender: 'Male',
+      date: new Date().toISOString().split('T')[0],
+      rxId: 'RX-' + Math.floor(1000 + Math.random() * 9000),
+      weight: '',
+      bp: ''
+    });
+    setComplaints([]);
+    setVitals({ bp: '', pulse: '', temp: '', weight: '', spo2: '', rbs: '' });
+    setDiagnosis('');
+    setInvestigations([]);
+    setMedicines([]);
+    setAdviceList([]);
+    setNextVisit('');
+    setSpecialNote('');
   };
 
   const handlePrint = () => {
+    // Auto-save to patient records upon print so history is always current
+    saveCurrentPrescriptionToHistory();
     window.print();
   };
 
@@ -200,6 +354,7 @@ export function App() {
       <Navbar
         viewMode={viewMode}
         onSetViewMode={setViewMode}
+        onOpenDashboard={() => setIsDashboardOpen(true)}
         onOpenDoctorSettings={() => setIsDoctorModalOpen(true)}
         onOpenTemplates={() => setIsTemplatesModalOpen(true)}
         onNewPrescription={handleNewPrescription}
@@ -209,6 +364,7 @@ export function App() {
         selectedFontId={selectedFontId}
         onSelectFontId={handleSelectFontId}
         fontPresets={FONT_PAIR_PRESETS}
+        savedCount={patientRecords.length}
       />
 
       {/* Main Content Area */}
@@ -245,14 +401,19 @@ export function App() {
                 <PatientInfoBar
                   patient={patient}
                   onChange={setPatient}
-                  onReset={() => setPatient(prev => ({
-                    ...prev,
-                    name: '',
-                    age: '',
-                    weight: '',
-                    bp: '',
-                    rxId: 'RX-' + Math.floor(1000 + Math.random() * 9000)
-                  }))}
+                  isEditing={Boolean(editingRecordId)}
+                  onCancelEdit={() => setEditingRecordId(null)}
+                  onReset={() => {
+                    setEditingRecordId(null);
+                    setPatient(prev => ({
+                      ...prev,
+                      name: '',
+                      age: '',
+                      weight: '',
+                      bp: '',
+                      rxId: 'RX-' + Math.floor(1000 + Math.random() * 9000)
+                    }));
+                  }}
                 />
               </div>
 
@@ -295,7 +456,7 @@ export function App() {
             </div>
           )}
 
-          {/* RIGHT: Live A4 Prescription Preview (WYSIWYG) */}
+          {/* RIGHT: Live Prescription Preview (WYSIWYG) */}
           {(viewMode === 'preview' || viewMode === 'split') && (
             <div className={`print:w-full print:max-w-full print:block ${
               viewMode === 'split' ? 'lg:col-span-6 xl:col-span-6' : 'max-w-[210mm] mx-auto w-full'
@@ -317,6 +478,7 @@ export function App() {
                   selectedFont={selectedFont}
                   onSelectFontId={handleSelectFontId}
                   fontPresets={FONT_PAIR_PRESETS}
+                  onPrint={handlePrint}
                 />
               </div>
             </div>
@@ -339,6 +501,20 @@ export function App() {
         isOpen={isTemplatesModalOpen}
         onClose={() => setIsTemplatesModalOpen(false)}
         onSelectTemplate={handleApplyTemplate}
+      />
+
+      {/* Chamber Dashboard & Patient History / Follow-up Checklist Modal */}
+      <DashboardModal
+        isOpen={isDashboardOpen}
+        onClose={() => setIsDashboardOpen(false)}
+        records={patientRecords}
+        onLoadPrescription={handleLoadPrescription}
+        onReprintPrescription={handleReprintPrescription}
+        onDeleteRecord={handleDeleteRecord}
+        onToggleFollowUpStatus={handleToggleFollowUpStatus}
+        onNewPrescription={handleNewPrescription}
+        darkMode={darkMode}
+        activeEditingRecordId={editingRecordId}
       />
 
     </div>

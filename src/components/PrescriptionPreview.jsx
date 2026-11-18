@@ -26,7 +26,8 @@ export const PrescriptionPreview = ({
   onUpdatePrintSettings = () => {},
   selectedFont = null,
   onSelectFontId = () => {},
-  fontPresets = []
+  fontPresets = [],
+  onPrint = null
 }) => {
   const [showConfig, setShowConfig] = useState(false);
 
@@ -42,7 +43,11 @@ export const PrescriptionPreview = ({
   };
 
   const handlePrint = () => {
-    window.print();
+    if (onPrint) {
+      onPrint();
+    } else {
+      window.print();
+    }
   };
 
   // Dimensions based on paperSize for Screen display
@@ -530,8 +535,9 @@ export const PrescriptionPreview = ({
               type="button"
               onClick={handlePrint}
               className="flex items-center gap-1.5 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer"
+              title="Print Prescription & Save to Database"
             >
-              <Printer className="w-4 h-4" /> Print / Save as PDF
+              <Printer className="w-4 h-4" /> Print and Save
             </button>
           </div>
         </div>
