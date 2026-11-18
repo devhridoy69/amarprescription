@@ -504,7 +504,7 @@ export const PrescriptionPreview = ({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-            <span className="text-xs font-bold text-slate-800">A4 Prescription Preview</span>
+            <span className="text-xs font-bold text-slate-800">Prescription Preview</span>
             <span className="text-[11px] text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full font-medium">
               {settings.pageCount} Page{settings.pageCount > 1 ? 's' : ''}
             </span>
