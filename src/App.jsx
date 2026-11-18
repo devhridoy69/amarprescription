@@ -466,10 +466,13 @@ export function App() {
     } catch (e) {}
   };
 
+  // Determine if authentication is active
+  const isAuthenticated = Boolean(currentUser || adminUser);
+
   return (
     <div className="min-h-screen bg-slate-100/70 text-slate-800 flex flex-col font-sans">
       
-      {/* If Admin is logged in, show dedicated Admin Panel View ONLY */}
+      {/* 1. If Admin is logged in, show dedicated Admin Panel View ONLY */}
       {adminUser ? (
         <AdminPanelModal
           isOpen={true}
@@ -478,7 +481,22 @@ export function App() {
           onAdminLogout={handleAdminLogout}
           darkMode={darkMode}
         />
+      ) : !currentUser ? (
+        /* 2. STRICT SECURITY GATE: If user is not logged in, DO NOT RENDER any dashboard, editor, or prescription UI! */
+        <div className="min-h-screen w-full flex items-center justify-center bg-slate-900 p-4 relative overflow-hidden">
+          {/* Subtle background glow */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+          <AuthModal
+            isOpen={true}
+            onClose={() => {}}
+            onLoginSuccess={handleLoginSuccess}
+            onAdminLoginSuccess={handleAdminLoginSuccess}
+            isForced={true}
+          />
+        </div>
       ) : (
+        /* 3. Doctor is fully authenticated: Render doctor workspace */
         <>
           {/* Top Navbar */}
           <Navbar
@@ -652,14 +670,16 @@ export function App() {
         activeEditingRecordId={editingRecordId}
       />
 
-      {/* Doctor Authentication (Mandatory Gate: User MUST Login or Register to use) */}
-      <AuthModal
-        isOpen={isAuthModalOpen || (!currentUser && !adminUser)}
-        onClose={() => setIsAuthModalOpen(false)}
-        onLoginSuccess={handleLoginSuccess}
-        onAdminLoginSuccess={handleAdminLoginSuccess}
-        isForced={!currentUser && !adminUser}
-      />
+      {/* Doctor Authentication Modal for manual re-login if already logged in */}
+      {currentUser && isAuthModalOpen && (
+        <AuthModal
+          isOpen={true}
+          onClose={() => setIsAuthModalOpen(false)}
+          onLoginSuccess={handleLoginSuccess}
+          onAdminLoginSuccess={handleAdminLoginSuccess}
+          isForced={false}
+        />
+      )}
 
         </>
       )}
