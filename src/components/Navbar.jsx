@@ -195,17 +195,6 @@ export const Navbar = ({
             <RotateCcw className="w-4 h-4" />
           </button>
 
-          {/* Print and Save Button */}
-          <button
-            type="button"
-            onClick={onPrint}
-            className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer"
-            title="Print Prescription & Save to Database"
-          >
-            <Printer className="w-4 h-4" />
-            <span>Print and Save</span>
-          </button>
-
         </div>
 
       </div>
