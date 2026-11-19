@@ -754,11 +754,21 @@ export function App() {
         currentUser={currentUser}
       />
 
-      {/* 1-Click Clinical Templates Modal */}
+      {/* 1-Click Clinical & Custom Templates Modal */}
       <TemplatesModal
         isOpen={isTemplatesModalOpen}
         onClose={() => setIsTemplatesModalOpen(false)}
         onSelectTemplate={handleApplyTemplate}
+        currentPrescription={{
+          complaints,
+          vitals,
+          diagnosis,
+          investigations,
+          medicines,
+          adviceList,
+          nextVisit,
+          specialNote
+        }}
       />
 
       {/* Chamber Dashboard & Patient History / Follow-up Checklist Modal */}

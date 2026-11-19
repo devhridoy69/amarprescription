@@ -1,8 +1,8 @@
 import React from 'react';
 import { 
-  Printer, Sparkles, Settings, RotateCcw, LayoutTemplate, 
-  Eye, Edit3, Columns, Heart, Stethoscope, Sun, Moon, Type,
-  LayoutDashboard, User, LogIn, LogOut, ShieldCheck, ShieldAlert
+  Eye, Edit3, Columns, Sun, Moon, Type,
+  LayoutDashboard, LogIn, LogOut, ShieldAlert,
+  RotateCcw, Sparkles
 } from 'lucide-react';
 
 export const Navbar = ({ 
@@ -26,37 +26,37 @@ export const Navbar = ({
   onLogout = () => {}
 }) => {
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-2xs no-print transition-all">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-2">
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-2xs no-print transition-colors duration-200">
+      <div className="max-w-[1700px] mx-auto px-3 sm:px-5 h-15 flex items-center justify-between gap-3">
         
-        {/* Brand & Official Logo */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
+        {/* LEFT: Brand Logo & Title */}
+        <div className="flex items-center gap-3 shrink-0">
           <img 
             src="/logo.png" 
             alt="আমার প্রেসক্রিপশন" 
-            className="h-10 sm:h-11 w-auto object-contain shrink-0 drop-shadow-xs"
+            className="h-9 sm:h-10 w-auto object-contain drop-shadow-xs"
           />
-          <div>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="text-[10px] font-bold tracking-wider text-teal-700 dark:text-teal-400 uppercase">
+          <div className="hidden xl:block">
+            <div className="flex items-center gap-1.5 leading-none">
+              <span className="text-[11px] font-extrabold tracking-wider text-teal-800 uppercase">
                 Doctor Rx Suite
               </span>
-              <span className="text-[10px] text-slate-300 dark:text-slate-600">•</span>
-              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
-                By Ayan Tech
+              <span className="text-[10px] text-slate-300">•</span>
+              <span className="text-[10px] font-bold text-slate-500">
+                Ayan Tech
               </span>
             </div>
           </div>
         </div>
 
-        {/* Center: Device View Mode Switcher (Editor / Split / Preview) */}
-        <div className="hidden md:flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold">
+        {/* CENTER: Clean View Switcher (Desktop) */}
+        <div className="hidden lg:flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold shrink-0">
           <button
             type="button"
             onClick={() => onSetViewMode('editor')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
               viewMode === 'editor'
-                ? 'bg-white text-teal-900 shadow-xs'
+                ? 'bg-white text-teal-900 shadow-xs font-bold'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
             title="Show only editor"
@@ -70,7 +70,7 @@ export const Navbar = ({
             onClick={() => onSetViewMode('split')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
               viewMode === 'split'
-                ? 'bg-white text-teal-900 shadow-xs'
+                ? 'bg-white text-teal-900 shadow-xs font-bold'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
             title="Side by side live view"
@@ -84,7 +84,7 @@ export const Navbar = ({
             onClick={() => onSetViewMode('preview')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
               viewMode === 'preview'
-                ? 'bg-white text-teal-900 shadow-xs'
+                ? 'bg-white text-teal-900 shadow-xs font-bold'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
             title="Show print preview"
@@ -95,7 +95,7 @@ export const Navbar = ({
         </div>
 
         {/* Mobile View Toggle */}
-        <div className="flex md:hidden items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs">
+        <div className="flex lg:hidden items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs shrink-0">
           <button
             type="button"
             onClick={() => onSetViewMode('editor')}
@@ -116,37 +116,49 @@ export const Navbar = ({
           </button>
         </div>
 
-        {/* Right Actions */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        {/* RIGHT: Action Controls */}
+        <div className="flex items-center gap-2 shrink-0">
           
-          {/* Dashboard / History Button */}
-          <button
-            type="button"
-            onClick={onOpenDashboard}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white dark:bg-teal-600 dark:hover:bg-teal-700 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
-            title="Dashboard, Patient History & Follow-ups"
-          >
-            <LayoutDashboard className="w-3.5 h-3.5 text-teal-400 dark:text-white" />
-            <span className="hidden sm:inline">Dashboard</span>
-            {savedCount > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-teal-500 text-white text-[10px] font-bold">
-                {savedCount}
-              </span>
-            )}
-          </button>
+          {/* Group 1: Clinical Tools (Dashboard, Templates, Font) */}
+          <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
+            {/* Dashboard Button */}
+            <button
+              type="button"
+              onClick={onOpenDashboard}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer shrink-0"
+              title="Chamber Dashboard & Patient Records"
+            >
+              <LayoutDashboard className="w-3.5 h-3.5 text-teal-200" />
+              <span>Dashboard</span>
+              {savedCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-teal-500 text-white text-[10px] font-bold">
+                  {savedCount}
+                </span>
+              )}
+            </button>
 
-          {/* Multi-Font Selector Dropdown */}
-          <div className="relative flex items-center">
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition-all">
-              <Type className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
+            {/* Templates Button */}
+            <button
+              type="button"
+              onClick={onOpenTemplates}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-white hover:bg-teal-50 text-slate-800 border border-slate-200 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0"
+              title="1-Click Clinical Templates & Custom Builder"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+              <span className="hidden sm:inline">Templates</span>
+            </button>
+
+            {/* Typography Font Selector */}
+            <div className="hidden md:flex items-center gap-1 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700">
+              <Type className="w-3.5 h-3.5 text-teal-600 shrink-0" />
               <select
                 value={selectedFontId}
                 onChange={(e) => onSelectFontId(e.target.value)}
-                className="bg-transparent border-none text-xs font-semibold focus:outline-hidden cursor-pointer pr-1 text-slate-800 dark:text-slate-200"
-                title="Change Typography Font (রিয়েলটাইম ফন্ট পরিবর্তন)"
+                className="bg-transparent border-none text-xs font-semibold focus:outline-hidden cursor-pointer max-w-[130px] lg:max-w-[170px] truncate pr-1 text-slate-800"
+                title="Change Typography Font (রিয়েলটাইম ফন্ট নির্বাচন)"
               >
                 {fontPresets.map((f) => (
-                  <option key={f.id} value={f.id} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100">
+                  <option key={f.id} value={f.id} className="bg-white text-slate-900">
                     {f.name}
                   </option>
                 ))}
@@ -154,52 +166,44 @@ export const Navbar = ({
             </div>
           </div>
 
-          {/* Templates Button */}
-          <button
-            type="button"
-            onClick={onOpenTemplates}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
-            title="1-Click Clinical Templates"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-            <span className="hidden sm:inline">Templates</span>
-          </button>
+          <div className="h-6 w-[1px] bg-slate-200 hidden sm:block"></div>
 
-          {/* Doctor Profile Settings */}
-          <button
-            type="button"
-            onClick={onOpenDoctorSettings}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-all cursor-pointer"
-            title="Doctor & Chamber Settings"
-          >
-            <Settings className="w-3.5 h-3.5" />
-            <span className="hidden lg:inline">Doctor Profile</span>
-          </button>
-
-          {/* User Account / Admin Badge / Registration Menu */}
+          {/* Group 2: Doctor Profile & Account */}
           {adminUser ? (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-teal-400 border border-teal-500/40 rounded-xl text-xs font-bold shadow-xs">
+            <button
+              type="button"
+              onClick={onOpenAdminPanel}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-teal-400 border border-teal-500/40 rounded-xl text-xs font-bold shadow-xs hover:bg-slate-800 cursor-pointer"
+            >
               <ShieldAlert className="w-4 h-4 text-rose-400" />
-              <span>Admin Panel</span>
-            </div>
+              <span className="hidden sm:inline">Admin Panel</span>
+            </button>
           ) : currentUser ? (
-            <div className="flex items-center gap-1.5 bg-teal-50 dark:bg-teal-950/70 border border-teal-200 dark:border-teal-800 py-1 px-2.5 rounded-xl">
-              <div className="w-6 h-6 rounded-lg bg-teal-600 text-white flex items-center justify-center text-xs font-bold shadow-2xs">
-                {currentUser.full_name ? currentUser.full_name.charAt(0).toUpperCase() : 'D'}
-              </div>
-              <div className="hidden sm:block text-left">
-                <span className="block text-[11px] font-bold text-teal-900 dark:text-teal-200 leading-tight truncate max-w-[100px]">
-                  {currentUser.full_name || 'Dr. Logged In'}
-                </span>
-                <span className="block text-[9px] text-teal-600 dark:text-teal-400 font-mono">
-                  {currentUser.phone}
-                </span>
-              </div>
+            <div className="flex items-center gap-1.5 bg-teal-50 border border-teal-200 py-1 px-2.5 rounded-xl">
+              <button
+                type="button"
+                onClick={onOpenDoctorSettings}
+                className="flex items-center gap-2 hover:opacity-85 transition-opacity text-left cursor-pointer"
+                title="ডাক্তারের প্রোফাইল ও চেম্বার সেটিংস"
+              >
+                <div className="w-7 h-7 rounded-lg bg-teal-700 text-white flex items-center justify-center text-xs font-extrabold shadow-2xs shrink-0">
+                  {currentUser.full_name ? currentUser.full_name.charAt(0).toUpperCase() : 'D'}
+                </div>
+                <div className="hidden sm:block leading-tight">
+                  <span className="block text-xs font-bold text-teal-950 truncate max-w-[120px]">
+                    {currentUser.full_name || 'Dr. Chamber'}
+                  </span>
+                  <span className="block text-[10px] text-teal-700 font-mono">
+                    {currentUser.phone}
+                  </span>
+                </div>
+              </button>
+
               <button
                 type="button"
                 onClick={onLogout}
                 className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors cursor-pointer ml-1"
-                title="লগআউট করুন"
+                title="লগআউট"
               >
                 <LogOut className="w-3.5 h-3.5" />
               </button>
@@ -208,37 +212,38 @@ export const Navbar = ({
             <button
               type="button"
               onClick={onOpenAuth}
-              className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all cursor-pointer animate-in fade-in"
-              title="ডাক্তার লগইন বা নতুন রেজিস্ট্রেশন মেনু"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold shadow-xs hover:shadow-md transition-all cursor-pointer"
+              title="ডাক্তার লগইন বা রেজিস্ট্রেশন"
             >
               <LogIn className="w-3.5 h-3.5" />
               <span>লগইন / রেজিস্টার</span>
             </button>
           )}
 
-          {/* Dark / Light Mode Toggle Switch */}
-          <button
-            type="button"
-            onClick={onToggleDarkMode}
-            className={`p-2 rounded-xl transition-all cursor-pointer flex items-center justify-center ${
-              darkMode 
-                ? 'bg-amber-400/20 text-amber-300 hover:bg-amber-400/30' 
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-            title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-          >
-            {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
-          </button>
+          {/* Group 3: Quick Utilities (Dark mode & New Rx) */}
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={onToggleDarkMode}
+              className={`p-2 rounded-xl transition-all cursor-pointer flex items-center justify-center border ${
+                darkMode 
+                  ? 'bg-amber-400/20 text-amber-300 border-amber-400/30 hover:bg-amber-400/30' 
+                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+              }`}
+              title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            >
+              {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+            </button>
 
-          {/* New Prescription */}
-          <button
-            type="button"
-            onClick={onNewPrescription}
-            className="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
-            title="Reset / New Prescription"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </button>
+            <button
+              type="button"
+              onClick={onNewPrescription}
+              className="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer border border-transparent hover:border-rose-200"
+              title="New Prescription (নতুন প্রেসক্রিপশন)"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+          </div>
 
         </div>
 
