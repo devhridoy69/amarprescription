@@ -226,22 +226,45 @@ export async function fetchSinglePrescriptionForPublic(prescriptionIdOrRxId) {
       };
     }
 
-    // 2. Try finding by rx_id
+    // 2. Try finding by rx_id (both exact and case-insensitive)
     const { data: byRx, error: err2 } = await supabase
       .from('prescriptions')
       .select('*')
-      .eq('rx_id', cleanId)
-      .maybeSingle();
+      .ilike('rx_id', cleanId)
+      .limit(1);
 
-    if (byRx && byRx.full_data) {
+    if (byRx && byRx.length > 0 && byRx[0].full_data) {
+      const match = byRx[0];
       return {
-        ...byRx.full_data,
-        id: byRx.id,
-        date: byRx.date,
-        diagnosis: byRx.diagnosis,
-        nextVisit: byRx.next_visit,
-        patientName: byRx.patient_name
+        ...match.full_data,
+        id: match.id,
+        date: match.date,
+        diagnosis: match.diagnosis,
+        nextVisit: match.next_visit,
+        patientName: match.patient_name
       };
+    }
+
+    // 3. Try finding without 'rec-' or 'RX-' prefix
+    const strippedId = cleanId.replace(/^rec-/, '').replace(/^rx-/i, '');
+    if (strippedId && strippedId !== cleanId) {
+      const { data: byPartial } = await supabase
+        .from('prescriptions')
+        .select('*')
+        .or(`id.ilike.%${strippedId}%,rx_id.ilike.%${strippedId}%`)
+        .limit(1);
+
+      if (byPartial && byPartial.length > 0 && byPartial[0].full_data) {
+        const match = byPartial[0];
+        return {
+          ...match.full_data,
+          id: match.id,
+          date: match.date,
+          diagnosis: match.diagnosis,
+          nextVisit: match.next_visit,
+          patientName: match.patient_name
+        };
+      }
     }
 
     // 3. Fallback check local storage if offline or running in same chamber

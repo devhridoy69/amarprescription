@@ -110,7 +110,7 @@ export const PrescriptionPreview = ({
                   <div className="flex flex-col items-center">
                     <div className="p-1 bg-white border border-slate-300 rounded shadow-2xs">
                       <QRCodeSVG
-                        value={`${typeof window !== 'undefined' ? window.location.origin : 'https://hridoyislam.me'}/?rx=${encodeURIComponent(patient.rxId)}`}
+                        value={`https://hridoyislam.me/?rx=${encodeURIComponent(patient.rxId)}`}
                         size={56}
                         level="M"
                         includeMargin={false}

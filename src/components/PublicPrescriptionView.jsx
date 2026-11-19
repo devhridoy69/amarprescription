@@ -21,11 +21,12 @@ export const PublicPrescriptionView = ({ rxId, onBackToApp = null }) => {
 
       setLoading(true);
       try {
+        console.log('Fetching public rx for:', rxId);
         const data = await fetchSinglePrescriptionForPublic(rxId);
         if (data) {
           setPrescription(data);
         } else {
-          setError('কোনো প্রেসক্রিপশন পাওয়া যায়নি। অনুগ্রহ করে আপনার প্রেসক্রিপশন আইডির সঠিকতা যাচাই করুন।');
+          setError(`প্রেসক্রিপশনটি পাওয়া যায়নি (${rxId})। ডাক্তার প্রেসক্রিপশনটি প্রিন্ট বা সেভ করলে ক্লাউড ডেটাবেজে সংরক্ষিত হয়ে এখানে দেখা যাবে।`);
         }
       } catch (err) {
         console.error(err);
