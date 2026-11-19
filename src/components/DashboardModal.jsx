@@ -87,7 +87,7 @@ export const DashboardModal = ({
   const todayFollowUps = followUpRecords.filter(f => f.isToday && !f.isCompleted).length;
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 ${darkMode ? 'dark' : ''}`}>
+    <div className={`no-print fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 ${darkMode ? 'dark' : ''}`}>
       <div className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
         
         {/* Header */}

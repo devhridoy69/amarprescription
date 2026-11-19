@@ -226,9 +226,11 @@ export function App() {
   // 1-Click direct reprint from history
   const handleReprintPrescription = (record) => {
     handleLoadPrescription(record);
+    // Close dashboard modal so screen is clean
+    setIsDashboardOpen(false);
     setTimeout(() => {
       window.print();
-    }, 150);
+    }, 250);
   };
 
   // Delete a patient record from history and Supabase cloud
