@@ -501,89 +501,91 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
             </div>
           </div>
 
-          {/* Special Drop (ড্রপ / ফোঁটা ও দিনের বার) Interactive Builder Bar */}
-          <div className="pt-2 pb-2 px-3 border-t border-sky-200/80 bg-gradient-to-r from-sky-50/90 via-sky-50/50 to-teal-50/40 -mx-3 rounded-lg space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-1 text-[11px]">
-              <span className="font-bold text-sky-950 flex items-center gap-1.5">
-                <span className="text-sm">💧</span>
-                <span>Drop Builder (ড্রপ ও দিনের পরিমাণ নির্বাচন):</span>
-              </span>
-              <span className="text-[10.5px] font-semibold text-sky-800 bg-sky-100/80 px-2 py-0.5 rounded border border-sky-200">
-                {currentMed.dosage?.includes('ফোঁটা') ? currentMed.dosage : `প্রতিবার ২ ফোঁটা করে (${dropTimes})`}
-              </span>
-            </div>
+          {/* Special Drop (ড্রপ / ফোঁটা ও দিনের বার) Interactive Builder Bar - Only shown when medicine type is Drop */}
+          {currentMed.type === 'Drop' && (
+            <div className="pt-2 pb-2 px-3 border-t border-sky-200/80 bg-gradient-to-r from-sky-50/90 via-sky-50/50 to-teal-50/40 -mx-3 rounded-lg space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-1 text-[11px]">
+                <span className="font-bold text-sky-950 flex items-center gap-1.5">
+                  <span className="text-sm">💧</span>
+                  <span>Drop Builder (ড্রপ ও দিনের পরিমাণ নির্বাচন):</span>
+                </span>
+                <span className="text-[10.5px] font-semibold text-sky-800 bg-sky-100/80 px-2 py-0.5 rounded border border-sky-200">
+                  {currentMed.dosage?.includes('ফোঁটা') ? currentMed.dosage : `প্রতিবার ২ ফোঁটা করে (${dropTimes})`}
+                </span>
+              </div>
 
-            {/* Step 1: কত ফোঁটা নির্বাচন */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[11px] font-semibold text-slate-600 min-w-[70px]">কত ফোঁটা:</span>
-              {[
-                { count: '1', label: '১ ফোঁটা' },
-                { count: '2', label: '২ ফোঁটা' },
-                { count: '3', label: '৩ ফোঁটা' },
-                { count: '4', label: '৪ ফোঁটা' },
-                { count: '5', label: '৫ ফোঁটা' },
-                { count: '6', label: '৬ ফোঁটা' },
-                { count: '8', label: '৮ ফোঁটা' },
-                { count: '10', label: '১০ ফোঁটা' },
-                { count: '15', label: '১৫ ফোঁটা' },
-              ].map(dp => {
-                const bnNums = { '1': '১', '2': '২', '3': '৩', '4': '৪', '5': '৫', '6': '৬', '7': '৭', '8': '৮', '9': '৯', '10': '১০', '15': '১৫' };
-                const isSelected = dropCount === dp.count && currentMed.type === 'Drop';
-                return (
-                  <button
-                    key={dp.count}
-                    type="button"
-                    onClick={() => {
-                      setDropCount(dp.count);
-                      applyDropDosage(dp.count, dropTimes);
-                    }}
-                    className={`px-2 py-1 rounded-md text-[11px] font-semibold border transition-all cursor-pointer ${
-                      isSelected
-                        ? 'bg-sky-700 text-white border-sky-800 shadow-xs ring-1 ring-sky-400'
-                        : 'bg-white text-sky-900 border-sky-200 hover:bg-sky-100'
-                    }`}
-                  >
-                    {dp.label}
-                  </button>
-                );
-              })}
-            </div>
+              {/* Step 1: কত ফোঁটা নির্বাচন */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] font-semibold text-slate-600 min-w-[70px]">কত ফোঁটা:</span>
+                {[
+                  { count: '1', label: '১ ফোঁটা' },
+                  { count: '2', label: '২ ফোঁটা' },
+                  { count: '3', label: '৩ ফোঁটা' },
+                  { count: '4', label: '৪ ফোঁটা' },
+                  { count: '5', label: '৫ ফোঁটা' },
+                  { count: '6', label: '৬ ফোঁটা' },
+                  { count: '8', label: '৮ ফোঁটা' },
+                  { count: '10', label: '১০ ফোঁটা' },
+                  { count: '15', label: '১৫ ফোঁটা' },
+                ].map(dp => {
+                  const bnNums = { '1': '১', '2': '২', '3': '৩', '4': '৪', '5': '৫', '6': '৬', '7': '৭', '8': '৮', '9': '৯', '10': '১০', '15': '১৫' };
+                  const isSelected = dropCount === dp.count && currentMed.type === 'Drop';
+                  return (
+                    <button
+                      key={dp.count}
+                      type="button"
+                      onClick={() => {
+                        setDropCount(dp.count);
+                        applyDropDosage(dp.count, dropTimes);
+                      }}
+                      className={`px-2 py-1 rounded-md text-[11px] font-semibold border transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-sky-700 text-white border-sky-800 shadow-xs ring-1 ring-sky-400'
+                          : 'bg-white text-sky-900 border-sky-200 hover:bg-sky-100'
+                      }`}
+                    >
+                      {dp.label}
+                    </button>
+                  );
+                })}
+              </div>
 
-            {/* Step 2: দিনে কতবার নির্বাচন */}
-            <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-sky-100">
-              <span className="text-[11px] font-semibold text-slate-600 min-w-[70px]">দিনে কতবার:</span>
-              {[
-                { times: 'দিনে ১ বার', label: 'দিনে ১ বার (1 time)' },
-                { times: 'দিনে ২ বার', label: 'দিনে ২ বার (2 times)' },
-                { times: 'দিনে ৩ বার', label: 'দিনে ৩ বার (3 times)' },
-                { times: 'দিনে ৪ বার', label: 'দিনে ৪ বার (4 times)' },
-                { times: 'প্রতি ৪ ঘন্টা পর পর', label: '৪ ঘন্টা পর পর' },
-                { times: 'প্রতি ৬ ঘন্টা পর পর', label: '৬ ঘন্টা পর পর' },
-                { times: 'প্রতি ১২ ঘন্টা পর পর', label: '১২ ঘন্টা পর পর' },
-                { times: 'প্রতি ২৪ ঘন্টা পর পর', label: '২৪ ঘন্টা পর পর' },
-                { times: 'প্রয়োজনে', label: 'প্রয়োজনে (SOS)' },
-              ].map(dt => {
-                const isSelected = dropTimes === dt.times && currentMed.type === 'Drop' && currentMed.dosage?.includes(dt.times);
-                return (
-                  <button
-                    key={dt.times}
-                    type="button"
-                    onClick={() => {
-                      setDropTimes(dt.times);
-                      applyDropDosage(dropCount, dt.times);
-                    }}
-                    className={`px-2 py-0.5 rounded text-[11px] font-medium border transition-all cursor-pointer ${
-                      isSelected
-                        ? 'bg-teal-700 text-white border-teal-800 font-bold shadow-xs'
-                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-teal-50 hover:text-teal-900'
-                    }`}
-                  >
-                    {dt.label}
-                  </button>
-                );
-              })}
+              {/* Step 2: দিনে কতবার নির্বাচন */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-sky-100">
+                <span className="text-[11px] font-semibold text-slate-600 min-w-[70px]">দিনে কতবার:</span>
+                {[
+                  { times: 'দিনে ১ বার', label: 'দিনে ১ বার (1 time)' },
+                  { times: 'দিনে ২ বার', label: 'দিনে ২ বার (2 times)' },
+                  { times: 'দিনে ৩ বার', label: 'দিনে ৩ বার (3 times)' },
+                  { times: 'দিনে ৪ বার', label: 'দিনে ৪ বার (4 times)' },
+                  { times: 'প্রতি ৪ ঘন্টা পর পর', label: '৪ ঘন্টা পর পর' },
+                  { times: 'প্রতি ৬ ঘন্টা পর পর', label: '৬ ঘন্টা পর পর' },
+                  { times: 'প্রতি ১২ ঘন্টা পর পর', label: '১২ ঘন্টা পর পর' },
+                  { times: 'প্রতি ২৪ ঘন্টা পর পর', label: '২৪ ঘন্টা পর পর' },
+                  { times: 'প্রয়োজনে', label: 'প্রয়োজনে (SOS)' },
+                ].map(dt => {
+                  const isSelected = dropTimes === dt.times && currentMed.type === 'Drop' && currentMed.dosage?.includes(dt.times);
+                  return (
+                    <button
+                      key={dt.times}
+                      type="button"
+                      onClick={() => {
+                        setDropTimes(dt.times);
+                        applyDropDosage(dropCount, dt.times);
+                      }}
+                      className={`px-2 py-0.5 rounded text-[11px] font-medium border transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-teal-700 text-white border-teal-800 font-bold shadow-xs'
+                          : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-teal-50 hover:text-teal-900'
+                      }`}
+                    >
+                      {dt.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Frequency Presets */}
           <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-100">
