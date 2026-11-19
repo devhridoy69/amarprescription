@@ -224,12 +224,48 @@ export const PrescriptionPreview = ({
                         O / E :
                       </h3>
                       <div className="space-y-1 text-slate-700 font-mono text-[10.5px]">
-                        {vitals.bp && <div>BP: <span className="font-semibold text-slate-900">{vitals.bp} mmHg</span></div>}
-                        {vitals.pulse && <div>Pulse: <span className="font-semibold text-slate-900">{vitals.pulse} /min</span></div>}
-                        {vitals.temp && <div>Temp: <span className="font-semibold text-slate-900">{vitals.temp} °F</span></div>}
-                        {vitals.spo2 && <div>SpO2: <span className="font-semibold text-slate-900">{vitals.spo2}%</span></div>}
-                        {vitals.weight && <div>Weight: <span className="font-semibold text-slate-900">{vitals.weight} kg</span></div>}
-                        {vitals.rbs && <div>RBS: <span className="font-semibold text-slate-900">{vitals.rbs} mmol/L</span></div>}
+                        {vitals.bp && (
+                          <div>
+                            BP: <span className="font-semibold text-slate-900">
+                              {vitals.bp.trim().toUpperCase() === 'N' ? 'N' : `${vitals.bp} mmHg`}
+                            </span>
+                          </div>
+                        )}
+                        {vitals.pulse && (
+                          <div>
+                            Pulse: <span className="font-semibold text-slate-900">
+                              {vitals.pulse.trim().toUpperCase() === 'N' ? 'N' : `${vitals.pulse} /min`}
+                            </span>
+                          </div>
+                        )}
+                        {vitals.temp && (
+                          <div>
+                            Temp: <span className="font-semibold text-slate-900">
+                              {vitals.temp.trim().toUpperCase() === 'N' ? 'N' : `${vitals.temp} °F`}
+                            </span>
+                          </div>
+                        )}
+                        {vitals.spo2 && (
+                          <div>
+                            SpO2: <span className="font-semibold text-slate-900">
+                              {vitals.spo2.trim().toUpperCase() === 'N' ? 'N' : (vitals.spo2.includes('%') ? vitals.spo2 : `${vitals.spo2}%`)}
+                            </span>
+                          </div>
+                        )}
+                        {vitals.weight && (
+                          <div>
+                            Weight: <span className="font-semibold text-slate-900">
+                              {vitals.weight.trim().toUpperCase() === 'N' ? 'N' : (vitals.weight.toLowerCase().includes('g') ? vitals.weight : `${vitals.weight} kg`)}
+                            </span>
+                          </div>
+                        )}
+                        {vitals.rbs && (
+                          <div>
+                            RBS: <span className="font-semibold text-slate-900">
+                              {vitals.rbs.trim().toUpperCase() === 'N' ? 'N' : `${vitals.rbs} mmol/L`}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

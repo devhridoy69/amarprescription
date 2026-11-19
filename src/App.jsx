@@ -474,7 +474,9 @@ export function App() {
   const isAuthenticated = Boolean(currentUser || adminUser);
 
   return (
-    <div className="min-h-screen bg-slate-100/70 text-slate-800 flex flex-col font-sans">
+    <div className={`min-h-screen bg-slate-100/70 text-slate-800 flex flex-col font-sans ${
+      viewMode === 'split' ? 'lg:h-screen lg:overflow-hidden' : ''
+    }`}>
       
       {/* 1. If Admin is logged in, show dedicated Admin Panel View ONLY */}
       {adminUser ? (
@@ -538,7 +540,11 @@ export function App() {
           />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 lg:p-6">
+      <main className={`w-full mx-auto p-3 sm:p-5 lg:p-6 ${
+        viewMode === 'split' 
+          ? 'max-w-[1600px] flex-1 flex flex-col min-h-0 overflow-hidden' 
+          : 'flex-1 max-w-7xl'
+      }`}>
         
         {/* Mobile Tab Navigator (visible on small screens when in editor view) */}
         {viewMode !== 'preview' && (
@@ -554,16 +560,18 @@ export function App() {
         )}
 
         {/* Dynamic Responsive Layout */}
-        <div className={`grid gap-6 print:block print:w-full ${
+        <div className={`print:block print:w-full ${
           viewMode === 'split' 
-            ? 'grid-cols-1 lg:grid-cols-12' 
-            : 'grid-cols-1'
+            ? 'grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0' 
+            : 'grid grid-cols-1 gap-6'
         }`}>
           
           {/* LEFT: Editor Pane */}
           {(viewMode === 'editor' || viewMode === 'split') && (
             <div className={`no-print space-y-4 ${
-              viewMode === 'split' ? 'lg:col-span-6 xl:col-span-6' : 'max-w-4xl mx-auto w-full'
+              viewMode === 'split' 
+                ? 'lg:col-span-6 xl:col-span-6 h-full overflow-y-auto pr-2' 
+                : 'max-w-4xl mx-auto w-full'
             }`}>
               
               {/* Patient Demographics */}
@@ -629,9 +637,11 @@ export function App() {
           {/* RIGHT: Live Prescription Preview (WYSIWYG) */}
           {(viewMode === 'preview' || viewMode === 'split') && (
             <div className={`print:w-full print:max-w-full print:block ${
-              viewMode === 'split' ? 'lg:col-span-6 xl:col-span-6' : 'max-w-[210mm] mx-auto w-full'
+              viewMode === 'split' 
+                ? 'lg:col-span-6 xl:col-span-6 h-full overflow-y-auto pl-1' 
+                : 'max-w-[210mm] mx-auto w-full'
             }`}>
-              <div className="sticky top-20 print:static">
+              <div className="print:static">
                 <PrescriptionPreview
                   doctor={doctor}
                   patient={patient}

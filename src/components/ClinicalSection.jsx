@@ -7,6 +7,8 @@ import { COMMON_COMPLAINTS, COMPLAINT_DURATIONS } from '../data/complaintsData';
 import { COMMON_INVESTIGATIONS, COMMON_DIAGNOSES } from '../data/investigationsData';
 
 const RECENT_COMPLAINTS_KEY = 'amar_rx_recent_complaints';
+const RECENT_DIAGNOSES_KEY = 'amar_rx_recent_diagnoses';
+const RECENT_INVESTIGATIONS_KEY = 'amar_rx_recent_investigations';
 
 export const ClinicalSection = ({ 
   complaints, onUpdateComplaints,
@@ -25,7 +27,7 @@ export const ClinicalSection = ({
   const [isVitalsOpen, setIsVitalsOpen] = useState(true);
   const [isInvOpen, setIsInvOpen] = useState(true);
 
-  // Recent Complaints (Limited to 5 recent items)
+  // Recent Complaints (Limited to 10 recent items)
   const [recentComplaints, setRecentComplaints] = useState(() => {
     try {
       const saved = localStorage.getItem(RECENT_COMPLAINTS_KEY);
@@ -35,12 +37,54 @@ export const ClinicalSection = ({
     }
   });
 
+  // Recent Diagnoses (Limited to 10 recent items)
+  const [recentDiagnoses, setRecentDiagnoses] = useState(() => {
+    try {
+      const saved = localStorage.getItem(RECENT_DIAGNOSES_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  // Recent Investigations (Limited to 10 recent items)
+  const [recentInvestigations, setRecentInvestigations] = useState(() => {
+    try {
+      const saved = localStorage.getItem(RECENT_INVESTIGATIONS_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
   const saveToRecentComplaints = (text, dur) => {
     try {
       const current = recentComplaints.filter(item => item.text !== text);
-      const updated = [{ text, duration: dur }, ...current].slice(0, 5);
+      const updated = [{ text, duration: dur }, ...current].slice(0, 10);
       setRecentComplaints(updated);
       localStorage.setItem(RECENT_COMPLAINTS_KEY, JSON.stringify(updated));
+    } catch (e) {}
+  };
+
+  const saveToRecentDiagnoses = (diagText) => {
+    if (!diagText || !diagText.trim()) return;
+    const clean = diagText.trim();
+    try {
+      const current = recentDiagnoses.filter(d => d !== clean);
+      const updated = [clean, ...current].slice(0, 10);
+      setRecentDiagnoses(updated);
+      localStorage.setItem(RECENT_DIAGNOSES_KEY, JSON.stringify(updated));
+    } catch (e) {}
+  };
+
+  const saveToRecentInvestigations = (testName) => {
+    if (!testName || !testName.trim()) return;
+    const clean = testName.trim();
+    try {
+      const current = recentInvestigations.filter(t => t !== clean);
+      const updated = [clean, ...current].slice(0, 10);
+      setRecentInvestigations(updated);
+      localStorage.setItem(RECENT_INVESTIGATIONS_KEY, JSON.stringify(updated));
     } catch (e) {}
   };
 
@@ -60,12 +104,59 @@ export const ClinicalSection = ({
     onUpdateComplaints(complaints.filter((_, i) => i !== index));
   };
 
+  // Helper to parse comma/slash-separated diagnoses into a clean array
+  const currentDiagnosisList = diagnosis 
+    ? diagnosis.split(',').map(d => d.trim()).filter(Boolean)
+    : [];
+
+  // Toggle or add Diagnosis (Multiple selection toggle)
+  const handleToggleDiagnosis = (diagText) => {
+    if (!diagText || !diagText.trim()) return;
+    const clean = diagText.trim();
+    const shortName = clean.split(' / ')[0].trim();
+
+    // Check if this diagnosis or its short name is already in the list
+    const exists = currentDiagnosisList.some(d => d === clean || d === shortName || clean.includes(d));
+
+    let updatedList;
+    if (exists) {
+      // Toggle off / remove
+      updatedList = currentDiagnosisList.filter(d => d !== clean && d !== shortName && !clean.includes(d));
+    } else {
+      // Toggle on / append
+      updatedList = [...currentDiagnosisList, clean];
+      saveToRecentDiagnoses(clean);
+    }
+
+    onUpdateDiagnosis(updatedList.join(', '));
+  };
+
+  const handleAddCustomDiagnosis = () => {
+    if (!customDiagnosis || !customDiagnosis.trim()) return;
+    const clean = customDiagnosis.trim();
+    const exists = currentDiagnosisList.some(d => d.toLowerCase() === clean.toLowerCase());
+    
+    if (!exists) {
+      const updatedList = [...currentDiagnosisList, clean];
+      onUpdateDiagnosis(updatedList.join(', '));
+      saveToRecentDiagnoses(clean);
+    }
+    setCustomDiagnosis('');
+  };
+
+  const handleRemoveSingleDiagnosis = (index) => {
+    const updatedList = currentDiagnosisList.filter((_, i) => i !== index);
+    onUpdateDiagnosis(updatedList.join(', '));
+  };
+
   // Add Investigation
   const addInvestigation = (testName) => {
-    if (!testName) return;
-    if (!investigations.includes(testName)) {
-      onUpdateInvestigations([...investigations, testName]);
+    if (!testName || !testName.trim()) return;
+    const clean = testName.trim();
+    if (!investigations.includes(clean)) {
+      onUpdateInvestigations([...investigations, clean]);
     }
+    saveToRecentInvestigations(clean);
     setCustomInvestigation('');
   };
 
@@ -73,14 +164,14 @@ export const ClinicalSection = ({
     onUpdateInvestigations(investigations.filter((_, i) => i !== index));
   };
 
-  // Quick normal vitals filler
+  // Quick normal vitals filler: BP, Pulse, Temp, SpO2 become 'N' (Normal), leaving Weight and RBS for manual entry
   const setNormalVitals = () => {
     onUpdateVitals({
       ...vitals,
-      bp: '120/80',
-      pulse: '76',
-      temp: '98.4',
-      spo2: '99'
+      bp: 'N',
+      pulse: 'N',
+      temp: 'N',
+      spo2: 'N'
     });
   };
 
@@ -97,7 +188,7 @@ export const ClinicalSection = ({
             <div className="w-2 h-2 rounded-full bg-rose-500"></div>
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
               <Activity className="w-3.5 h-3.5 text-rose-500" /> 
-              Chief Complaints (C/C - প্রধান লক্ষণ ও উপসর্গ)
+              Chief Complaints (C/C)
               <span className="text-[11px] bg-rose-50 text-rose-700 font-semibold px-2 py-0.5 rounded-full">
                 {complaints.length}
               </span>
@@ -117,7 +208,7 @@ export const ClinicalSection = ({
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[11px] font-bold text-rose-800 flex items-center gap-1.5">
                     <History className="w-3 h-3 text-rose-600" />
-                    <span>Recent Suggestions (সাম্প্রতিক ব্যবহৃত ৫টি C/C)</span>
+                    <span>Recent Suggestions</span>
                   </span>
                   <button
                     type="button"
@@ -157,10 +248,10 @@ export const ClinicalSection = ({
               </div>
             )}
 
-            {/* Quick 1-Click Complaint Tags (In English with Bengali hint) */}
+            {/* Quick 1-Click Complaint Tags (Pure English Only) */}
             <div>
               <p className="text-[11px] text-slate-500 mb-2">
-                নিচের বাটনে ক্লিক করে সহজে ইংলিশে উপসর্গ যুক্ত করুন (টাইপ করতে হবে না):
+                Click any tag below to add complaint instantly (1-click):
               </p>
               <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1 bg-slate-50/70 rounded-xl border border-slate-200/60">
                 {COMMON_COMPLAINTS.map((item) => {
@@ -175,10 +266,9 @@ export const ClinicalSection = ({
                           ? 'bg-rose-600 text-white border-rose-700 shadow-2xs font-semibold'
                           : 'bg-white text-slate-700 border-slate-200 hover:bg-rose-50 hover:text-rose-800 hover:border-rose-200'
                       }`}
-                      title={`${item.bn} (${item.defaultDuration})`}
+                      title={`${item.en} (${item.defaultDuration})`}
                     >
                       <span>{item.en}</span>
-                      <span className={`text-[10px] ml-1 ${isSelected ? 'text-rose-100' : 'text-slate-400'}`}>({item.bn})</span>
                     </button>
                   );
                 })}
@@ -248,7 +338,7 @@ export const ClinicalSection = ({
             <div className="w-2 h-2 rounded-full bg-blue-500"></div>
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
               <Stethoscope className="w-3.5 h-3.5 text-blue-500" /> 
-              On Examination (O/E) & Diagnosis (শারীরিক পরীক্ষা ও রোগ নির্ণয়)
+              On Examination (O/E) & Diagnosis
             </h3>
           </div>
           <button type="button" className="text-slate-400 hover:text-slate-600">
@@ -266,8 +356,9 @@ export const ClinicalSection = ({
                 type="button"
                 onClick={setNormalVitals}
                 className="text-[11px] text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2.5 py-0.5 rounded-md font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                title="BP, Pulse, Temp ও SpO2 ফিল্ডে 'N' (Normal) বসবে। Weight ও RBS ম্যানুয়াল বসান।"
               >
-                <CheckCircle2 className="w-3 h-3" /> Fill Normal Vitals (BP 120/80, 98.4°F)
+                <CheckCircle2 className="w-3 h-3" /> Fill Normal Vitals (BP, Pulse, Temp, SpO2: N)
               </button>
             </div>
 
@@ -279,6 +370,7 @@ export const ClinicalSection = ({
                 </label>
                 <input
                   type="text"
+                  inputMode="text"
                   value={vitals.bp || ''}
                   onChange={(e) => onUpdateVitals({ ...vitals, bp: e.target.value })}
                   placeholder="120/80"
@@ -292,6 +384,7 @@ export const ClinicalSection = ({
                 </label>
                 <input
                   type="text"
+                  inputMode="numeric"
                   value={vitals.pulse || ''}
                   onChange={(e) => onUpdateVitals({ ...vitals, pulse: e.target.value })}
                   placeholder="76"
@@ -305,6 +398,7 @@ export const ClinicalSection = ({
                 </label>
                 <input
                   type="text"
+                  inputMode="decimal"
                   value={vitals.temp || ''}
                   onChange={(e) => onUpdateVitals({ ...vitals, temp: e.target.value })}
                   placeholder="98.4"
@@ -318,6 +412,7 @@ export const ClinicalSection = ({
                 </label>
                 <input
                   type="text"
+                  inputMode="numeric"
                   value={vitals.spo2 || ''}
                   onChange={(e) => onUpdateVitals({ ...vitals, spo2: e.target.value })}
                   placeholder="99%"
@@ -331,6 +426,7 @@ export const ClinicalSection = ({
                 </label>
                 <input
                   type="text"
+                  inputMode="decimal"
                   value={vitals.weight || ''}
                   onChange={(e) => onUpdateVitals({ ...vitals, weight: e.target.value })}
                   placeholder="65"
@@ -344,6 +440,7 @@ export const ClinicalSection = ({
                 </label>
                 <input
                   type="text"
+                  inputMode="decimal"
                   value={vitals.rbs || ''}
                   onChange={(e) => onUpdateVitals({ ...vitals, rbs: e.target.value })}
                   placeholder="6.2"
@@ -352,31 +449,141 @@ export const ClinicalSection = ({
               </div>
             </div>
 
-            {/* Diagnosis (Dx) Section */}
-            <div className="pt-2 border-t border-slate-100">
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Provisional / Confirmed Diagnosis (রোগ নির্ণয়):
-              </label>
+            {/* Diagnosis (Dx) Section with Manual Entry & Recent Suggestions */}
+            <div className="pt-2 border-t border-slate-100 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold text-slate-700">
+                  Provisional / Confirmed Diagnosis (রোগ নির্ণয়):
+                </label>
+                {diagnosis && (
+                  <button
+                    type="button"
+                    onClick={() => onUpdateDiagnosis('')}
+                    className="text-[10px] text-rose-500 hover:text-rose-700 underline cursor-pointer"
+                  >
+                    ক্লিয়ার
+                  </button>
+                )}
+              </div>
+
+              {/* Selected Multiple Diagnoses Tags with Remove (x) */}
+              {currentDiagnosisList.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 p-2 bg-teal-50/50 rounded-xl border border-teal-100">
+                  {currentDiagnosisList.map((d, idx) => (
+                    <span 
+                      key={idx}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-teal-200 text-teal-900 rounded-lg text-xs font-bold shadow-2xs"
+                    >
+                      <span>• {d}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSingleDiagnosis(idx)}
+                        className="text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                        title="এই রোগটি বাদ দিন"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Diagnosis Main Display / Direct Editable Input */}
               <input
                 type="text"
                 value={diagnosis}
                 onChange={(e) => onUpdateDiagnosis(e.target.value)}
-                placeholder="e.g. Acute Viral URTI / Acid Peptic Disease (APD) / Essential Hypertension"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-teal-900 focus:ring-1 focus:ring-teal-500 mb-2"
+                onBlur={() => saveToRecentDiagnoses(diagnosis)}
+                placeholder="e.g. Acute Viral URTI, Acid Peptic Disease (APD), Essential Hypertension"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-teal-900 focus:ring-1 focus:ring-teal-500 focus:bg-white"
               />
 
-              {/* Quick Click Diagnoses */}
-              <div className="flex flex-wrap gap-1.5">
-                {COMMON_DIAGNOSES.slice(0, 8).map((diag) => (
-                  <button
-                    key={diag}
-                    type="button"
-                    onClick={() => onUpdateDiagnosis(diag)}
-                    className="px-2 py-0.5 rounded text-[11px] bg-slate-100 hover:bg-teal-50 text-slate-600 hover:text-teal-800 border border-slate-200 hover:border-teal-200 transition-colors cursor-pointer"
-                  >
-                    {diag.split(' / ')[0]}
-                  </button>
-                ))}
+              {/* Manual Entry Input for Custom/Uncommon Disease */}
+              <div className="flex gap-1.5 items-center">
+                <input
+                  type="text"
+                  value={customDiagnosis}
+                  onChange={(e) => setCustomDiagnosis(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddCustomDiagnosis()}
+                  placeholder="যেকোনো নতুন বা নির্দিষ্ট রোগের নাম লিখে Add চাপুন (ম্যানুয়াল এন্ট্রি)..."
+                  className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:ring-1 focus:ring-teal-500 focus:bg-white"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddCustomDiagnosis}
+                  className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add Diagnosis
+                </button>
+              </div>
+
+              {/* Recent Suggestions for Diagnosis (Limit 5) */}
+              {recentDiagnoses.length > 0 && (
+                <div className="p-2 bg-teal-50/60 rounded-xl border border-teal-100">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-bold text-teal-800 flex items-center gap-1.5">
+                      <History className="w-3 h-3 text-teal-600" />
+                      <span>Recent Suggestions</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRecentDiagnoses([]);
+                        localStorage.removeItem(RECENT_DIAGNOSES_KEY);
+                      }}
+                      className="text-[10px] text-teal-600 hover:text-teal-800 underline cursor-pointer"
+                    >
+                      ক্লিয়ার
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {recentDiagnoses.map((diag, idx) => {
+                      const isSelected = currentDiagnosisList.some(d => d === diag || diag.includes(d));
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handleToggleDiagnosis(diag)}
+                          className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition-all border flex items-center gap-1 cursor-pointer ${
+                            isSelected
+                              ? 'bg-teal-600 text-white border-teal-700 shadow-2xs'
+                              : 'bg-white text-teal-900 border-teal-200 hover:bg-teal-100/70'
+                          }`}
+                          title={isSelected ? 'বাদ দিতে ক্লিক করুন' : 'যোগ করতে ক্লিক করুন'}
+                        >
+                          <Sparkles className="w-2.5 h-2.5 text-amber-500" />
+                          <span>{diag}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Common Diagnoses Quick Tags */}
+              <div>
+                <p className="text-[10px] text-slate-400 mb-1">কমন রোগসমূহ (এক ক্লিকে একাধিক রোগ সিলেক্ট/আনসিলেক্ট করুন):</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {COMMON_DIAGNOSES.map((diag) => {
+                    const shortName = diag.split(' / ')[0].trim();
+                    const isSelected = currentDiagnosisList.some(d => d === diag || d === shortName || diag.includes(d));
+                    return (
+                      <button
+                        key={diag}
+                        type="button"
+                        onClick={() => handleToggleDiagnosis(diag)}
+                        className={`px-2 py-0.5 rounded text-[11px] transition-colors border cursor-pointer ${
+                          isSelected
+                            ? 'bg-teal-600 text-white border-teal-700 font-bold shadow-2xs'
+                            : 'bg-slate-100 hover:bg-teal-50 text-slate-600 hover:text-teal-800 border-slate-200 hover:border-teal-200'
+                        }`}
+                        title={isSelected ? 'বাদ দিতে ক্লিক করুন' : 'যোগ করতে ক্লিক করুন'}
+                      >
+                        {shortName}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
@@ -394,7 +601,7 @@ export const ClinicalSection = ({
             <div className="w-2 h-2 rounded-full bg-purple-500"></div>
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
               <FileText className="w-3.5 h-3.5 text-purple-500" /> 
-              Investigations Advised (পরীক্ষা-নিরীক্ষা / ল্যাব টেস্ট)
+              Investigations Advised
               <span className="text-[11px] bg-purple-50 text-purple-700 font-semibold px-2 py-0.5 rounded-full">
                 {investigations.length}
               </span>
@@ -407,6 +614,50 @@ export const ClinicalSection = ({
 
         {isInvOpen && (
           <div className="pt-3 space-y-3">
+            
+            {/* Recent Suggestions for Investigations (Limit 10) */}
+            {recentInvestigations.length > 0 && (
+              <div className="p-2.5 bg-purple-50/60 rounded-xl border border-purple-100">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-bold text-purple-800 flex items-center gap-1.5">
+                    <History className="w-3 h-3 text-purple-600" />
+                    <span>Recent Suggestions</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRecentInvestigations([]);
+                      localStorage.removeItem(RECENT_INVESTIGATIONS_KEY);
+                    }}
+                    className="text-[10px] text-purple-600 hover:text-purple-800 underline cursor-pointer"
+                  >
+                    ক্লিয়ার
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {recentInvestigations.map((test, idx) => {
+                    const isSelected = investigations.includes(test);
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => isSelected ? removeInvestigation(investigations.indexOf(test)) : addInvestigation(test)}
+                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition-all border flex items-center gap-1 cursor-pointer ${
+                          isSelected
+                            ? 'bg-purple-600 text-white border-purple-700 shadow-2xs'
+                            : 'bg-white text-purple-900 border-purple-200 hover:bg-purple-100/70'
+                        }`}
+                        title={isSelected ? 'বাদ দিতে ক্লিক করুন' : 'যোগ করতে ক্লিক করুন'}
+                      >
+                        <Sparkles className="w-2.5 h-2.5 text-amber-500" />
+                        <span>{test}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <p className="text-[11px] text-slate-500">
               প্রয়োজনীয় ল্যাব টেস্টে ক্লিক করে প্রেসক্রিপশনে যুক্ত করুন:
             </p>

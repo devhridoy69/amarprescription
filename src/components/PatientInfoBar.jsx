@@ -53,6 +53,7 @@ export const PatientInfoBar = ({ patient, onChange, onReset, isEditing = false, 
           </label>
           <input
             type="text"
+            inputMode="text"
             value={patient.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
             placeholder="e.g. মোঃ করিম উদ্দিন"
@@ -68,6 +69,8 @@ export const PatientInfoBar = ({ patient, onChange, onReset, isEditing = false, 
           <div className="flex rounded-lg border border-slate-200 bg-slate-50 focus-within:ring-2 focus-within:ring-teal-500 focus-within:border-teal-500 focus-within:bg-white overflow-hidden">
             <input
               type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={patient.age}
               onChange={(e) => handleInputChange('age', e.target.value)}
               placeholder="35"
@@ -146,6 +149,7 @@ export const PatientInfoBar = ({ patient, onChange, onReset, isEditing = false, 
           <div className="flex rounded-lg border border-slate-200 bg-slate-50 focus-within:ring-2 focus-within:ring-teal-500 focus-within:border-teal-500 focus-within:bg-white overflow-hidden">
             <input
               type="text"
+              inputMode="decimal"
               value={patient.weight || ''}
               onChange={(e) => handleInputChange('weight', e.target.value)}
               placeholder="65"
@@ -162,30 +166,17 @@ export const PatientInfoBar = ({ patient, onChange, onReset, isEditing = false, 
           </div>
         </div>
 
-        {/* Row 2: BP */}
+        {/* Row 2: Patient Phone Number (Optional) */}
         <div className="col-span-6 sm:col-span-3">
           <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center gap-1">
-            <HeartPulse className="w-3 h-3 text-rose-500" /> BP (রক্তচাপ)
-          </label>
-          <input
-            type="text"
-            value={patient.bp || ''}
-            onChange={(e) => handleInputChange('bp', e.target.value)}
-            placeholder="120/80"
-            className="w-full px-2.5 py-2 bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 rounded-lg text-center font-medium focus:ring-2 focus:ring-teal-500"
-          />
-        </div>
-
-        {/* Row 2: Patient Phone Number (Optional) */}
-        <div className="col-span-12 sm:col-span-6">
-          <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center gap-1">
-            <Phone className="w-3 h-3 text-slate-400" /> Patient Phone (রোগীর মোবাইল নম্বর - ঐচ্ছিক)
+            <Phone className="w-3 h-3 text-slate-400" /> Patient Phone (রোগীর মোবাইল - ঐচ্ছিক)
           </label>
           <input
             type="tel"
+            inputMode="tel"
             value={patient.phone || ''}
             onChange={(e) => handleInputChange('phone', e.target.value)}
-            placeholder="e.g. 01700-000000 (ঐচ্ছিক)"
+            placeholder="01700-000000"
             className="w-full px-3 py-2 bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 rounded-lg text-slate-900 font-medium focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
           />
         </div>
