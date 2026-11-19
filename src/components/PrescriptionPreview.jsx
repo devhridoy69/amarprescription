@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { 
   Printer, Layers, Eye, EyeOff, Sliders, ChevronDown, 
-  FileText, ArrowDown, ArrowUp, CheckCircle, Info
+  FileText, ArrowDown, ArrowUp, CheckCircle, Info, QrCode
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { StackedFraction, renderWithFractions } from './StackedFraction';
 
 export const PrescriptionPreview = ({ 
@@ -80,7 +81,7 @@ export const PrescriptionPreview = ({
             <div className="grid grid-cols-12 gap-4 pb-4 border-b-2 border-teal-700/80">
               
               {/* Left: Doctor Credentials */}
-              <div className="col-span-7 sm:col-span-7 space-y-0.5">
+              <div className="col-span-5 space-y-0.5">
                 <h1 className="text-base sm:text-lg font-black text-teal-900 tracking-tight leading-tight">
                   {doctor.name || 'Dr. Md. Rafiqul Islam'}
                 </h1>
@@ -103,8 +104,27 @@ export const PrescriptionPreview = ({
                 )}
               </div>
 
+              {/* Middle: Smart Auto QR Code */}
+              <div className="col-span-2 flex flex-col items-center justify-center text-center">
+                {patient.rxId && (
+                  <div className="flex flex-col items-center">
+                    <div className="p-1 bg-white border border-slate-300 rounded shadow-2xs">
+                      <QRCodeSVG
+                        value={`${typeof window !== 'undefined' ? window.location.origin : 'https://hridoyislam.me'}/?rx=${encodeURIComponent(patient.rxId)}`}
+                        size={56}
+                        level="M"
+                        includeMargin={false}
+                      />
+                    </div>
+                    <span className="text-[7.5px] font-bold text-teal-800 uppercase tracking-tighter mt-1 whitespace-nowrap">
+                      Scan for PDF
+                    </span>
+                  </div>
+                )}
+              </div>
+
               {/* Right: Chamber / Hospital Details */}
-              <div className="col-span-5 sm:col-span-5 text-right space-y-0.5 flex flex-col justify-between">
+              <div className="col-span-5 text-right space-y-0.5 flex flex-col justify-between">
                 <div>
                   <h2 className="text-xs sm:text-sm font-black text-slate-900 leading-tight">
                     {doctor.chamberName || 'Ayan Specialized Digital Chamber'}

@@ -201,6 +201,75 @@ export async function searchMedicinesOnline(query, limit = 25) {
 }
 
 /**
+ * Fetch a single prescription by ID or rxId for public patient download / QR viewing
+ */
+export async function fetchSinglePrescriptionForPublic(prescriptionIdOrRxId) {
+  if (!prescriptionIdOrRxId) return null;
+  const cleanId = String(prescriptionIdOrRxId).trim();
+
+  try {
+    // 1. Try finding by id
+    const { data: byId, error: err1 } = await supabase
+      .from('prescriptions')
+      .select('*')
+      .eq('id', cleanId)
+      .maybeSingle();
+
+    if (byId && byId.full_data) {
+      return {
+        ...byId.full_data,
+        id: byId.id,
+        date: byId.date,
+        diagnosis: byId.diagnosis,
+        nextVisit: byId.next_visit,
+        patientName: byId.patient_name
+      };
+    }
+
+    // 2. Try finding by rx_id
+    const { data: byRx, error: err2 } = await supabase
+      .from('prescriptions')
+      .select('*')
+      .eq('rx_id', cleanId)
+      .maybeSingle();
+
+    if (byRx && byRx.full_data) {
+      return {
+        ...byRx.full_data,
+        id: byRx.id,
+        date: byRx.date,
+        diagnosis: byRx.diagnosis,
+        nextVisit: byRx.next_visit,
+        patientName: byRx.patient_name
+      };
+    }
+
+    // 3. Fallback check local storage if offline or running in same chamber
+    if (typeof window !== 'undefined') {
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('amar_rx_records')) {
+            const list = JSON.parse(localStorage.getItem(key) || '[]');
+            const found = list.find(r => 
+              String(r.id) === cleanId || 
+              String(r.patient?.rxId) === cleanId ||
+              String(r.rxId) === cleanId
+            );
+            if (found) return found;
+          }
+        }
+      } catch (e) {}
+    }
+
+    return null;
+  } catch (err) {
+    console.error('Fetch single prescription public error:', err);
+    return null;
+  }
+}
+
+/**
  * Fetch all prescriptions for the logged-in doctor from Supabase cloud
  * Separate account data by doctorPhone / doctorId
  */

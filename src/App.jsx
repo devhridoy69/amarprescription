@@ -11,12 +11,24 @@ import DashboardModal from './components/DashboardModal';
 import AuthModal from './components/AuthModal';
 import AdminPanelModal from './components/AdminPanelModal';
 import MobileSectionTabs from './components/MobileSectionTabs';
+import PublicPrescriptionView from './components/PublicPrescriptionView';
 import { DEFAULT_DOCTOR } from './data/defaultDoctor';
 import { PRESCRIPTION_TEMPLATES } from './data/templatesData';
 import { FONT_PAIR_PRESETS } from './data/fontPresets';
 import { fetchPrescriptionsFromCloud, savePrescriptionToCloud, deletePrescriptionFromCloud } from './lib/supabase';
 
 export function App() {
+  // Detect if user visited via QR code link (?rx=... or ?id=...)
+  const [publicRxId, setPublicRxId] = useState(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('rx') || params.get('id') || null;
+    } catch (e) {
+      return null;
+    }
+  });
+
   // Check remember me validity (1 month = 30 days) on initial mount
   const [currentUser, setCurrentUser] = useState(() => {
     try {
@@ -549,6 +561,19 @@ export function App() {
 
   // Determine if authentication is active
   const isAuthenticated = Boolean(currentUser || adminUser);
+
+  // If visited via QR Code scan (?rx=RX-1234), show patient public viewer with 1-click PDF download
+  if (publicRxId) {
+    return (
+      <PublicPrescriptionView
+        rxId={publicRxId}
+        onBackToApp={() => {
+          setPublicRxId(null);
+          window.history.replaceState({}, '', window.location.pathname);
+        }}
+      />
+    );
+  }
 
   return (
     <div className={`min-h-screen bg-slate-100/70 text-slate-800 flex flex-col font-sans ${
