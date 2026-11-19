@@ -171,7 +171,9 @@ export const PrescriptionPreview = ({
             {patient.weight && (
               <div className="flex items-center gap-1">
                 <span className="text-slate-400">Wt:</span>
-                <span className="font-bold text-slate-900">{patient.weight}</span>
+                <span className="font-bold text-slate-900">
+                  {patient.weight} {patient.weightUnit || (patient.weight.toLowerCase().includes('g') ? '' : 'kg')}
+                </span>
               </div>
             )}
 
@@ -179,6 +181,13 @@ export const PrescriptionPreview = ({
               <div className="flex items-center gap-1">
                 <span className="text-slate-400">BP:</span>
                 <span className="font-bold text-rose-700">{patient.bp}</span>
+              </div>
+            )}
+
+            {patient.phone && (
+              <div className="flex items-center gap-1">
+                <span className="text-slate-400">Mob:</span>
+                <span className="font-bold font-mono text-slate-900">{patient.phone}</span>
               </div>
             )}
           </div>

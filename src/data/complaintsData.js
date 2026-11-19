@@ -1,29 +1,29 @@
-// Common Chief Complaints (C/C) with English and Bengali labels
+// Common Chief Complaints (C/C) in Standard Medical English with durations
 export const COMMON_COMPLAINTS = [
-  { en: 'Fever', bn: 'জ্বর', defaultDuration: '৩ দিন' },
-  { en: 'Cough', bn: 'কাশি (শুকনা/কফযুক্ত)', defaultDuration: '৫ দিন' },
-  { en: 'Cold & Runny Nose', bn: 'সর্দি ও নাক বন্ধ', defaultDuration: '৪ দিন' },
-  { en: 'Sore Throat', bn: 'গলা ব্যথা ও ঢোক গিলতে কষ্ট', defaultDuration: '৩ দিন' },
-  { en: 'Headache', bn: 'মাথা ব্যথা', defaultDuration: '২ দিন' },
-  { en: 'Abdominal Pain', bn: 'পেটে ব্যথা', defaultDuration: '১ দিন' },
-  { en: 'Acidity & Heartburn', bn: 'গ্যাস্ট্রিক ও বুক জ্বালাপোড়া', defaultDuration: '৭ দিন' },
-  { en: 'Nausea & Vomiting', bn: 'বমি বমি ভাব ও বমি', defaultDuration: '১ দিন' },
-  { en: 'Loose Motion / Diarrhea', bn: 'পাতলা পায়খানা', defaultDuration: '২ দিন' },
-  { en: 'Constipation', bn: 'কোষ্ঠকাঠিন্য', defaultDuration: '১০ দিন' },
-  { en: 'Low Back Pain', bn: 'কোমরে তীব্র ব্যথা', defaultDuration: '১৫ দিন' },
-  { en: 'Joint Pain', bn: 'হাঁটু ও গিঁটে ব্যথা', defaultDuration: '১ মাস' },
-  { en: 'Burning Micturition', bn: 'প্রস্রাবে জ্বালাপোড়া', defaultDuration: '৩ দিন' },
-  { en: 'Shortness of Breath', bn: 'শ্বাসকষ্ট ও হাঁপানি', defaultDuration: '৫ দিন' },
-  { en: 'Chest Pain', bn: 'বুকে ব্যথা / চাপ', defaultDuration: '১ দিন' },
-  { en: 'General Weakness', bn: 'শরীরে দুর্বলতা ও ক্লান্তি', defaultDuration: '১ মাস' },
-  { en: 'Loss of Appetite', bn: 'খাবারে অরুচি', defaultDuration: '৭ দিন' },
-  { en: 'Skin Itching / Rash', bn: 'গায়ে চুলকানি ও লাল দাগ', defaultDuration: '৫ দিন' },
-  { en: 'Dizziness / Vertigo', bn: 'মাথা ঘোরা', defaultDuration: '৩ দিন' },
-  { en: 'Insomnia', bn: 'ঘুম না হওয়া', defaultDuration: '১৫ দিন' },
-  { en: 'High Blood Pressure', bn: 'উচ্চ রক্তচাপজনিত অস্বস্তি', defaultDuration: '৭ দিন' },
-  { en: 'High Blood Sugar', bn: 'রক্তে চিনির মাত্রা বৃদ্ধি', defaultDuration: '১ মাস' },
+  { en: 'Fever', bn: 'জ্বর', defaultDuration: '3 days' },
+  { en: 'Cough', bn: 'কাশি', defaultDuration: '5 days' },
+  { en: 'Runny nose & Sneezing', bn: 'সর্দি ও হাঁচি', defaultDuration: '4 days' },
+  { en: 'Sore throat', bn: 'গলা ব্যথা', defaultDuration: '3 days' },
+  { en: 'Headache', bn: 'মাথা ব্যথা', defaultDuration: '2 days' },
+  { en: 'Abdominal pain', bn: 'পেটে ব্যথা', defaultDuration: '1 day' },
+  { en: 'Acidity & Heartburn', bn: 'গ্যাস্ট্রিক ও বুক জ্বালা', defaultDuration: '7 days' },
+  { en: 'Nausea & Vomiting', bn: 'বমি বমি ভাব ও বমি', defaultDuration: '1 day' },
+  { en: 'Loose motion / Diarrhea', bn: 'পাতলা পায়খানা', defaultDuration: '2 days' },
+  { en: 'Constipation', bn: 'কোষ্ঠকাঠিন্য', defaultDuration: '7 days' },
+  { en: 'Low back pain', bn: 'কোমর ব্যথা', defaultDuration: '15 days' },
+  { en: 'Joint pain & Swelling', bn: 'গিঁটে ব্যথা', defaultDuration: '1 month' },
+  { en: 'Burning micturition', bn: 'প্রস্রাবে জ্বালাপোড়া', defaultDuration: '3 days' },
+  { en: 'Shortness of breath', bn: 'শ্বাসকষ্ট', defaultDuration: '5 days' },
+  { en: 'Chest pain', bn: 'বুকে ব্যথা', defaultDuration: '1 day' },
+  { en: 'General weakness', bn: 'শারীরিক দুর্বলতা', defaultDuration: '15 days' },
+  { en: 'Loss of appetite', bn: 'ক্ষুধামন্দা', defaultDuration: '7 days' },
+  { en: 'Skin rash & Itching', bn: 'চুলকানি ও ফুসকুড়ি', defaultDuration: '5 days' },
+  { en: 'Vertigo & Dizziness', bn: 'মাথা ঘোরা', defaultDuration: '3 days' },
+  { en: 'Insomnia', bn: 'অনিদ্রা', defaultDuration: '15 days' },
+  { en: 'High blood pressure', bn: 'উচ্চ রক্তচাপ', defaultDuration: '7 days' },
+  { en: 'Elevated blood sugar', bn: 'রক্তে গ্লুকোজ বৃদ্ধি', defaultDuration: '1 month' }
 ];
 
 export const COMPLAINT_DURATIONS = [
-  '১ দিন', '২ দিন', '৩ দিন', '৪ দিন', '৫ দিন', '৭ দিন', '১০ দিন', '১৫ দিন', '১ মাস', '২ মাস', '৬ মাস'
+  '1 day', '2 days', '3 days', '4 days', '5 days', '7 days', '10 days', '15 days', '1 month', '2 months', '3 months', '6 months'
 ];

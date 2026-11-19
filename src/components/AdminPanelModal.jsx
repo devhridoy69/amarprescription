@@ -3,14 +3,15 @@ import {
   ShieldAlert, ShieldCheck, Users, Clock, CheckCircle2, 
   XCircle, Ban, Trash2, Calendar, Search, RefreshCw, 
   X, Phone, Award, Stethoscope, AlertTriangle, Key, LogOut,
-  Sliders, UserCheck, UserX, FileText, ChevronRight, Edit3, Save, Sparkles, Building, Lock
+  Sliders, UserCheck, UserX, FileText, ChevronRight, Edit3, Save, Sparkles, Building, Lock, UserPlus
 } from 'lucide-react';
 import { 
   adminFetchAllUsers, 
   adminUpdateUserStatus, 
   adminUpdateUserFullDetails, 
   adminDeleteUser,
-  updateAdminMasterPassword 
+  updateAdminMasterPassword,
+  adminCreateUser
 } from '../lib/supabase';
 
 export const AdminPanelModal = ({ 
@@ -39,6 +40,21 @@ export const AdminPanelModal = ({
   });
   const [adminPassLoading, setAdminPassLoading] = useState(false);
   const [adminPassError, setAdminPassError] = useState('');
+
+  // Modal Sub-state: Create New Doctor by Admin
+  const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
+  const [createUserForm, setCreateUserForm] = useState({
+    fullName: '',
+    phone: '',
+    password: '',
+    degrees: 'MBBS',
+    specialty: 'General Physician',
+    bmdcReg: '',
+    status: 'approved',
+    validityDays: '30'
+  });
+  const [createUserLoading, setCreateUserLoading] = useState(false);
+  const [createUserError, setCreateUserError] = useState('');
 
   const loadUsers = async () => {
     setLoading(true);
@@ -163,6 +179,46 @@ export const AdminPanelModal = ({
     }
   };
 
+  const handleCreateUserSubmit = async (e) => {
+    e.preventDefault();
+    setCreateUserError('');
+
+    if (!createUserForm.phone || !createUserForm.password) {
+      setCreateUserError('ফোন নম্বর ও পাসওয়ার্ড আবশ্যক।');
+      return;
+    }
+    if (createUserForm.password.length < 4) {
+      setCreateUserError('পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে।');
+      return;
+    }
+
+    setCreateUserLoading(true);
+    try {
+      const res = await adminCreateUser(createUserForm);
+      if (res.success) {
+        showToast(`ডাক্তার "${res.data.full_name}" সফলভাবে যুক্ত করা হয়েছে!`);
+        setIsCreateUserModalOpen(false);
+        setCreateUserForm({
+          fullName: '',
+          phone: '',
+          password: '',
+          degrees: 'MBBS',
+          specialty: 'General Physician',
+          bmdcReg: '',
+          status: 'approved',
+          validityDays: '30'
+        });
+        loadUsers();
+      } else {
+        setCreateUserError(res.error || 'ইউজার তৈরি ব্যর্থ হয়েছে।');
+      }
+    } catch (err) {
+      setCreateUserError('ইউজার তৈরিতে সমস্যা দেখা দিয়েছে।');
+    } finally {
+      setCreateUserLoading(false);
+    }
+  };
+
   const filteredUsers = useMemo(() => {
     return users.filter(u => {
       const q = searchTerm.toLowerCase();
@@ -213,6 +269,27 @@ export const AdminPanelModal = ({
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setCreateUserError('');
+                setCreateUserForm({
+                  fullName: '',
+                  phone: '',
+                  password: '',
+                  degrees: 'MBBS',
+                  specialty: 'General Physician',
+                  bmdcReg: '',
+                  status: 'approved',
+                  validityDays: '30'
+                });
+                setIsCreateUserModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
+              title="এডমিন থেকে সরাসরি নতুন ডাক্তার অ্যাকাউন্ট তৈরি করুন"
+            >
+              <UserPlus className="w-3.5 h-3.5 text-white" />
+              <span>+ নতুন ইউজার তৈরি (Create User)</span>
+            </button>
             <button
               onClick={() => {
                 setAdminPassError('');
@@ -871,6 +948,170 @@ export const AdminPanelModal = ({
                     <Save className="w-3.5 h-3.5" />
                   )}
                   <span>{adminPassLoading ? 'সংরক্ষণ হচ্ছে...' : 'পাসওয়ার্ড পরিবর্তন করুন'}</span>
+                </button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+      )}
+
+      {/* Admin Create New Doctor User Modal */}
+      {isCreateUserModalOpen && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+            
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center border border-teal-500/30">
+                  <UserPlus className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-white">নতুন ডাক্তার ইউজার তৈরি</h3>
+                  <p className="text-[11px] text-slate-400">এডমিন থেকে সরাসরি অ্যাকাউন্ট তৈরি ও সক্রিয়করণ</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCreateUserModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleCreateUserSubmit} className="p-6 space-y-3.5 text-xs">
+              {createUserError && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 font-semibold flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{createUserError}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block font-bold text-slate-700 mb-1">
+                    ডাক্তারের নাম (Full Name) *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={createUserForm.fullName}
+                    onChange={(e) => setCreateUserForm({ ...createUserForm, fullName: e.target.value })}
+                    placeholder="e.g. Dr. Md. Rafiqul Islam"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold focus:ring-2 focus:ring-teal-500 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    মোবাইল নম্বর (Login Phone) *
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    value={createUserForm.phone}
+                    onChange={(e) => setCreateUserForm({ ...createUserForm, phone: e.target.value })}
+                    placeholder="017XXXXXXXX"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-mono font-semibold focus:ring-2 focus:ring-teal-500 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    লগইন পাসওয়ার্ড (Password) *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    minLength={4}
+                    value={createUserForm.password}
+                    onChange={(e) => setCreateUserForm({ ...createUserForm, password: e.target.value })}
+                    placeholder="পাসওয়ার্ড লিখুন"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold focus:ring-2 focus:ring-teal-500 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    ডিগ্রি (Degrees)
+                  </label>
+                  <input
+                    type="text"
+                    value={createUserForm.degrees}
+                    onChange={(e) => setCreateUserForm({ ...createUserForm, degrees: e.target.value })}
+                    placeholder="MBBS, FCPS"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold focus:ring-2 focus:ring-teal-500 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    বিশেষজ্ঞতা (Specialty)
+                  </label>
+                  <input
+                    type="text"
+                    value={createUserForm.specialty}
+                    onChange={(e) => setCreateUserForm({ ...createUserForm, specialty: e.target.value })}
+                    placeholder="General Physician / Medicine"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold focus:ring-2 focus:ring-teal-500 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    BMDC Reg No
+                  </label>
+                  <input
+                    type="text"
+                    value={createUserForm.bmdcReg}
+                    onChange={(e) => setCreateUserForm({ ...createUserForm, bmdcReg: e.target.value })}
+                    placeholder="A-12345"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold focus:ring-2 focus:ring-teal-500 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    ভ্যালিডিটি মেয়াদ (Days)
+                  </label>
+                  <select
+                    value={createUserForm.validityDays}
+                    onChange={(e) => setCreateUserForm({ ...createUserForm, validityDays: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold focus:ring-2 focus:ring-teal-500 focus:bg-white"
+                  >
+                    <option value="7">৭ দিন (ট্রায়াল)</option>
+                    <option value="30">৩০ দিন (১ মাস)</option>
+                    <option value="90">৯০ দিন (৩ মাস)</option>
+                    <option value="180">১৮০ দিন (৬ মাস)</option>
+                    <option value="365">৩৬৫ দিন (১ বছর)</option>
+                    <option value="1825">৫ বছর</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateUserModalOpen(false)}
+                  disabled={createUserLoading}
+                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-xl font-semibold hover:bg-slate-50 cursor-pointer disabled:opacity-50"
+                >
+                  বাতিল (Cancel)
+                </button>
+                <button
+                  type="submit"
+                  disabled={createUserLoading}
+                  className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold shadow-md cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {createUserLoading ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <UserPlus className="w-3.5 h-3.5" />
+                  )}
+                  <span>{createUserLoading ? 'তৈরি হচ্ছে...' : 'অ্যাকাউন্ট তৈরি ও অনুমোদন'}</span>
                 </button>
               </div>
             </form>

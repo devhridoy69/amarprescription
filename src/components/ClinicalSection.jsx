@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Activity, Stethoscope, FileText, Plus, X, HeartPulse, 
-  Thermometer, CheckCircle2, ChevronDown, ChevronUp 
+  Thermometer, CheckCircle2, ChevronDown, ChevronUp, History, Sparkles
 } from 'lucide-react';
 import { COMMON_COMPLAINTS, COMPLAINT_DURATIONS } from '../data/complaintsData';
 import { COMMON_INVESTIGATIONS, COMMON_DIAGNOSES } from '../data/investigationsData';
+
+const RECENT_COMPLAINTS_KEY = 'amar_rx_recent_complaints';
 
 export const ClinicalSection = ({ 
   complaints, onUpdateComplaints,
@@ -14,7 +16,7 @@ export const ClinicalSection = ({
 }) => {
   // Local input states for custom additions
   const [customComplaint, setCustomComplaint] = useState('');
-  const [selectedDuration, setSelectedDuration] = useState('৩ দিন');
+  const [selectedDuration, setSelectedDuration] = useState('3 days');
   const [customDiagnosis, setCustomDiagnosis] = useState('');
   const [customInvestigation, setCustomInvestigation] = useState('');
   
@@ -23,13 +25,34 @@ export const ClinicalSection = ({
   const [isVitalsOpen, setIsVitalsOpen] = useState(true);
   const [isInvOpen, setIsInvOpen] = useState(true);
 
+  // Recent Complaints (Limited to 5 recent items)
+  const [recentComplaints, setRecentComplaints] = useState(() => {
+    try {
+      const saved = localStorage.getItem(RECENT_COMPLAINTS_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const saveToRecentComplaints = (text, dur) => {
+    try {
+      const current = recentComplaints.filter(item => item.text !== text);
+      const updated = [{ text, duration: dur }, ...current].slice(0, 5);
+      setRecentComplaints(updated);
+      localStorage.setItem(RECENT_COMPLAINTS_KEY, JSON.stringify(updated));
+    } catch (e) {}
+  };
+
   // Add Chief Complaint
   const addComplaint = (text, dur = selectedDuration) => {
-    if (!text) return;
-    const exists = complaints.some(c => c.text === text);
+    if (!text || !text.trim()) return;
+    const cleanText = text.trim();
+    const exists = complaints.some(c => c.text === cleanText);
     if (!exists) {
-      onUpdateComplaints([...complaints, { text, duration: dur }]);
+      onUpdateComplaints([...complaints, { text: cleanText, duration: dur }]);
     }
+    saveToRecentComplaints(cleanText, dur);
     setCustomComplaint('');
   };
 
@@ -88,26 +111,74 @@ export const ClinicalSection = ({
         {isComplaintsOpen && (
           <div className="pt-3 space-y-3">
             
-            {/* Quick 1-Click Complaint Tags */}
+            {/* Recent Suggestions (Limit 5 items) */}
+            {recentComplaints.length > 0 && (
+              <div className="p-2.5 bg-rose-50/60 rounded-xl border border-rose-100">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-bold text-rose-800 flex items-center gap-1.5">
+                    <History className="w-3 h-3 text-rose-600" />
+                    <span>Recent Suggestions (সাম্প্রতিক ব্যবহৃত ৫টি C/C)</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRecentComplaints([]);
+                      localStorage.removeItem(RECENT_COMPLAINTS_KEY);
+                    }}
+                    className="text-[10px] text-rose-500 hover:text-rose-700 underline cursor-pointer"
+                  >
+                    ক্লিয়ার
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {recentComplaints.map((item, idx) => {
+                    const isSelected = complaints.some(c => c.text === item.text);
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => addComplaint(item.text, item.duration || '3 days')}
+                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition-all border flex items-center gap-1 cursor-pointer ${
+                          isSelected
+                            ? 'bg-rose-600 text-white border-rose-700'
+                            : 'bg-white text-rose-900 border-rose-200 hover:bg-rose-100/70'
+                        }`}
+                        title={`যোগ করতে ক্লিক করুন (${item.duration || '3 days'})`}
+                      >
+                        <Sparkles className="w-2.5 h-2.5 text-amber-500" />
+                        <span>{item.text}</span>
+                        {item.duration && (
+                          <span className={`text-[10px] ${isSelected ? 'text-rose-100' : 'text-slate-500'}`}>({item.duration})</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Quick 1-Click Complaint Tags (In English with Bengali hint) */}
             <div>
               <p className="text-[11px] text-slate-500 mb-2">
-                নিচের বাটনে ক্লিক করে এক ক্লিকে উপসর্গ যুক্ত করুন (টাইপ করতে হবে না):
+                নিচের বাটনে ক্লিক করে সহজে ইংলিশে উপসর্গ যুক্ত করুন (টাইপ করতে হবে না):
               </p>
               <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1 bg-slate-50/70 rounded-xl border border-slate-200/60">
                 {COMMON_COMPLAINTS.map((item) => {
-                  const isSelected = complaints.some(c => c.text.includes(item.bn) || c.text.includes(item.en));
+                  const isSelected = complaints.some(c => c.text === item.en || c.text.includes(item.en));
                   return (
                     <button
                       key={item.en}
                       type="button"
-                      onClick={() => addComplaint(`${item.bn} (${item.en})`, item.defaultDuration)}
+                      onClick={() => addComplaint(item.en, item.defaultDuration)}
                       className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all border cursor-pointer ${
                         isSelected
                           ? 'bg-rose-600 text-white border-rose-700 shadow-2xs font-semibold'
                           : 'bg-white text-slate-700 border-slate-200 hover:bg-rose-50 hover:text-rose-800 hover:border-rose-200'
                       }`}
+                      title={`${item.bn} (${item.defaultDuration})`}
                     >
-                      {item.bn}
+                      <span>{item.en}</span>
+                      <span className={`text-[10px] ml-1 ${isSelected ? 'text-rose-100' : 'text-slate-400'}`}>({item.bn})</span>
                     </button>
                   );
                 })}
@@ -121,13 +192,13 @@ export const ClinicalSection = ({
                 value={customComplaint}
                 onChange={(e) => setCustomComplaint(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addComplaint(customComplaint)}
-                placeholder="অন্য কোনো নির্দিষ্ট উপসর্গ লিখুন..."
+                placeholder="Type specific complaint in English (e.g. Chest tightness)..."
                 className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-rose-500"
               />
               <select
                 value={selectedDuration}
                 onChange={(e) => setSelectedDuration(e.target.value)}
-                className="px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700"
+                className="px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 cursor-pointer"
               >
                 {COMPLAINT_DURATIONS.map(d => (
                   <option key={d} value={d}>{d}</option>

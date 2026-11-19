@@ -73,7 +73,9 @@ export function App() {
     date: new Date().toISOString().split('T')[0],
     rxId: 'RX-' + Math.floor(1000 + Math.random() * 9000),
     weight: '',
-    bp: ''
+    weightUnit: 'kg',
+    bp: '',
+    phone: ''
   });
 
   // Clinical State (Default blank for doctor to fill up)
@@ -381,7 +383,9 @@ export function App() {
       date: new Date().toISOString().split('T')[0],
       rxId: 'RX-' + Math.floor(1000 + Math.random() * 9000),
       weight: '',
-      bp: ''
+      weightUnit: 'kg',
+      bp: '',
+      phone: ''
     });
     setComplaints([]);
     setVitals({ bp: '', pulse: '', temp: '', weight: '', spo2: '', rbs: '' });

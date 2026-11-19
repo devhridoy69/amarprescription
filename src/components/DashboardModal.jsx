@@ -240,6 +240,42 @@ export const DashboardModal = ({
                 </div>
               </div>
 
+              {/* Quick Search in Overview */}
+              <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xs">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      if (e.target.value.trim() && activeTab !== 'history') {
+                        setFilterByDate(false);
+                      }
+                    }}
+                    onFocus={() => {
+                      if (activeTab === 'overview' && records.length > 5) {
+                        // User can search right here
+                      }
+                    }}
+                    placeholder="রোগীর নাম, ফোন নম্বর (Phone), প্রেসক্রিপশন আইডি দিয়ে খুঁজুন..."
+                    className="w-full pl-9 pr-24 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-medium focus:ring-2 focus:ring-teal-500"
+                  />
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  {searchTerm ? (
+                    <button 
+                      onClick={() => setSearchTerm('')}
+                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  ) : (
+                    <span className="absolute right-3 top-2 text-[10px] text-teal-600 dark:text-teal-400 font-bold bg-teal-50 dark:bg-teal-950 px-2 py-0.5 rounded border border-teal-200">
+                      দ্রুত সার্চ
+                    </span>
+                  )}
+                </div>
+              </div>
+
               {/* Recent 5 Patients Quick List */}
               <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200/80 dark:border-slate-800">
                 <div className="flex items-center justify-between mb-3">
@@ -276,7 +312,11 @@ export const DashboardModal = ({
                               {rec.patient?.name || 'নাম উল্লেখ নেই'}
                             </span>
                             <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                              {rec.patient?.age ? `${rec.patient.age} ${rec.patient.ageUnit || 'Y'}` : ''} • {rec.patient?.gender || 'Male'} • {rec.diagnosis || 'Diagnosis N/A'}
+                              {rec.patient?.age ? `${rec.patient.age} ${rec.patient.ageUnit || 'Y'}` : ''} • {rec.patient?.gender || 'Male'}
+                              {rec.patient?.phone && (
+                                <span className="font-mono text-teal-700 dark:text-teal-400 font-semibold"> • {rec.patient.phone}</span>
+                              )}
+                              <span> • {rec.diagnosis || 'Diagnosis N/A'}</span>
                             </span>
                           </div>
                         </div>
@@ -330,7 +370,7 @@ export const DashboardModal = ({
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="রোগীর নাম, ফোন নম্বর, প্রেসক্রিপশন আইডি বা রোগ দিয়ে খুঁজুন..."
+                    placeholder="রোগীর নাম, ফোন নম্বর (Phone), প্রেসক্রিপশন আইডি বা রোগ দিয়ে খুঁজুন..."
                     className="w-full pl-9 pr-8 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-medium focus:ring-2 focus:ring-teal-500"
                   />
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
@@ -422,6 +462,12 @@ export const DashboardModal = ({
                           <span className="text-xs text-slate-500 dark:text-slate-400">
                             ({rec.patient?.age ? `${rec.patient.age} ${rec.patient.ageUnit || 'Y'}` : '—'}, {rec.patient?.gender})
                           </span>
+                          {rec.patient?.phone && (
+                            <span className="text-xs font-mono font-bold text-teal-700 dark:text-teal-400 flex items-center gap-1 bg-teal-50 dark:bg-teal-950/60 px-2 py-0.5 rounded border border-teal-200/80">
+                              <Phone className="w-3 h-3" />
+                              {rec.patient.phone}
+                            </span>
+                          )}
                         </div>
 
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600 dark:text-slate-400">

@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, Calendar, Hash, HeartPulse, Scale, RefreshCw } from 'lucide-react';
+import { User, Calendar, Hash, HeartPulse, Scale, RefreshCw, Phone } from 'lucide-react';
 
 export const PatientInfoBar = ({ patient, onChange, onReset, isEditing = false, onCancelEdit = null }) => {
   const handleInputChange = (field, value) => {
@@ -138,18 +138,28 @@ export const PatientInfoBar = ({ patient, onChange, onReset, isEditing = false, 
           />
         </div>
 
-        {/* Row 2: Weight */}
+        {/* Row 2: Weight & Unit (KG / Gram) */}
         <div className="col-span-6 sm:col-span-3">
           <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center gap-1">
             <Scale className="w-3 h-3 text-slate-400" /> Wt (ওজন)
           </label>
-          <input
-            type="text"
-            value={patient.weight}
-            onChange={(e) => handleInputChange('weight', e.target.value)}
-            placeholder="e.g. 65 kg"
-            className="w-full px-2.5 py-2 bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 rounded-lg text-center font-medium focus:ring-2 focus:ring-teal-500"
-          />
+          <div className="flex rounded-lg border border-slate-200 bg-slate-50 focus-within:ring-2 focus-within:ring-teal-500 focus-within:border-teal-500 focus-within:bg-white overflow-hidden">
+            <input
+              type="text"
+              value={patient.weight || ''}
+              onChange={(e) => handleInputChange('weight', e.target.value)}
+              placeholder="65"
+              className="w-full px-2.5 py-2 bg-transparent text-slate-900 font-medium text-center focus:outline-hidden"
+            />
+            <select
+              value={patient.weightUnit || 'kg'}
+              onChange={(e) => handleInputChange('weightUnit', e.target.value)}
+              className="bg-slate-100 border-l border-slate-200 px-2 py-2 text-slate-700 font-bold text-[11px] focus:outline-hidden cursor-pointer"
+            >
+              <option value="kg">kg</option>
+              <option value="gm">gm</option>
+            </select>
+          </div>
         </div>
 
         {/* Row 2: BP */}
@@ -159,10 +169,24 @@ export const PatientInfoBar = ({ patient, onChange, onReset, isEditing = false, 
           </label>
           <input
             type="text"
-            value={patient.bp}
+            value={patient.bp || ''}
             onChange={(e) => handleInputChange('bp', e.target.value)}
             placeholder="120/80"
             className="w-full px-2.5 py-2 bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 rounded-lg text-center font-medium focus:ring-2 focus:ring-teal-500"
+          />
+        </div>
+
+        {/* Row 2: Patient Phone Number (Optional) */}
+        <div className="col-span-12 sm:col-span-6">
+          <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center gap-1">
+            <Phone className="w-3 h-3 text-slate-400" /> Patient Phone (রোগীর মোবাইল নম্বর - ঐচ্ছিক)
+          </label>
+          <input
+            type="tel"
+            value={patient.phone || ''}
+            onChange={(e) => handleInputChange('phone', e.target.value)}
+            placeholder="e.g. 01700-000000 (ঐচ্ছিক)"
+            className="w-full px-3 py-2 bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 rounded-lg text-slate-900 font-medium focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
           />
         </div>
 

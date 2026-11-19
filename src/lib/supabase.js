@@ -614,3 +614,59 @@ export async function adminDeleteUser(userId, phone) {
 
   return true;
 }
+
+/**
+ * Admin: Directly create a new doctor user from Admin Panel
+ */
+export async function adminCreateUser({ fullName, phone, password, degrees = '', specialty = '', bmdcReg = '', status = 'approved', validityDays = 30 }) {
+  if (!phone || !password) {
+    return { success: false, error: 'ফোন নম্বর এবং পাসওয়ার্ড আবশ্যক।' };
+  }
+
+  const cleanPhone = phone.trim().replace(/\s+/g, '');
+  const userId = 'doc_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+  const validUntil = new Date(Date.now() + (Number(validityDays) || 30) * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  const payload = {
+    id: userId,
+    phone: cleanPhone,
+    full_name: (fullName || 'Dr. User').trim(),
+    degrees: (degrees || '').trim(),
+    specialty: (specialty || '').trim(),
+    bmdc_reg: (bmdcReg || '').trim(),
+    password_hash: password.trim(),
+    status: status || 'approved',
+    valid_until: validUntil,
+    created_at: new Date().toISOString()
+  };
+
+  // 1. Try Supabase cloud insert
+  try {
+    const dbPayload = filterDbUserFields(payload);
+    const { data, error } = await supabase
+      .from('doctor_users')
+      .insert([dbPayload])
+      .select();
+
+    if (error) {
+      if (error.code === '23505' || error.message?.includes('duplicate') || error.message?.includes('unique')) {
+        return { success: false, error: 'এই ফোন নম্বর দিয়ে ইতিমধ্যে একটি অ্যাকাউন্ট তৈরি করা হয়েছে।' };
+      }
+      console.error('Supabase admin create error:', error);
+    }
+  } catch (e) {
+    console.error('Supabase admin create exception:', e);
+  }
+
+  // 2. Persist in LocalStorage
+  const localList = getLocalUsers();
+  const existingIdx = localList.findIndex(u => u.phone === cleanPhone);
+  if (existingIdx >= 0) {
+    localList[existingIdx] = { ...localList[existingIdx], ...payload };
+  } else {
+    localList.unshift(payload);
+  }
+  saveLocalUsers(localList);
+
+  return { success: true, data: payload };
+}
