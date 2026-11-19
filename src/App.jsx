@@ -344,6 +344,18 @@ export function App() {
         localStorage.setItem(RECENT_MEDICINES_KEY, JSON.stringify(mergedMeds.slice(0, 10)));
       }
 
+      // 5. Recent Advice
+      if (adviceList && adviceList.length > 0) {
+        const RECENT_ADVICE_KEY = 'amar_rx_recent_advice';
+        const savedAdvice = JSON.parse(localStorage.getItem(RECENT_ADVICE_KEY) || '[]');
+        let mergedAdvice = [...savedAdvice];
+        adviceList.forEach(adv => {
+          if (!adv) return;
+          mergedAdvice = [adv, ...mergedAdvice.filter(x => x !== adv)];
+        });
+        localStorage.setItem(RECENT_ADVICE_KEY, JSON.stringify(mergedAdvice.slice(0, 10)));
+      }
+
       // Notify all sections that recents have updated for the next patient/prescription
       window.dispatchEvent(new Event('rx_recent_updated'));
     } catch (err) {

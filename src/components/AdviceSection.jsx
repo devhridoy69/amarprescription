@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { ShieldAlert, Plus, X, Calendar, CheckSquare, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShieldAlert, Plus, X, Calendar, CheckSquare, Sparkles, History } from 'lucide-react';
 import { COMMON_ADVICE, FOLLOW_UP_PRESETS } from '../data/adviceData';
+
+const RECENT_ADVICE_KEY = 'amar_rx_recent_advice';
 
 export const AdviceSection = ({ 
   adviceList, onUpdateAdvice, 
@@ -8,6 +10,32 @@ export const AdviceSection = ({
   specialNote, onUpdateSpecialNote
 }) => {
   const [customAdvice, setCustomAdvice] = useState('');
+
+  // Recent Advices (Static during current prescription editing, refreshes on next prescription via event)
+  const [recentAdvices, setRecentAdvices] = useState(() => {
+    try {
+      const saved = localStorage.getItem(RECENT_ADVICE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    const handleRecentUpdate = () => {
+      try {
+        const saved = localStorage.getItem(RECENT_ADVICE_KEY);
+        setRecentAdvices(saved ? JSON.parse(saved) : []);
+      } catch (e) {}
+    };
+
+    window.addEventListener('rx_recent_updated', handleRecentUpdate);
+    window.addEventListener('storage', handleRecentUpdate);
+    return () => {
+      window.removeEventListener('rx_recent_updated', handleRecentUpdate);
+      window.removeEventListener('storage', handleRecentUpdate);
+    };
+  }, []);
 
   const addAdvice = (text) => {
     if (!text) return;
@@ -41,6 +69,49 @@ export const AdviceSection = ({
           <label className="block text-xs font-semibold text-slate-700 mb-1.5">
             Medical & Dietary Advice (উপদেশ নির্বাচন করুন):
           </label>
+
+          {/* Recent Advices Suggestions */}
+          {recentAdvices.length > 0 && (
+            <div className="mb-2.5 p-2.5 bg-emerald-50/60 rounded-xl border border-emerald-100">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[11px] font-bold text-emerald-800 flex items-center gap-1.5">
+                  <History className="w-3 h-3 text-emerald-600" />
+                  <span>Recent Suggestions</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRecentAdvices([]);
+                    localStorage.removeItem(RECENT_ADVICE_KEY);
+                  }}
+                  className="text-[10px] text-emerald-600 hover:text-emerald-800 underline cursor-pointer"
+                >
+                  ক্লিয়ার
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {recentAdvices.map((advText, idx) => {
+                  const isSelected = adviceList.includes(advText);
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => isSelected ? removeAdvice(adviceList.indexOf(advText)) : addAdvice(advText)}
+                      className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all border flex items-center gap-1 cursor-pointer ${
+                        isSelected
+                          ? 'bg-emerald-600 text-white border-emerald-700'
+                          : 'bg-white text-emerald-950 border-emerald-200 hover:bg-emerald-100/70'
+                      }`}
+                      title={isSelected ? 'প্রেসক্রিপশন থেকে বাদ দিন' : 'প্রেসক্রিপশনে যোগ করুন'}
+                    >
+                      <span>{advText}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto p-2 bg-slate-50/70 rounded-xl border border-slate-200/60 mb-2.5">
             {COMMON_ADVICE.map((item, idx) => {
               const isSelected = adviceList.includes(item.bn);
