@@ -28,7 +28,8 @@ export const PrescriptionPreview = ({
   selectedFont = null,
   onSelectFontId = () => {},
   fontPresets = [],
-  onPrint = null
+  onPrint = null,
+  hideToolbar = false
 }) => {
   const [showConfig, setShowConfig] = useState(false);
 
@@ -568,8 +569,9 @@ export const PrescriptionPreview = ({
         }
       `}</style>
 
-      {/* Floating Action & Customization Toolbar (Screen Only) */}
-      <div className="no-print w-full flex flex-col gap-2.5 mb-4 bg-white/95 backdrop-blur-md p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-xs">
+      {/* Floating Action & Customization Toolbar (Screen Only, hidden in public patient viewer) */}
+      {!hideToolbar && (
+        <div className="no-print w-full flex flex-col gap-2.5 mb-4 bg-white/95 backdrop-blur-md p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-xs">
         
         {/* Top row: Status, Multi-page pills, Print button */}
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -807,6 +809,7 @@ export const PrescriptionPreview = ({
           </div>
         )}
       </div>
+      )}
 
       {/* RENDER PAGES (Single Page OR Multi-Pages with Clean Page Break) */}
       <div className="w-full flex flex-col items-center">

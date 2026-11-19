@@ -1,15 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Download, Printer, FileText, CheckCircle2, AlertCircle, 
-  ArrowLeft, ShieldCheck, Phone, Stethoscope, Share2, Loader2
+  ArrowLeft, ShieldCheck, Share2, Loader2, Check
 } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import { fetchSinglePrescriptionForPublic } from '../lib/supabase';
 import { PrescriptionPreview } from './PrescriptionPreview';
 
 export const PublicPrescriptionView = ({ rxId, onBackToApp = null }) => {
   const [prescription, setPrescription] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [error, setError] = useState(null);
+  const prescriptionContainerRef = useRef(null);
 
   useEffect(() => {
     async function loadRx() {
@@ -21,12 +26,11 @@ export const PublicPrescriptionView = ({ rxId, onBackToApp = null }) => {
 
       setLoading(true);
       try {
-        console.log('Fetching public rx for:', rxId);
         const data = await fetchSinglePrescriptionForPublic(rxId);
         if (data) {
           setPrescription(data);
         } else {
-          setError(`প্রেসক্রিপশনটি পাওয়া যায়নি (${rxId})। ডাক্তার প্রেসক্রিপশনটি প্রিন্ট বা সেভ করলে ক্লাউড ডেটাবেজে সংরক্ষিত হয়ে এখানে দেখা যাবে।`);
+          setError(`প্রেসক্রিপশনটি পাওয়া যায়নি (${rxId})। ডাক্তার প্রেসক্রিপশনটি প্রিন্ট বা সেভ করলে ক্লাউড ডেটাবেজে সংরক্ষিত হয়ে এখানে পাওয়া যাবে।`);
         }
       } catch (err) {
         console.error(err);
@@ -39,8 +43,63 @@ export const PublicPrescriptionView = ({ rxId, onBackToApp = null }) => {
     loadRx();
   }, [rxId]);
 
-  const handleDownloadPDF = () => {
-    window.print();
+  // Direct High-Resolution PDF Download to Phone/PC Storage
+  const handleDownloadDirectPDF = async () => {
+    if (isGeneratingPdf) return;
+
+    const paperElement = prescriptionContainerRef.current?.querySelector('.prescription-paper');
+    if (!paperElement) {
+      window.print();
+      return;
+    }
+
+    setIsGeneratingPdf(true);
+    setDownloadSuccess(false);
+
+    try {
+      // 1. Capture clean screenshot of prescription paper in high resolution
+      const canvas = await html2canvas(paperElement, {
+        scale: 2.5, // 2.5x crisp print quality
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        windowWidth: paperElement.scrollWidth,
+        windowHeight: paperElement.scrollHeight
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+      // 2. Build standard A4 PDF document
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pdfWidth = 210;
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      // Fit or paginate neatly
+      if (pdfHeight <= 297) {
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+      } else {
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, 297);
+      }
+
+      const patientName = (prescription?.patient?.name || 'Patient').replace(/[^a-zA-Z0-9_\u0980-\u09FF]/g, '_');
+      const safeRxId = (prescription?.patient?.rxId || rxId || 'Rx').replace(/[^a-zA-Z0-9_-]/g, '');
+      const filename = `Prescription_${patientName}_${safeRxId}.pdf`;
+
+      // 3. Save directly to phone / browser download folder
+      pdf.save(filename);
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 4000);
+    } catch (err) {
+      console.error('PDF generation error, falling back to browser print:', err);
+      window.print();
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const handleShare = () => {
@@ -74,7 +133,7 @@ export const PublicPrescriptionView = ({ rxId, onBackToApp = null }) => {
             <AlertCircle className="w-6 h-6" />
           </div>
           <h2 className="text-lg font-bold text-slate-800 mb-1">প্রেসক্রিপশন পাওয়া যায়নি</h2>
-          <p className="text-xs text-slate-500 mb-6">{error || 'প্রেসক্রিপশনটি ক্লাউড ডেটাবেজে সংরক্ষিত নাও থাকতে পারে।'}</p>
+          <p className="text-xs text-slate-500 mb-6">{error}</p>
           
           <div className="flex gap-2 justify-center">
             {onBackToApp ? (
@@ -109,26 +168,28 @@ export const PublicPrescriptionView = ({ rxId, onBackToApp = null }) => {
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col">
-      {/* Top Patient Bar with 1-Click Download PDF */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs px-4 py-3 no-print">
-        <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      {/* Clean Mobile Patient Header: Direct Download Button Only (No Pad Settings) */}
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs px-3 sm:px-4 py-2.5 sm:py-3 no-print">
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
           
-          <div className="flex items-center gap-2.5">
-            <img src="/logo.png" alt="আমার প্রেসক্রিপশন" className="h-8 w-auto object-contain" />
-            <div>
+          <div className="flex items-center gap-2">
+            <img src="/logo.png" alt="আমার প্রেসক্রিপশন" className="h-7 sm:h-8 w-auto object-contain shrink-0" />
+            <div className="leading-tight truncate">
               <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold text-slate-900">ডিজিটাল প্রেসক্রিপশন</span>
-                <span className="text-[10px] font-bold bg-teal-100 text-teal-800 px-2 py-0.2 rounded-full">
+                <span className="text-xs font-bold text-slate-900 truncate">
+                  {patient.name || 'ডিজিটাল প্রেসক্রিপশন'}
+                </span>
+                <span className="text-[10px] font-bold bg-teal-100 text-teal-800 px-1.5 py-0.2 rounded-full shrink-0">
                   {patient.rxId || rxId}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 truncate max-w-[200px] sm:max-w-xs">
-                {patient.name ? `${patient.name} (${patient.age || ''} ${patient.ageUnit || 'Y'})` : 'Patient Record'}
+              <p className="text-[10px] text-slate-500 truncate">
+                {patient.age ? `${patient.age} ${patient.ageUnit || 'Y'} • ` : ''}{prescription.date || 'আজকের প্রেসক্রিপশন'}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               type="button"
               onClick={handleShare}
@@ -139,22 +200,38 @@ export const PublicPrescriptionView = ({ rxId, onBackToApp = null }) => {
               <span className="hidden sm:inline">শেয়ার</span>
             </button>
 
+            {/* Direct Device Save / Download PDF Button */}
             <button
               type="button"
-              onClick={handleDownloadPDF}
-              className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs hover:shadow-md cursor-pointer transition-all animate-pulse hover:animate-none"
+              onClick={handleDownloadDirectPDF}
+              disabled={isGeneratingPdf}
+              className="px-3.5 sm:px-4 py-2 bg-teal-700 hover:bg-teal-800 disabled:bg-teal-400 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs hover:shadow-md cursor-pointer transition-all"
             >
-              <Download className="w-4 h-4" />
-              <span>Download PDF / Print</span>
+              {isGeneratingPdf ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>PDF তৈরি হচ্ছে...</span>
+                </>
+              ) : downloadSuccess ? (
+                <>
+                  <Check className="w-4 h-4 text-emerald-300" />
+                  <span>ডাউনলোড সম্পন্ন!</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  <span>Download PDF</span>
+                </>
+              )}
             </button>
           </div>
 
         </div>
       </header>
 
-      {/* Main Prescription Presentation Area */}
-      <main className="flex-1 py-4 sm:py-8 px-2 sm:px-4 max-w-4xl mx-auto w-full">
-        <div className="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden print:shadow-none print:border-none">
+      {/* Main Prescription Presentation Area - Pad Settings Strictly Hidden (hideToolbar=true) */}
+      <main className="flex-1 py-3 sm:py-6 px-2 sm:px-4 max-w-4xl mx-auto w-full">
+        <div ref={prescriptionContainerRef} className="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden print:shadow-none print:border-none">
           <PrescriptionPreview
             doctor={doctor}
             patient={patient}
@@ -175,13 +252,14 @@ export const PublicPrescriptionView = ({ rxId, onBackToApp = null }) => {
               paperSize: 'A4',
               scale: 100
             }}
-            onPrint={handleDownloadPDF}
+            onPrint={handleDownloadDirectPDF}
+            hideToolbar={true} // Strictly hide Pad Settings and toolbar for patients
           />
         </div>
 
         {/* Footer info for patient */}
-        <div className="text-center py-6 text-xs text-slate-500 no-print space-y-1">
-          <div className="flex items-center justify-center gap-1.5 text-teal-700 font-bold">
+        <div className="text-center py-5 text-xs text-slate-500 no-print space-y-1">
+          <div className="flex items-center justify-center gap-1.5 text-teal-800 font-bold">
             <ShieldCheck className="w-4 h-4 text-teal-600" />
             <span>Digital Verified & Authenticated Prescription</span>
           </div>
