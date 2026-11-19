@@ -268,6 +268,30 @@ export function saveLocalUsers(users) {
   } catch (e) {}
 }
 
+// Valid columns in Supabase 'doctor_users' table
+const DB_USER_COLUMNS = new Set([
+  'id',
+  'phone',
+  'full_name',
+  'degrees',
+  'specialty',
+  'bmdc_reg',
+  'password_hash',
+  'status',
+  'valid_until',
+  'created_at'
+]);
+
+function filterDbUserFields(dataObj) {
+  const clean = {};
+  for (const [key, val] of Object.entries(dataObj || {})) {
+    if (DB_USER_COLUMNS.has(key) && val !== undefined) {
+      clean[key] = val;
+    }
+  }
+  return clean;
+}
+
 /**
  * Register Doctor (Supabase + Local fallback)
  */
@@ -289,34 +313,34 @@ export async function registerDoctorOnline({ fullName, phone, password, degrees 
     degrees: degrees.trim(),
     specialty: specialty.trim(),
     bmdc_reg: bmdcReg.trim(),
-    workplace: '',
-    chamber_name: '',
-    chamber_address: '',
-    visiting_hours: '',
-    appointment_phone: '',
     password_hash: password,
     status: 'pending', // 'pending' | 'approved' | 'rejected' | 'suspended'
     valid_until: defaultValidUntil,
-    has_watermark: true, // Controlled exclusively by Admin: true = watermark shown, false = removed
     created_at: new Date().toISOString()
   };
 
-  // 1. Try Supabase
+  // 1. Try Supabase cloud insert first
   let supabaseSuccess = false;
   try {
+    const dbPayload = filterDbUserFields(payload);
     const { data, error } = await supabase
       .from('doctor_users')
-      .insert([payload])
+      .insert([dbPayload])
       .select();
 
-    if (!error) {
+    if (!error && data && data.length > 0) {
       supabaseSuccess = true;
-    } else if (error.code === '23505' || error.message?.includes('duplicate') || error.message?.includes('unique')) {
-      return { success: false, error: 'এই ফোন নম্বর দিয়ে ইতিমধ্যে একটি অ্যাকাউন্ট তৈরি করা হয়েছে।' };
+    } else if (error) {
+      if (error.code === '23505' || error.message?.includes('duplicate') || error.message?.includes('unique')) {
+        return { success: false, error: 'এই ফোন নম্বর দিয়ে ইতিমধ্যে একটি অ্যাকাউন্ট তৈরি করা হয়েছে।' };
+      }
+      console.error('Supabase registration insert error:', error);
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error('Supabase registration exception:', e);
+  }
 
-  // 2. Always persist to localStorage mirror
+  // 2. Always persist to localStorage mirror (for offline and fast UI sync)
   const localList = getLocalUsers();
   const existingLocal = localList.find(u => u.phone === cleanPhone);
   if (existingLocal) {
@@ -499,13 +523,22 @@ export async function adminUpdateUserFullDetails(userId, phone, updatedFields) {
     saveLocalUsers(localList);
   }
 
-  // Update in Supabase cloud
+  // Update in Supabase cloud (only passing columns that exist in the database schema)
   try {
-    await supabase
-      .from('doctor_users')
-      .update(updatedFields)
-      .eq('phone', phone);
-  } catch (e) {}
+    const dbFields = filterDbUserFields(updatedFields);
+    if (Object.keys(dbFields).length > 0) {
+      const { error } = await supabase
+        .from('doctor_users')
+        .update(dbFields)
+        .eq('phone', phone);
+      
+      if (error) {
+        console.error('Supabase admin update error:', error);
+      }
+    }
+  } catch (e) {
+    console.error('Supabase admin update exception:', e);
+  }
 
   return true;
 }
