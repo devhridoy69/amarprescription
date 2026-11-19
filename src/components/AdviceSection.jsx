@@ -41,7 +41,7 @@ export const AdviceSection = ({
           <label className="block text-xs font-semibold text-slate-700 mb-1.5">
             Medical & Dietary Advice (উপদেশ নির্বাচন করুন):
           </label>
-          <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto p-1.5 bg-slate-50/70 rounded-xl border border-slate-200/60 mb-2.5">
+          <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto p-2 bg-slate-50/70 rounded-xl border border-slate-200/60 mb-2.5">
             {COMMON_ADVICE.map((item, idx) => {
               const isSelected = adviceList.includes(item.bn);
               return (
@@ -49,9 +49,9 @@ export const AdviceSection = ({
                   key={idx}
                   type="button"
                   onClick={() => isSelected ? removeAdvice(adviceList.indexOf(item.bn)) : addAdvice(item.bn)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all border text-left cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border text-left cursor-pointer ${
                     isSelected
-                      ? 'bg-emerald-600 text-white border-emerald-700 shadow-2xs font-semibold'
+                      ? 'bg-emerald-600 text-white border-emerald-700 shadow-2xs'
                       : 'bg-white text-slate-700 border-slate-200 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-200'
                   }`}
                 >
@@ -117,13 +117,13 @@ export const AdviceSection = ({
               placeholder="e.g. ৭ দিন পর / টেস্ট রিপোর্ট সহ"
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-teal-900 focus:ring-1 focus:ring-teal-500 mb-2"
             />
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1.5">
               {FOLLOW_UP_PRESETS.map((p) => (
                 <button
                   key={p.label}
                   type="button"
                   onClick={() => onUpdateNextVisit(p.customText || p.label)}
-                  className="px-2 py-0.5 rounded text-[11px] bg-white border border-slate-200 text-slate-600 hover:bg-teal-50 hover:text-teal-800 transition-colors cursor-pointer"
+                  className="px-2.5 py-1 rounded-md text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-teal-50 hover:text-teal-800 hover:border-teal-300 transition-colors cursor-pointer"
                 >
                   {p.label}
                 </button>

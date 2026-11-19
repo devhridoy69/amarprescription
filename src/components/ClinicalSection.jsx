@@ -232,10 +232,10 @@ export const ClinicalSection = ({
 
             {/* Quick 1-Click Complaint Tags (Pure English Only) */}
             <div>
-              <p className="text-[11px] text-slate-500 mb-2">
+              <p className="text-xs text-slate-500 font-medium mb-2">
                 Click any tag below to add complaint instantly (1-click):
               </p>
-              <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1 bg-slate-50/70 rounded-xl border border-slate-200/60">
+              <div className="flex flex-wrap gap-1.5 max-h-44 overflow-y-auto p-1.5 bg-slate-50/70 rounded-xl border border-slate-200/60">
                 {COMMON_COMPLAINTS.map((item) => {
                   const isSelected = complaints.some(c => c.text === item.en || c.text.includes(item.en));
                   return (
@@ -243,7 +243,7 @@ export const ClinicalSection = ({
                       key={item.en}
                       type="button"
                       onClick={() => addComplaint(item.en, item.defaultDuration)}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all border cursor-pointer ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border cursor-pointer ${
                         isSelected
                           ? 'bg-rose-600 text-white border-rose-700 shadow-2xs font-semibold'
                           : 'bg-white text-slate-700 border-slate-200 hover:bg-rose-50 hover:text-rose-800 hover:border-rose-200'
@@ -557,7 +557,7 @@ export const ClinicalSection = ({
 
               {/* Common Diagnoses Quick Tags */}
               <div>
-                <p className="text-[10px] text-slate-400 mb-1">কমন রোগসমূহ (এক ক্লিকে একাধিক রোগ সিলেক্ট/আনসিলেক্ট করুন):</p>
+                <p className="text-xs text-slate-500 font-medium mb-1.5">কমন রোগসমূহ (এক ক্লিকে একাধিক রোগ সিলেক্ট/আনসিলেক্ট করুন):</p>
                 <div className="flex flex-wrap gap-1.5">
                   {COMMON_DIAGNOSES.map((diag) => {
                     const shortName = diag.split(' / ')[0].trim();
@@ -567,10 +567,10 @@ export const ClinicalSection = ({
                         key={diag}
                         type="button"
                         onClick={() => handleToggleDiagnosis(diag)}
-                        className={`px-2 py-0.5 rounded text-[11px] transition-colors border cursor-pointer ${
+                        className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors border cursor-pointer ${
                           isSelected
                             ? 'bg-teal-600 text-white border-teal-700 font-bold shadow-2xs'
-                            : 'bg-slate-100 hover:bg-teal-50 text-slate-600 hover:text-teal-800 border-slate-200 hover:border-teal-200'
+                            : 'bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-900 border-slate-200 hover:border-teal-200'
                         }`}
                         title={isSelected ? 'বাদ দিতে ক্লিক করুন' : 'যোগ করতে ক্লিক করুন'}
                       >
@@ -650,12 +650,12 @@ export const ClinicalSection = ({
               </div>
             )}
 
-            <p className="text-[11px] text-slate-500">
+            <p className="text-xs text-slate-500 font-medium">
               প্রয়োজনীয় ল্যাব টেস্টে ক্লিক করে প্রেসক্রিপশনে যুক্ত করুন:
             </p>
 
             {/* Quick 1-Click Investigation Pills */}
-            <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1 bg-slate-50/70 rounded-xl border border-slate-200/60">
+            <div className="flex flex-wrap gap-1.5 max-h-44 overflow-y-auto p-1.5 bg-slate-50/70 rounded-xl border border-slate-200/60">
               {COMMON_INVESTIGATIONS.map((test) => {
                 const isSelected = investigations.includes(test);
                 return (
@@ -663,7 +663,7 @@ export const ClinicalSection = ({
                     key={test}
                     type="button"
                     onClick={() => isSelected ? removeInvestigation(investigations.indexOf(test)) : addInvestigation(test)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all border cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border cursor-pointer ${
                       isSelected
                         ? 'bg-purple-600 text-white border-purple-700 shadow-2xs font-semibold'
                         : 'bg-white text-slate-700 border-slate-200 hover:bg-purple-50 hover:text-purple-800 hover:border-purple-200'

@@ -390,30 +390,45 @@ export const PrescriptionPreview = ({
                         <div className="pl-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-800 font-medium">
                           
                           {/* Dosage with vertical fraction like 1 up, 2 down */}
-                          <div className="inline-flex items-center font-bold font-mono text-teal-950 bg-slate-100/90 px-2 py-0.5 rounded border border-slate-200">
-                            {renderWithFractions(med.dosage, 'md')}
-                          </div>
+                          {med.dosage && (
+                            <div className="inline-flex items-center font-bold font-mono text-teal-950 bg-slate-100/90 px-2 py-0.5 rounded border border-slate-200">
+                              {renderWithFractions(med.dosage, 'md')}
+                            </div>
+                          )}
 
-                          {/* Unit e.g. 1/2 কাপ / Tablet */}
-                          {med.unit && (
+                          {/* Unit e.g. 1/2 কাপ / চামচ (অপ্রয়োজনীয় রিপিটেটিভ Tablet, Capsule, ফোঁটা বাদ দিয়ে পরিচ্ছন্ন রাখা) */}
+                          {med.unit && 
+                           med.unit.toLowerCase() !== 'tablet' && 
+                           med.unit.toLowerCase() !== 'tab' && 
+                           med.unit.toLowerCase() !== 'capsule' && 
+                           med.unit.toLowerCase() !== 'cap' && 
+                           med.unit !== 'ফোঁটা' && 
+                           med.unit !== 'drops' && 
+                           med.unit !== 'ড্রপ' && (
                             <span className="text-slate-700 font-semibold">
                               {renderWithFractions(med.unit, 'sm')}
                             </span>
                           )}
 
-                          <span className="text-slate-300">•</span>
-
                           {/* Timing / Instructions */}
-                          <span className="text-slate-800 font-semibold">
-                            {renderWithFractions(med.instruction, 'sm')}
-                          </span>
-
-                          <span className="text-slate-300">•</span>
+                          {med.instruction && (
+                            <>
+                              <span className="text-slate-300">•</span>
+                              <span className="text-slate-800 font-semibold">
+                                {renderWithFractions(med.instruction, 'sm')}
+                              </span>
+                            </>
+                          )}
 
                           {/* Duration */}
-                          <span className="text-slate-700 font-bold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/60 text-[11px]">
-                            {med.duration}
-                          </span>
+                          {med.duration && (
+                            <>
+                              <span className="text-slate-300">•</span>
+                              <span className="text-slate-700 font-bold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/60 text-[11px]">
+                                {med.duration}
+                              </span>
+                            </>
+                          )}
 
                         </div>
                       </div>

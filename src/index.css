@@ -4,9 +4,26 @@
   :root {
     --app-font: 'Hind Siliguri', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
+  /* Optimal desktop & laptop zoom for maximum clarity and ergonomics */
+  @media (min-width: 1024px) {
+    #root {
+      zoom: 105%;
+    }
+  }
+  /* Mobile and tablet touch friendly baseline without breaking viewport bounds */
+  @media (max-width: 1023px) {
+    #root {
+      zoom: 100%;
+    }
+  }
   * {
     box-sizing: border-box;
     font-family: var(--app-font);
+  }
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+    touch-action: manipulation;
   }
   body {
     background-color: #f8fafc;

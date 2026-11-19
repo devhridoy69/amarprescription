@@ -452,6 +452,24 @@ export function App() {
     }
   }, [selectedFontId, selectedFont]);
 
+  // UI Font Size Zoom State with localStorage persistence (Default: 108% for better readability)
+  const [uiTextZoom, setUiTextZoom] = useState(() => {
+    try {
+      const saved = localStorage.getItem('amar_rx_ui_zoom');
+      if (saved) {
+        const parsed = Number(saved);
+        if (parsed <= 100) return 108; // Upgrade previous 100% to 108%
+        return parsed;
+      }
+    } catch (e) {}
+    return 108;
+  });
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--ui-text-zoom', `${uiTextZoom}%`);
+    localStorage.setItem('amar_rx_ui_zoom', String(uiTextZoom));
+  }, [uiTextZoom]);
+
   const handleSelectFontId = (fontId) => {
     setSelectedFontId(fontId);
   };
@@ -778,6 +796,7 @@ export function App() {
                   onAddMedicine={handleAddMedicine}
                   onRemoveMedicine={handleRemoveMedicine}
                   onReorderMedicines={handleReorderMedicines}
+                  currentUser={currentUser}
                 />
               </div>
 

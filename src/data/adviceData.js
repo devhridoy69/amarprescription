@@ -1,6 +1,6 @@
 // Standard Medical and Dietary Advice
 export const COMMON_ADVICE = [
-  { bn: 'প্রচুর পরিমাণে বিশুদ্ধ পানি পান করুন (প্রতিদিন ৩-৪ লিটার)', en: 'Drink plenty of pure drinking water (3-4 L daily)' },
+  { bn: 'পর্যাপ্ত পরিমাণে বিশুদ্ধ পানি পান করুন (প্রতিদিন ২-৩ লিটার)', en: 'Drink adequate pure drinking water (2-3 L daily)' },
   { bn: 'তৈলাক্ত, ভাজাপোড়া ও অতিরিক্ত মসলাযুক্ত খাবার সম্পূর্ণ পরিহার করুন', en: 'Avoid oily, spicy and deep-fried fast food' },
   { bn: 'ভরা পেটে ওষুধ সেবন করবেন', en: 'Take medications with or after meals' },
   { bn: 'অ্যান্টিবায়োটিকের সম্পূর্ণ কোর্স নির্দিষ্ট সময়ে শেষ করবেন, মাঝপথে বন্ধ করবেন না', en: 'Complete full course of antibiotics as directed' },
@@ -13,7 +13,7 @@ export const COMMON_ADVICE = [
   { bn: 'ভারী কোনো জিনিস তুলবেন না ও সামনে ঝুঁকে কাজ করবেন না', en: 'Do not lift heavy weights or bend forward' },
   { bn: 'নরম বিছানা পরিহার করুন এবং শক্ত সমান বিছানায় ঘুমাবেন', en: 'Sleep on a firm, flat mattress; avoid soft beds' },
   { bn: 'শাকসবজি, ফলমূল ও আঁশযুক্ত খাবার বেশি করে খাবেন', en: 'Eat plenty of green vegetables and dietary fibers' },
-  { bn: 'ওষুধ চলাকালীন রক্তচাপ ও রক্তের শর্করা নিয়মিত মাপবেন', en: 'Monitor blood pressure and blood sugar regularly' },
+  { bn: 'ওষুধ চলাকালীন রক্তচাপ ( Blood Pressure ) ও রক্তের শর্করা ( Blood Suger ) নিয়মিত মাপবেন', en: 'Monitor blood pressure and blood sugar regularly' },
   { bn: 'রোগের কোনো অস্বাভাবিক লক্ষণ বা অবনতি হলে দ্রুত চিকিৎসকের শরণাপন্ন হবেন', en: 'Contact doctor or hospital immediately if symptoms worsen' },
   { bn: 'রিপোর্ট সহ নির্দিষ্ট তারিখে অবশ্যই ফলো-আপে আসবেন', en: 'Follow-up on scheduled date along with test reports' }
 ];

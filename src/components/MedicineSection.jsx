@@ -17,11 +17,91 @@ import { StackedFraction, renderWithFractions } from './StackedFraction';
 
 const RECENT_MEDICINES_KEY = 'amar_rx_recent_medicines';
 
-export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, onReorderMedicines, onUpdateMedicine }) => {
+export const MedicineSection = ({ 
+  medicines, 
+  onAddMedicine, 
+  onRemoveMedicine, 
+  onReorderMedicines, 
+  onUpdateMedicine,
+  currentUser = null 
+}) => {
   // Input fields state
   const [searchTerm, setSearchTerm] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
+
+  // User-specific custom instructions storage key
+  const userPhone = currentUser?.phone || 'default';
+  const CUSTOM_INSTRUCTIONS_KEY = `amar_rx_custom_instructions_${userPhone}`;
+  const CUSTOM_DURATIONS_KEY = `amar_rx_custom_durations_${userPhone}`;
+
+  const [customInstructionsList, setCustomInstructionsList] = useState(() => {
+    try {
+      const saved = localStorage.getItem(CUSTOM_INSTRUCTIONS_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const [customDurationsList, setCustomDurationsList] = useState(() => {
+    try {
+      const saved = localStorage.getItem(CUSTOM_DURATIONS_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  // Save custom instruction
+  const handleSaveCustomInstruction = () => {
+    const text = (currentMed.instruction || '').trim();
+    if (!text) return;
+    if (customInstructionsList.includes(text) || INSTRUCTION_PRESETS.some(p => p.startsWith(text))) {
+      alert('এই নিয়মটি ইতিমধ্যে তালিকায় রয়েছে');
+      return;
+    }
+    const updated = [...customInstructionsList, text];
+    setCustomInstructionsList(updated);
+    try {
+      localStorage.setItem(CUSTOM_INSTRUCTIONS_KEY, JSON.stringify(updated));
+    } catch (e) {}
+  };
+
+  // Remove custom instruction
+  const handleRemoveCustomInstruction = (itemToRemove, e) => {
+    if (e) e.stopPropagation();
+    const updated = customInstructionsList.filter(item => item !== itemToRemove);
+    setCustomInstructionsList(updated);
+    try {
+      localStorage.setItem(CUSTOM_INSTRUCTIONS_KEY, JSON.stringify(updated));
+    } catch (e) {}
+  };
+
+  // Save custom duration
+  const handleSaveCustomDuration = () => {
+    const text = (currentMed.duration || '').trim();
+    if (!text) return;
+    if (customDurationsList.includes(text) || DURATION_PRESETS.includes(text)) {
+      alert('এই স্থায়িত্বটি ইতিমধ্যে তালিকায় রয়েছে');
+      return;
+    }
+    const updated = [...customDurationsList, text];
+    setCustomDurationsList(updated);
+    try {
+      localStorage.setItem(CUSTOM_DURATIONS_KEY, JSON.stringify(updated));
+    } catch (e) {}
+  };
+
+  // Remove custom duration
+  const handleRemoveCustomDuration = (itemToRemove, e) => {
+    if (e) e.stopPropagation();
+    const updated = customDurationsList.filter(item => item !== itemToRemove);
+    setCustomDurationsList(updated);
+    try {
+      localStorage.setItem(CUSTOM_DURATIONS_KEY, JSON.stringify(updated));
+    } catch (e) {}
+  };
 
   // Recent Medicines (Limited to 10 recent items)
   // Static during current prescription editing, refreshes on next prescription via event
@@ -61,7 +141,7 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
     genericName: '',
     strength: '',
     dosage: '1+0+1',
-    unit: 'Tablet',
+    unit: '', // No default repetitive 'Tablet'
     instruction: '', // Blank by default
     duration: '', // Blank by default
     isFraction: false,
@@ -150,6 +230,7 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
   const normalizeType = (rawType = '') => {
     if (!rawType || typeof rawType !== 'string') return 'Tab';
     const t = rawType.toLowerCase();
+    if (t.includes('supp')) return 'Supp';
     if (t.includes('tab')) return 'Tab';
     if (t.includes('cap')) return 'Cap';
     if (t.includes('syp') || t.includes('susp') || t.includes('syrup')) return 'Syp';
@@ -169,22 +250,32 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
     const gName = med.genericName || med.generic_name || '';
     const str = med.strength || '';
     const medType = normalizeType(rawType);
-    const defaultUnit = medType === 'Cap' ? 'Capsule' : 
-                        medType === 'Syp' ? 'চামচ (Spoon)' :
-                        medType === 'Drop' ? 'ড্রপ (Drop)' : 'Tablet';
+    const defaultUnit = medType === 'Cap' ? '' : 
+                        medType === 'Syp' ? 'চামচ' :
+                        medType === 'Drop' ? '' :
+                        medType === 'Supp' ? 'টি' : '';
 
-    let initialUnit = med.defaultUnit || defaultUnit;
+    let initialDosage = med.defaultDosage || '1+0+1';
+    let initialUnit = med.defaultUnit && med.defaultUnit !== 'Tablet' && med.defaultUnit !== 'Capsule' ? med.defaultUnit : defaultUnit;
+    let initialInstruction = '';
     if (medType === 'Drop') {
       const bnNums = { '1': '১', '2': '২', '3': '৩', '4': '৪', '5': '৫', '6': '৬', '7': '৭', '8': '৮', '9': '৯', '10': '১০', '15': '১৫' };
       if (dropLang === 'bn') {
         const bnCount = bnNums[dropCount] || dropCount;
-        initialDosage = `প্রতিবার ${bnCount} ফোঁটা করে (${dropTimes})`;
-        initialUnit = 'ফোঁটা';
+        initialInstruction = `প্রতিবার ${bnCount} ফোঁটা করে`;
+        initialUnit = ''; // Keep unit empty so redundant "ফোঁটা" doesn't show next to dosage
       } else {
-        const enTimes = DROP_FREQUENCY_MAP[dropTimes]?.en || dropTimes;
-        initialDosage = `${dropCount} drops each time (${enTimes})`;
-        initialUnit = 'drops';
+        initialInstruction = `${dropCount} drops each time`;
+        initialUnit = '';
       }
+    } else if (medType === 'Supp') {
+      initialInstruction = 'পায়খানার রাস্তায় ব্যবহার করবেন';
+      initialDosage = 'SOS';
+      initialUnit = 'টি';
+    } else if (medType === 'Inj') {
+      initialInstruction = 'মাংসে বা শিরায় পুশ করবেন (IM/IV)';
+      initialDosage = '0+0+1';
+      initialUnit = 'ভায়াল';
     }
 
     setCurrentMed({
@@ -194,7 +285,7 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
       strength: str,
       dosage: initialDosage,
       unit: initialUnit,
-      instruction: '', // Blank by default as requested
+      instruction: initialInstruction, // Auto-populated with drop guidance for Drop
       duration: '', // Blank by default as requested
       isFraction: med.defaultDosage?.includes('1/2') || med.defaultUnit?.includes('১/২') || false,
       fractionDetail: med.defaultDosage?.includes('1/2') ? { num: 1, den: 2, label: '1/2' } : null
@@ -223,7 +314,7 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
       genericName: '',
       strength: '',
       dosage: '1+0+1',
-      unit: 'Tablet',
+      unit: '',
       instruction: '',
       duration: '',
       isFraction: false,
@@ -303,41 +394,27 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
     }));
   };
 
-  // Drop builder states: drops count, frequency per day and language (bn / en)
+  // Drop builder states: drops count and language (bn / en)
   const [dropCount, setDropCount] = useState('2');
-  const [dropTimes, setDropTimes] = useState('দিনে ৩ বার');
   const [dropLang, setDropLang] = useState('bn'); // 'bn' | 'en'
 
-  const DROP_FREQUENCY_MAP = {
-    'দিনে ১ বার': { en: 'Once daily (1 time)', labelEn: '1 time daily' },
-    'দিনে ২ বার': { en: 'Twice daily (2 times)', labelEn: '2 times daily' },
-    'দিনে ৩ বার': { en: '3 times daily', labelEn: '3 times daily' },
-    'দিনে ৪ বার': { en: '4 times daily', labelEn: '4 times daily' },
-    'প্রতি ৪ ঘন্টা পর পর': { en: 'Every 4 hours', labelEn: 'Every 4 hrs' },
-    'প্রতি ৬ ঘন্টা পর পর': { en: 'Every 6 hours', labelEn: 'Every 6 hrs' },
-    'প্রতি ১২ ঘন্টা পর পর': { en: 'Every 12 hours', labelEn: 'Every 12 hrs' },
-    'প্রতি ২৪ ঘন্টা পর পর': { en: 'Every 24 hours', labelEn: 'Every 24 hrs' },
-    'প্রয়োজনে': { en: 'As needed (SOS)', labelEn: 'SOS (as needed)' },
-  };
+  // Sync drop count into currentMed whenever dropCount or dropLang changes
+  const applyDropDosage = (count, lang = dropLang) => {
+    const bnNums = { '1': '১', '2': '২', '3': '৩', '4': '৪', '5': '৫', '6': '৬', '7': '৭', '8': '৮', '9': '৯', '10': '১০', '15': '১৫' };
+    const bnCount = bnNums[count] || count;
 
-  // Sync drop state into currentMed.dosage whenever dropCount, dropTimes or dropLang changes
-  const applyDropDosage = (count, times, lang = dropLang) => {
-    let dosageStr = '';
-    const unitStr = lang === 'en' ? 'drops' : 'ফোঁটা';
+    let instructionStr = '';
     if (lang === 'en') {
-      const enTimes = DROP_FREQUENCY_MAP[times]?.en || times;
-      dosageStr = `${count} drops each time (${enTimes})`;
+      instructionStr = `${count} drops each time`;
     } else {
-      const bnNums = { '1': '১', '2': '২', '3': '৩', '4': '৪', '5': '৫', '6': '৬', '7': '৭', '8': '৮', '9': '৯', '10': '১০', '15': '১৫' };
-      const bnCount = bnNums[count] || count;
-      dosageStr = `প্রতিবার ${bnCount} ফোঁটা করে (${times})`;
+      instructionStr = `প্রতিবার ${bnCount} ফোঁটা করে`;
     }
 
     setCurrentMed(prev => ({
       ...prev,
       type: 'Drop',
-      unit: unitStr,
-      dosage: dosageStr
+      unit: '', // No extra unit pill so redundant "ফোঁটা" is omitted
+      instruction: instructionStr
     }));
   };
 
@@ -473,6 +550,7 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
                 <option value="Tab">Tab</option>
                 <option value="Cap">Cap</option>
                 <option value="Syp">Syp</option>
+                <option value="Supp">Supp</option>
                 <option value="Drop">Drop</option>
                 <option value="Inj">Inj</option>
                 <option value="Inhaler">Inhaler</option>
@@ -533,6 +611,11 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
                     <button
                       key={item.id ? `med-${item.id}-${idx}` : `med-idx-${idx}`}
                       type="button"
+                      onMouseDown={(e) => {
+                        // Prevent search input from losing focus prematurely
+                        e.preventDefault();
+                        handleSelectMedicine(item);
+                      }}
                       onClick={() => handleSelectMedicine(item)}
                       className="w-full text-left px-3 py-2 hover:bg-teal-50/90 transition-colors flex items-center justify-between border-b border-slate-50 last:border-none cursor-pointer group"
                     >
@@ -664,9 +747,9 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
             </div>
           </div>
 
-          {/* Special Drop (ড্রপ / ফোঁটা ও দিনের বার) Interactive Builder Bar - Only shown when medicine type is Drop */}
+          {/* Special Drop (ড্রপ / ফোঁটা) Interactive Builder Bar - Only shown when medicine type is Drop */}
           {currentMed.type === 'Drop' && (
-            <div className="pt-2 pb-2.5 px-3 border border-sky-200/90 bg-gradient-to-r from-sky-50 via-teal-50/40 to-sky-50/60 -mx-1 sm:-mx-2 rounded-xl space-y-2.5 shadow-2xs">
+            <div className="pt-2 pb-2.5 px-3 border border-sky-200/90 bg-gradient-to-r from-sky-50 via-teal-50/40 to-sky-50/60 -mx-1 sm:-mx-2 rounded-xl space-y-2 shadow-2xs">
               <div className="flex flex-wrap items-center justify-between gap-1 text-[11px]">
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-sky-950 flex items-center gap-1.5">
@@ -679,7 +762,7 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
                       type="button"
                       onClick={() => {
                         setDropLang('bn');
-                        applyDropDosage(dropCount, dropTimes, 'bn');
+                        applyDropDosage(dropCount, 'bn');
                       }}
                       className={`px-2 py-0.5 rounded-md font-bold transition-all cursor-pointer ${
                         dropLang === 'bn'
@@ -694,7 +777,7 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
                       type="button"
                       onClick={() => {
                         setDropLang('en');
-                        applyDropDosage(dropCount, dropTimes, 'en');
+                        applyDropDosage(dropCount, 'en');
                       }}
                       className={`px-2 py-0.5 rounded-md font-bold transition-all cursor-pointer ${
                         dropLang === 'en'
@@ -709,11 +792,11 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
                 </div>
 
                 <span className="text-[10.5px] font-semibold text-sky-900 bg-white/90 px-2.5 py-0.5 rounded-lg border border-sky-200 shadow-2xs">
-                  {currentMed.dosage ? `${currentMed.dosage}${currentMed.unit ? ` (${currentMed.unit})` : ''}` : `প্রতিবার ${dropCount} ফোঁটা করে (${dropTimes})`}
+                  {currentMed.instruction ? `${currentMed.dosage} • ${currentMed.instruction}` : `প্রতিবার ${dropCount} ফোঁটা করে`}
                 </span>
               </div>
 
-              {/* Step 1: কত ফোঁটা নির্বাচন */}
+              {/* কত ফোঁটা নির্বাচন */}
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-[11px] font-semibold text-slate-700 min-w-[70px]">
                   {dropLang === 'bn' ? 'কত ফোঁটা:' : 'Drop count:'}
@@ -729,7 +812,8 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
                   { count: '10', bnLabel: '১০ ফোঁটা', enLabel: '10 drops' },
                   { count: '15', bnLabel: '১৫ ফোঁটা', enLabel: '15 drops' },
                 ].map(dp => {
-                  const isSelected = dropCount === dp.count && currentMed.type === 'Drop';
+                  const bnNums = { '1': '১', '2': '২', '3': '৩', '4': '৪', '5': '৫', '6': '৬', '7': '৭', '8': '৮', '9': '৯', '10': '১০', '15': '১৫' };
+                  const isSelected = (dropCount === dp.count || currentMed.instruction?.includes(`${bnNums[dp.count] || dp.count} ফোঁটা`) || currentMed.instruction?.includes(`${dp.count} drops`)) && currentMed.type === 'Drop';
                   const label = dropLang === 'bn' ? dp.bnLabel : dp.enLabel;
                   return (
                     <button
@@ -737,7 +821,7 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
                       type="button"
                       onClick={() => {
                         setDropCount(dp.count);
-                        applyDropDosage(dp.count, dropTimes, dropLang);
+                        applyDropDosage(dp.count, dropLang);
                       }}
                       className={`px-2 py-1 rounded-md text-[11px] font-semibold border transition-all cursor-pointer ${
                         isSelected
@@ -750,53 +834,12 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
                   );
                 })}
               </div>
-
-              {/* Step 2: দিনে কতবার নির্বাচন */}
-              <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-sky-100">
-                <span className="text-[11px] font-semibold text-slate-700 min-w-[70px]">
-                  {dropLang === 'bn' ? 'দিনে কতবার:' : 'Frequency:'}
-                </span>
-                {[
-                  { times: 'দিনে ১ বার', labelBn: 'দিনে ১ বার', labelEn: '1 time daily' },
-                  { times: 'দিনে ২ বার', labelBn: 'দিনে ২ বার', labelEn: '2 times daily' },
-                  { times: 'দিনে ৩ বার', labelBn: 'দিনে ৩ বার', labelEn: '3 times daily' },
-                  { times: 'দিনে ৪ বার', labelBn: 'দিনে ৪ বার', labelEn: '4 times daily' },
-                  { times: 'প্রতি ৪ ঘন্টা পর পর', labelBn: '৪ ঘন্টা পর পর', labelEn: 'Every 4 hrs' },
-                  { times: 'প্রতি ৬ ঘন্টা পর পর', labelBn: '৬ ঘন্টা পর পর', labelEn: 'Every 6 hrs' },
-                  { times: 'প্রতি ১২ ঘন্টা পর পর', labelBn: '১২ ঘন্টা পর পর', labelEn: 'Every 12 hrs' },
-                  { times: 'প্রতি ২৪ ঘন্টা পর পর', labelBn: '২৪ ঘন্টা পর পর', labelEn: 'Every 24 hrs' },
-                  { times: 'প্রয়োজনে', labelBn: 'প্রয়োজনে (SOS)', labelEn: 'SOS (as needed)' },
-                ].map(dt => {
-                  const enFreq = DROP_FREQUENCY_MAP[dt.times]?.en || dt.times;
-                  const isSelected = dropTimes === dt.times && currentMed.type === 'Drop' && (
-                    currentMed.dosage?.includes(dt.times) || currentMed.dosage?.includes(enFreq)
-                  );
-                  const label = dropLang === 'bn' ? dt.labelBn : dt.labelEn;
-                  return (
-                    <button
-                      key={dt.times}
-                      type="button"
-                      onClick={() => {
-                        setDropTimes(dt.times);
-                        applyDropDosage(dropCount, dt.times, dropLang);
-                      }}
-                      className={`px-2 py-0.5 rounded text-[11px] font-medium border transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-teal-700 text-white border-teal-800 font-bold shadow-xs'
-                          : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-teal-50 hover:text-teal-900'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
             </div>
           )}
 
           {/* Frequency Presets */}
           <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-100">
-            <span className="text-[11px] font-medium text-slate-500 mr-1">Frequency:</span>
+            <span className="text-xs font-semibold text-slate-600 mr-1">Frequency:</span>
             {FREQUENCY_PRESETS.map((freq) => (
               <button
                 key={freq.code}
@@ -813,19 +856,27 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
                   } else {
                     const isFrac = freq.code.includes('1/2');
                     const isDrop = currentMed.type === 'Drop';
-                    const unitForDrop = isDrop 
-                      ? (currentMed.unit || (dropLang === 'en' ? 'drops' : 'ফোঁটা'))
-                      : currentMed.unit;
+                    const unitVal = isDrop ? (currentMed.unit || '') : currentMed.unit;
+                    
+                    // If Drop type, preserve or ensure drop instructions
+                    let inst = currentMed.instruction;
+                    if (isDrop && (!inst || !inst.includes('ফোঁটা'))) {
+                      const bnNums = { '1': '১', '2': '২', '3': '৩', '4': '৪', '5': '৫', '6': '৬', '7': '৭', '8': '৮', '9': '৯', '10': '১০', '15': '১৫' };
+                      const bnCount = bnNums[dropCount] || dropCount;
+                      inst = `প্রতিবার ${bnCount} ফোঁটা করে`;
+                    }
+
                     setCurrentMed({ 
                       ...currentMed, 
                       dosage: freq.code,
-                      unit: unitForDrop,
+                      unit: unitVal,
+                      instruction: inst,
                       isFraction: isFrac,
                       fractionDetail: isFrac ? { num: 1, den: 2, label: '1/2' } : null
                     });
                   }
                 }}
-                className={`px-2 py-1 rounded-md text-[11px] font-medium transition-all border cursor-pointer ${
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all border cursor-pointer ${
                   currentMed.dosage === freq.code
                     ? 'bg-teal-600 text-white border-teal-700 font-bold'
                     : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-teal-50 hover:text-teal-900'
@@ -839,7 +890,7 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
 
           {/* Unit Selector including 1/2 Cup (Half Cup) and 1 Cup */}
           <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-100">
-            <span className="text-[11px] font-medium text-slate-500 mr-1">Unit / পরিমাপ:</span>
+            <span className="text-xs font-semibold text-slate-600 mr-1">Unit / পরিমাপ:</span>
             
             {/* Special Highlighted 1/2 Cup Unit */}
             <button
@@ -851,7 +902,7 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
                   setCurrentMed({ ...currentMed, unit: '১/২ কাপ (Half Cup)' });
                 }
               }}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all border flex items-center gap-1 cursor-pointer ${
+              className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all border flex items-center gap-1 cursor-pointer ${
                 currentMed.unit?.includes('১/২ কাপ')
                   ? 'bg-amber-600 text-white border-amber-700 shadow-xs'
                   : 'bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100'
@@ -872,10 +923,10 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
                     setCurrentMed({ ...currentMed, unit: u.label });
                   }
                 }}
-                className={`px-2 py-1 rounded-md text-[11px] font-medium transition-all border cursor-pointer ${
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all border cursor-pointer ${
                   currentMed.unit === u.label
-                    ? 'bg-teal-600 text-white border-teal-700'
-                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    ? 'bg-teal-600 text-white border-teal-700 font-bold'
+                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                 }`}
               >
                 {u.isFraction ? renderWithFractions(u.short, 'sm') : u.short}
@@ -902,44 +953,102 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
           
           {/* Instructions */}
           <div>
-            <label className="block text-[11px] font-medium text-slate-600 mb-1">
-              Instructions (খাবার নিয়ম)
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[11px] font-medium text-slate-600">
+                Instructions (খাবার নিয়ম)
+              </label>
+              {currentMed.instruction?.trim() && (
+                <button
+                  type="button"
+                  onClick={handleSaveCustomInstruction}
+                  className="text-[10.5px] text-teal-700 hover:text-teal-900 font-bold bg-teal-50 hover:bg-teal-100 px-2 py-0.5 rounded border border-teal-200 flex items-center gap-1 cursor-pointer transition-colors"
+                  title="ভবিষ্যতের জন্য এই নিয়মটি আপনার একাউন্টে সেভ করে রাখুন"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>সেভ রাখুন (Next time)</span>
+                </button>
+              )}
+            </div>
             <input
               type="text"
               value={currentMed.instruction}
               onChange={(e) => setCurrentMed({ ...currentMed, instruction: e.target.value })}
+              placeholder="খাবার নিয়ম লিখুন বা নিচের বাটন ক্লিক করুন..."
               className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium focus:ring-1 focus:ring-teal-500 mb-1.5"
             />
-            <div className="flex flex-wrap gap-1">
-              {INSTRUCTION_PRESETS.slice(0, 6).map((inst) => (
-                <button
-                  key={inst}
-                  type="button"
-                  onClick={() => {
-                    if (currentMed.instruction === inst) {
-                      setCurrentMed({ ...currentMed, instruction: '' });
-                    } else {
-                      setCurrentMed({ ...currentMed, instruction: inst });
-                    }
-                  }}
-                  className={`px-2 py-0.5 rounded text-[10px] border transition-colors cursor-pointer ${
-                    currentMed.instruction === inst
-                      ? 'bg-teal-600 text-white border-teal-700 font-bold'
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-teal-50 hover:text-teal-800'
-                  }`}
-                >
-                  {inst.split(' (')[0]}
-                </button>
-              ))}
-            </div>
+              <div className="flex flex-wrap gap-1.5">
+                {/* Doctor's Custom Saved Instructions */}
+                {customInstructionsList.map((cInst) => (
+                  <button
+                    key={cInst}
+                    type="button"
+                    onClick={() => {
+                      if (currentMed.instruction === cInst) {
+                        setCurrentMed({ ...currentMed, instruction: '' });
+                      } else {
+                        setCurrentMed({ ...currentMed, instruction: cInst });
+                      }
+                    }}
+                    className={`group px-2.5 py-1 rounded-md text-xs font-semibold border transition-all flex items-center gap-1.5 cursor-pointer ${
+                      currentMed.instruction === cInst
+                        ? 'bg-teal-700 text-white border-teal-800 shadow-xs'
+                        : 'bg-emerald-50 text-emerald-950 border-emerald-300 hover:bg-emerald-100 shadow-2xs'
+                    }`}
+                    title="আপনার ব্যক্তিগত কাস্টম নিয়ম"
+                  >
+                    <span>{cInst}</span>
+                    <span
+                      onClick={(e) => handleRemoveCustomInstruction(cInst, e)}
+                      className="text-slate-400 group-hover:text-rose-600 hover:scale-125 transition-transform"
+                      title="মুছে ফেলুন"
+                    >
+                      ×
+                    </span>
+                  </button>
+                ))}
+
+                {/* Default Preset Instructions */}
+                {INSTRUCTION_PRESETS.slice(0, 14).map((inst) => (
+                  <button
+                    key={inst}
+                    type="button"
+                    onClick={() => {
+                      if (currentMed.instruction === inst) {
+                        setCurrentMed({ ...currentMed, instruction: '' });
+                      } else {
+                        setCurrentMed({ ...currentMed, instruction: inst });
+                      }
+                    }}
+                    className={`px-2.5 py-1 rounded-md text-xs font-semibold border transition-colors cursor-pointer ${
+                      currentMed.instruction === inst
+                        ? 'bg-teal-600 text-white border-teal-700 font-bold'
+                        : 'bg-white border-slate-200 text-slate-800 hover:bg-teal-50 hover:text-teal-900 shadow-2xs'
+                    }`}
+                  >
+                    {inst.split(' (')[0]}
+                  </button>
+                ))}
+              </div>
           </div>
 
           {/* Duration */}
           <div>
-            <label className="block text-[11px] font-medium text-slate-600 mb-1">
-              Duration (স্থায়িত্ব / কতদিন)
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[11px] font-medium text-slate-600">
+                Duration (স্থায়িত্ব / কতদিন)
+              </label>
+              {currentMed.duration?.trim() && (
+                <button
+                  type="button"
+                  onClick={handleSaveCustomDuration}
+                  className="text-[10.5px] text-teal-700 hover:text-teal-900 font-bold bg-teal-50 hover:bg-teal-100 px-2 py-0.5 rounded border border-teal-200 flex items-center gap-1 cursor-pointer transition-colors"
+                  title="ভবিষ্যতের জন্য এই মেয়াদটি আপনার একাউন্টে সেভ করে রাখুন"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>সেভ রাখুন (Next time)</span>
+                </button>
+              )}
+            </div>
             <div className="flex items-center gap-1.5 mb-1.5">
               <input
                 type="text"
@@ -967,28 +1076,59 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
                 <span className="text-[10px] text-slate-500 font-semibold pr-1">দিন</span>
               </div>
             </div>
-            <div className="flex flex-wrap gap-1">
-              {DURATION_PRESETS.slice(0, 7).map((dur) => (
-                <button
-                  key={dur}
-                  type="button"
-                  onClick={() => {
-                    if (currentMed.duration === dur) {
-                      setCurrentMed({ ...currentMed, duration: '' });
-                    } else {
-                      setCurrentMed({ ...currentMed, duration: dur });
-                    }
-                  }}
-                  className={`px-2 py-0.5 rounded text-[10px] border transition-colors cursor-pointer ${
-                    currentMed.duration === dur
-                      ? 'bg-teal-600 text-white border-teal-700 font-bold'
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-teal-50 hover:text-teal-800'
-                  }`}
-                >
-                  {dur}
-                </button>
-              ))}
-            </div>
+              <div className="flex flex-wrap gap-1.5">
+                {/* Doctor's Custom Saved Durations */}
+                {customDurationsList.map((cDur) => (
+                  <button
+                    key={cDur}
+                    type="button"
+                    onClick={() => {
+                      if (currentMed.duration === cDur) {
+                        setCurrentMed({ ...currentMed, duration: '' });
+                      } else {
+                        setCurrentMed({ ...currentMed, duration: cDur });
+                      }
+                    }}
+                    className={`group px-2.5 py-1 rounded-md text-xs font-semibold border transition-all flex items-center gap-1.5 cursor-pointer ${
+                      currentMed.duration === cDur
+                        ? 'bg-teal-700 text-white border-teal-800 shadow-xs'
+                        : 'bg-emerald-50 text-emerald-950 border-emerald-300 hover:bg-emerald-100 shadow-2xs'
+                    }`}
+                    title="আপনার ব্যক্তিগত কাস্টম স্থায়িত্ব"
+                  >
+                    <span>{cDur}</span>
+                    <span
+                      onClick={(e) => handleRemoveCustomDuration(cDur, e)}
+                      className="text-slate-400 group-hover:text-rose-600 hover:scale-125 transition-transform"
+                      title="মুছে ফেলুন"
+                    >
+                      ×
+                    </span>
+                  </button>
+                ))}
+
+                {/* Default Preset Durations */}
+                {DURATION_PRESETS.slice(0, 7).map((dur) => (
+                  <button
+                    key={dur}
+                    type="button"
+                    onClick={() => {
+                      if (currentMed.duration === dur) {
+                        setCurrentMed({ ...currentMed, duration: '' });
+                      } else {
+                        setCurrentMed({ ...currentMed, duration: dur });
+                      }
+                    }}
+                    className={`px-2.5 py-1 rounded-md text-xs font-bold border transition-colors cursor-pointer ${
+                      currentMed.duration === dur
+                        ? 'bg-teal-600 text-white border-teal-700 font-bold'
+                        : 'bg-white border-slate-200 text-slate-800 hover:bg-teal-50 hover:text-teal-900 shadow-2xs'
+                    }`}
+                  >
+                    {dur}
+                  </button>
+                ))}
+              </div>
           </div>
 
         </div>
@@ -1072,22 +1212,39 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
 
                     {/* Dosage and instructions line */}
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-xs">
-                      <span className="inline-flex items-center px-2 py-0.5 bg-teal-50 text-teal-900 border border-teal-200 rounded font-mono font-bold text-[11px]">
-                        {renderWithFractions(med.dosage, 'sm')}
-                      </span>
-                      {med.unit && (
+                      {med.dosage && (
+                        <span className="inline-flex items-center px-2 py-0.5 bg-teal-50 text-teal-900 border border-teal-200 rounded font-mono font-bold text-[11px]">
+                          {renderWithFractions(med.dosage, 'sm')}
+                        </span>
+                      )}
+                      {med.unit && 
+                       med.unit.toLowerCase() !== 'tablet' && 
+                       med.unit.toLowerCase() !== 'tab' && 
+                       med.unit.toLowerCase() !== 'capsule' && 
+                       med.unit.toLowerCase() !== 'cap' && 
+                       med.unit !== 'ফোঁটা' && 
+                       med.unit !== 'drops' && 
+                       med.unit !== 'ড্রপ' && (
                         <span className="text-slate-600 font-medium">
                           {renderWithFractions(med.unit, 'sm')}
                         </span>
                       )}
-                      <span className="text-slate-400">•</span>
-                      <span className="text-slate-700">
-                        {renderWithFractions(med.instruction, 'sm')}
-                      </span>
-                      <span className="text-slate-400">•</span>
-                      <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[11px]">
-                        {med.duration}
-                      </span>
+                      {med.instruction && (
+                        <>
+                          <span className="text-slate-400">•</span>
+                          <span className="text-slate-700">
+                            {renderWithFractions(med.instruction, 'sm')}
+                          </span>
+                        </>
+                      )}
+                      {med.duration && (
+                        <>
+                          <span className="text-slate-400">•</span>
+                          <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[11px]">
+                            {med.duration}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
