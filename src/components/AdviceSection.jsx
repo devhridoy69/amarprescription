@@ -25,9 +25,7 @@ export const AdviceSection = ({
     <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 sm:p-5 mb-5 transition-all">
       <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
           <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-            <CheckSquare className="w-3.5 h-3.5 text-emerald-600" /> 
             Advice & Follow-Up (উপদেশ ও পরবর্তী সাক্ষাত)
             <span className="text-[11px] bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full">
               {adviceList.length} items

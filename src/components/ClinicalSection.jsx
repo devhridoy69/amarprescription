@@ -170,9 +170,7 @@ export const ClinicalSection = ({
           onClick={() => setIsComplaintsOpen(!isComplaintsOpen)}
         >
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-rose-500"></div>
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-              <Activity className="w-3.5 h-3.5 text-rose-500" /> 
               Chief Complaints (C/C)
               <span className="text-[11px] bg-rose-50 text-rose-700 font-semibold px-2 py-0.5 rounded-full">
                 {complaints.length}
@@ -221,7 +219,6 @@ export const ClinicalSection = ({
                         }`}
                         title={`যোগ করতে ক্লিক করুন (${item.duration || '3 days'})`}
                       >
-                        <Sparkles className="w-2.5 h-2.5 text-amber-500" />
                         <span>{item.text}</span>
                         {item.duration && (
                           <span className={`text-[10px] ${isSelected ? 'text-rose-100' : 'text-slate-500'}`}>({item.duration})</span>
@@ -337,9 +334,7 @@ export const ClinicalSection = ({
           onClick={() => setIsVitalsOpen(!isVitalsOpen)}
         >
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-              <Stethoscope className="w-3.5 h-3.5 text-blue-500" /> 
               On Examination (O/E) & Diagnosis
             </h3>
           </div>
@@ -552,7 +547,6 @@ export const ClinicalSection = ({
                           }`}
                           title={isSelected ? 'বাদ দিতে ক্লিক করুন' : 'যোগ করতে ক্লিক করুন'}
                         >
-                          <Sparkles className="w-2.5 h-2.5 text-amber-500" />
                           <span>{diag}</span>
                         </button>
                       );
@@ -599,10 +593,8 @@ export const ClinicalSection = ({
           onClick={() => setIsInvOpen(!isInvOpen)}
         >
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-purple-500"></div>
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-              <FileText className="w-3.5 h-3.5 text-purple-500" /> 
-              Investigations Advised
+              Investigations Advised (ল্যাব টেস্ট)
               <span className="text-[11px] bg-purple-50 text-purple-700 font-semibold px-2 py-0.5 rounded-full">
                 {investigations.length}
               </span>
@@ -650,7 +642,6 @@ export const ClinicalSection = ({
                         }`}
                         title={isSelected ? 'বাদ দিতে ক্লিক করুন' : 'যোগ করতে ক্লিক করুন'}
                       >
-                        <Sparkles className="w-2.5 h-2.5 text-amber-500" />
                         <span>{test}</span>
                       </button>
                     );

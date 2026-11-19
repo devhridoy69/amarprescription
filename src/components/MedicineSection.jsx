@@ -581,7 +581,6 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
         <div className="bg-white rounded-xl p-3 border border-teal-100/80 shadow-2xs space-y-2.5">
           <div className="flex flex-wrap items-center justify-between gap-1 text-xs">
             <span className="font-semibold text-slate-700 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-teal-600" />
               Dosage & Fractions Builder (ডোজ ও ভগ্নাংশ নির্বাচন):
             </span>
             <span className="text-[11px] text-slate-500">
@@ -662,7 +661,6 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
               <div className="flex flex-wrap items-center justify-between gap-1 text-[11px]">
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-sky-950 flex items-center gap-1.5">
-                    <span className="text-sm">💧</span>
                     <span>Drop Builder (ড্রপ ও পরিমাণ নির্বাচন):</span>
                   </span>
 

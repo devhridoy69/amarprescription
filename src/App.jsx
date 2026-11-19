@@ -190,6 +190,8 @@ export function App() {
       date: patient.date || new Date().toISOString().split('T')[0],
       timestamp: Date.now(),
       patient: { ...patient },
+      doctor: { ...doctor }, // Save current doctor details so public QR view displays full doctor header
+      doctorProfile: { ...doctor },
       complaints: [...complaints],
       vitals: { ...vitals },
       diagnosis,

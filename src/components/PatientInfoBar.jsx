@@ -11,9 +11,8 @@ export const PatientInfoBar = ({ patient, onChange, onReset, isEditing = false, 
       {/* Top Header */}
       <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
         <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${isEditing ? 'bg-amber-500 animate-pulse' : 'bg-teal-500 animate-pulse'}`}></div>
-          <span className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-            <User className="w-3.5 h-3.5 text-teal-600" /> Patient Information (রোগীর তথ্য)
+          <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+            Patient Information (রোগীর তথ্য)
           </span>
           {isEditing && (
             <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold border border-amber-300">
@@ -116,8 +115,8 @@ export const PatientInfoBar = ({ patient, onChange, onReset, isEditing = false, 
 
         {/* Row 2: Date */}
         <div className="col-span-6 sm:col-span-3">
-          <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center gap-1">
-            <Calendar className="w-3 h-3 text-slate-400" /> Date (তারিখ)
+          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+            Date (তারিখ)
           </label>
           <input
             type="date"
@@ -129,8 +128,8 @@ export const PatientInfoBar = ({ patient, onChange, onReset, isEditing = false, 
 
         {/* Row 2: Rx ID */}
         <div className="col-span-6 sm:col-span-3">
-          <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center gap-1">
-            <Hash className="w-3 h-3 text-slate-400" /> Rx / ID No.
+          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+            Rx / ID No.
           </label>
           <input
             type="text"
@@ -143,7 +142,7 @@ export const PatientInfoBar = ({ patient, onChange, onReset, isEditing = false, 
 
         {/* Row 2: Weight & Unit (KG / Gram) */}
         <div className="col-span-6 sm:col-span-3">
-          <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center gap-1">
+          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
             <Scale className="w-3 h-3 text-slate-400" /> Wt (ওজন)
           </label>
           <div className="flex rounded-lg border border-slate-200 bg-slate-50 focus-within:ring-2 focus-within:ring-teal-500 focus-within:border-teal-500 focus-within:bg-white overflow-hidden">
