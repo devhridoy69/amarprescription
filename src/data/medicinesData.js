@@ -907,8 +907,9 @@ export const COMMON_MEDICINES = [
 
 // Presets for quick dosage fraction builder
 export const FRACTION_PRESETS = [
-  { label: '1/2', display: '½', num: 1, den: 2, title: 'Half (১/২ আধা)' },
   { label: '1/4', display: '¼', num: 1, den: 4, title: 'Quarter (১/৪ এক-চতুর্থাংশ)' },
+  { label: '1/2', display: '½', num: 1, den: 2, title: 'Half (১/২ আধা)' },
+  { label: '3/4', display: '¾', num: 3, den: 4, title: 'Three-Quarters (৩/৪ পৌনে)' },
   { label: '1', display: '1', num: 1, den: 1, title: 'Full (১ টি)' },
   { label: '1 1/2', display: '1½', num: 3, den: 2, whole: 1, title: 'One and Half (১ ১/২ দেড়)' },
   { label: '2', display: '2', num: 2, den: 1, title: 'Two (২ টি)' },

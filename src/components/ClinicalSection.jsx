@@ -57,36 +57,25 @@ export const ClinicalSection = ({
     }
   });
 
-  const saveToRecentComplaints = (text, dur) => {
-    try {
-      const current = recentComplaints.filter(item => item.text !== text);
-      const updated = [{ text, duration: dur }, ...current].slice(0, 10);
-      setRecentComplaints(updated);
-      localStorage.setItem(RECENT_COMPLAINTS_KEY, JSON.stringify(updated));
-    } catch (e) {}
-  };
-
-  const saveToRecentDiagnoses = (diagText) => {
-    if (!diagText || !diagText.trim()) return;
-    const clean = diagText.trim();
-    try {
-      const current = recentDiagnoses.filter(d => d !== clean);
-      const updated = [clean, ...current].slice(0, 10);
-      setRecentDiagnoses(updated);
-      localStorage.setItem(RECENT_DIAGNOSES_KEY, JSON.stringify(updated));
-    } catch (e) {}
-  };
-
-  const saveToRecentInvestigations = (testName) => {
-    if (!testName || !testName.trim()) return;
-    const clean = testName.trim();
-    try {
-      const current = recentInvestigations.filter(t => t !== clean);
-      const updated = [clean, ...current].slice(0, 10);
-      setRecentInvestigations(updated);
-      localStorage.setItem(RECENT_INVESTIGATIONS_KEY, JSON.stringify(updated));
-    } catch (e) {}
-  };
+  // Listen to window focus or storage changes to reload recent suggestions between prescriptions
+  useEffect(() => {
+    const handleStorageUpdate = () => {
+      try {
+        const savedC = localStorage.getItem(RECENT_COMPLAINTS_KEY);
+        if (savedC) setRecentComplaints(JSON.parse(savedC));
+        const savedD = localStorage.getItem(RECENT_DIAGNOSES_KEY);
+        if (savedD) setRecentDiagnoses(JSON.parse(savedD));
+        const savedI = localStorage.getItem(RECENT_INVESTIGATIONS_KEY);
+        if (savedI) setRecentInvestigations(JSON.parse(savedI));
+      } catch (e) {}
+    };
+    window.addEventListener('rx_recent_updated', handleStorageUpdate);
+    window.addEventListener('storage', handleStorageUpdate);
+    return () => {
+      window.removeEventListener('rx_recent_updated', handleStorageUpdate);
+      window.removeEventListener('storage', handleStorageUpdate);
+    };
+  }, []);
 
   // Add Chief Complaint
   const addComplaint = (text, dur = selectedDuration) => {
@@ -96,7 +85,6 @@ export const ClinicalSection = ({
     if (!exists) {
       onUpdateComplaints([...complaints, { text: cleanText, duration: dur }]);
     }
-    saveToRecentComplaints(cleanText, dur);
     setCustomComplaint('');
   };
 
@@ -125,7 +113,6 @@ export const ClinicalSection = ({
     } else {
       // Toggle on / append
       updatedList = [...currentDiagnosisList, clean];
-      saveToRecentDiagnoses(clean);
     }
 
     onUpdateDiagnosis(updatedList.join(', '));
@@ -139,7 +126,6 @@ export const ClinicalSection = ({
     if (!exists) {
       const updatedList = [...currentDiagnosisList, clean];
       onUpdateDiagnosis(updatedList.join(', '));
-      saveToRecentDiagnoses(clean);
     }
     setCustomDiagnosis('');
   };
@@ -156,7 +142,6 @@ export const ClinicalSection = ({
     if (!investigations.includes(clean)) {
       onUpdateInvestigations([...investigations, clean]);
     }
-    saveToRecentInvestigations(clean);
     setCustomInvestigation('');
   };
 
@@ -275,7 +260,7 @@ export const ClinicalSection = ({
               </div>
             </div>
 
-            {/* Custom Complaint Input + Duration */}
+            {/* Custom Complaint Input + Duration + Custom Days */}
             <div className="flex flex-wrap sm:flex-nowrap gap-2 items-center">
               <input
                 type="text"
@@ -294,6 +279,23 @@ export const ClinicalSection = ({
                   <option key={d} value={d}>{d}</option>
                 ))}
               </select>
+              <div className="flex items-center gap-0.5 bg-slate-50 border border-slate-200 rounded-lg px-1 py-0.5 shrink-0">
+                <input
+                  type="number"
+                  min="1"
+                  max="365"
+                  placeholder="দিন"
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val) {
+                      setSelectedDuration(`${val} days`);
+                    }
+                  }}
+                  className="w-11 text-center text-xs font-bold text-rose-800 bg-transparent outline-none"
+                  title="কাস্টম দিন লিখুন (যেমন: 4, 8, 20)"
+                />
+                <span className="text-[10px] text-slate-500 font-medium pr-0.5">days</span>
+              </div>
               <button
                 type="button"
                 onClick={() => addComplaint(customComplaint)}
@@ -493,7 +495,6 @@ export const ClinicalSection = ({
                 type="text"
                 value={diagnosis}
                 onChange={(e) => onUpdateDiagnosis(e.target.value)}
-                onBlur={() => saveToRecentDiagnoses(diagnosis)}
                 placeholder="e.g. Acute Viral URTI, Acid Peptic Disease (APD), Essential Hypertension"
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-teal-900 focus:ring-1 focus:ring-teal-500 focus:bg-white"
               />

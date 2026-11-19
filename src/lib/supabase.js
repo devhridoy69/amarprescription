@@ -100,18 +100,43 @@ export async function updateAdminMasterPassword(currentPassword, newPassword) {
 
 /**
  * Search medicines from Supabase 'Medicine_Database'
+ * Supports smart multi-word search e.g. "napa drop", "napa syrup", "cef-3 syp", "solbion inj"
  */
-export async function searchMedicinesOnline(query, limit = 20) {
+export async function searchMedicinesOnline(query, limit = 25) {
   if (!query || query.trim().length < 1) return [];
 
   const cleanQuery = query.trim();
+  const parts = cleanQuery.split(/\s+/).filter(Boolean);
+
+  // Dosage type synonyms / keywords
+  const typeKeywords = [
+    'drop', 'drops', 'syp', 'syrup', 'susp', 'suspension',
+    'tab', 'tablet', 'cap', 'capsule', 'inj', 'injection',
+    'inhaler', 'gel', 'ointment', 'oint', 'suppository', 'cream', 'sachet'
+  ];
+
+  let targetTypeFilter = null;
+  let textTokens = [];
+
+  for (const part of parts) {
+    const pLower = part.toLowerCase();
+    if (!targetTypeFilter && typeKeywords.includes(pLower)) {
+      targetTypeFilter = pLower;
+    } else {
+      textTokens.push(part);
+    }
+  }
+
+  // The actual brand / generic query string
+  const brandQuery = textTokens.length > 0 ? textTokens.join(' ') : cleanQuery;
 
   try {
+    const fetchLimit = targetTypeFilter ? limit * 3 : limit;
     const { data: brandMatches, error: brandError } = await supabase
       .from('Medicine_Database')
       .select('id, Type, brand_name, strength, generic_name, company')
-      .ilike('brand_name', `${cleanQuery}%`)
-      .limit(limit);
+      .ilike('brand_name', `${brandQuery}%`)
+      .limit(fetchLimit);
 
     if (brandError) {
       console.warn('Supabase brand search error:', brandError);
@@ -119,14 +144,14 @@ export async function searchMedicinesOnline(query, limit = 20) {
 
     let results = brandMatches || [];
 
-    if (results.length < limit) {
-      const remainingLimit = limit - results.length;
+    if (results.length < fetchLimit) {
+      const remainingLimit = fetchLimit - results.length;
       const existingIds = new Set(results.map(r => r.id));
 
       const { data: genericMatches } = await supabase
         .from('Medicine_Database')
         .select('id, Type, brand_name, strength, generic_name, company')
-        .or(`generic_name.ilike.%${cleanQuery}%,brand_name.ilike.%${cleanQuery}%`)
+        .or(`generic_name.ilike.%${brandQuery}%,brand_name.ilike.%${brandQuery}%`)
         .limit(remainingLimit * 2);
 
       if (genericMatches) {
@@ -134,13 +159,41 @@ export async function searchMedicinesOnline(query, limit = 20) {
           if (!existingIds.has(item.id)) {
             existingIds.add(item.id);
             results.push(item);
-            if (results.length >= limit) break;
+            if (results.length >= fetchLimit) break;
           }
         }
       }
     }
 
-    return results;
+    // If user specified a dosage type in their query (e.g. "napa drop"), filter by type!
+    if (targetTypeFilter) {
+      results = results.filter(item => {
+        const t = (item.Type || '').toLowerCase();
+        if (targetTypeFilter.startsWith('drop')) return t.includes('drop');
+        if (targetTypeFilter.startsWith('syp') || targetTypeFilter.startsWith('syrup') || targetTypeFilter.startsWith('susp')) {
+          return t.includes('syrup') || t.includes('susp') || t.includes('solution') || t.includes('elixir');
+        }
+        if (targetTypeFilter.startsWith('tab')) return t.includes('tab');
+        if (targetTypeFilter.startsWith('cap')) return t.includes('cap');
+        if (targetTypeFilter.startsWith('inj')) return t.includes('inj') || t.includes('infusion');
+        if (targetTypeFilter.startsWith('inhal')) return t.includes('inhal') || t.includes('nebuli');
+        if (targetTypeFilter.startsWith('oint') || targetTypeFilter.startsWith('gel') || targetTypeFilter.startsWith('cream')) {
+          return t.includes('oint') || t.includes('gel') || t.includes('cream');
+        }
+        return t.includes(targetTypeFilter);
+      });
+    }
+
+    // Map database fields to unified application shape
+    return results.slice(0, limit).map(item => ({
+      id: item.id,
+      brandName: item.brand_name || item.brandName || '',
+      genericName: item.generic_name || item.genericName || '',
+      strength: item.strength || '',
+      type: item.Type || item.type || 'Tab',
+      company: item.company || '',
+      source: 'supabase'
+    }));
   } catch (err) {
     console.error('Supabase medicine search exception:', err);
     return [];

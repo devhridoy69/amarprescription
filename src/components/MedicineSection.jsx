@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useTransition } from 'react';
 import { 
   Pill, Plus, Trash2, Search, ArrowUp, ArrowDown, Sparkles, 
-  Coffee, HelpCircle, Check, X, Layers, Clock, Database, Loader2
+  Coffee, HelpCircle, Check, X, Layers, Clock, Database, Loader2, History
 } from 'lucide-react';
 import { 
   COMMON_MEDICINES, 
@@ -14,11 +14,41 @@ import {
 import { searchMedicinesOnline } from '../lib/supabase';
 import { StackedFraction, renderWithFractions } from './StackedFraction';
 
+const RECENT_MEDICINES_KEY = 'amar_rx_recent_medicines';
+
 export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, onReorderMedicines, onUpdateMedicine }) => {
   // Input fields state
   const [searchTerm, setSearchTerm] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
+
+  // Recent Medicines (Limited to 10 recent items)
+  // Static during current prescription editing, refreshes on next prescription via event
+  const [recentMedicines, setRecentMedicines] = useState(() => {
+    try {
+      const saved = localStorage.getItem(RECENT_MEDICINES_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  // Reload recent medicines when a prescription is finalized / saved (for next patient)
+  useEffect(() => {
+    const handleRecentUpdate = () => {
+      try {
+        const saved = localStorage.getItem(RECENT_MEDICINES_KEY);
+        setRecentMedicines(saved ? JSON.parse(saved) : []);
+      } catch (e) {}
+    };
+
+    window.addEventListener('rx_recent_updated', handleRecentUpdate);
+    window.addEventListener('storage', handleRecentUpdate);
+    return () => {
+      window.removeEventListener('rx_recent_updated', handleRecentUpdate);
+      window.removeEventListener('storage', handleRecentUpdate);
+    };
+  }, []);
 
   // Supabase search states
   const [onlineSuggestions, setOnlineSuggestions] = useState([]);
@@ -41,12 +71,13 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
   const suggestionsRef = useRef(null);
   const debounceTimerRef = useRef(null);
 
-  // Filtered local medicine suggestions
+  // Filtered local medicine suggestions (safe from undefined)
   const localSuggestions = COMMON_MEDICINES.filter((item) => {
-    const term = searchTerm.toLowerCase();
-    const matchesSearch = 
-      item.brandName.toLowerCase().includes(term) ||
-      item.genericName.toLowerCase().includes(term);
+    if (!item) return false;
+    const term = (searchTerm || '').toLowerCase();
+    const bName = (item.brandName || '').toLowerCase();
+    const gName = (item.genericName || '').toLowerCase();
+    const matchesSearch = bName.includes(term) || gName.includes(term);
     const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
     return matchesSearch && matchesCategory;
   }).slice(0, 8);
@@ -108,6 +139,7 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
 
   // Normalize Type string for select dropdown
   const normalizeType = (rawType = '') => {
+    if (!rawType || typeof rawType !== 'string') return 'Tab';
     const t = rawType.toLowerCase();
     if (t.includes('tab')) return 'Tab';
     if (t.includes('cap')) return 'Cap';
@@ -122,24 +154,43 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
 
   // Quick select a medicine from database
   const handleSelectMedicine = (med) => {
-    const medType = normalizeType(med.type);
+    if (!med) return;
+    const rawType = med.type || med.Type || '';
+    const bName = med.brandName || med.brand_name || '';
+    const gName = med.genericName || med.generic_name || '';
+    const str = med.strength || '';
+    const medType = normalizeType(rawType);
     const defaultUnit = medType === 'Cap' ? 'Capsule' : 
                         medType === 'Syp' ? 'চামচ (Spoon)' :
                         medType === 'Drop' ? 'ড্রপ (Drop)' : 'Tablet';
 
+    let initialUnit = med.defaultUnit || defaultUnit;
+    if (medType === 'Drop') {
+      const bnNums = { '1': '১', '2': '২', '3': '৩', '4': '৪', '5': '৫', '6': '৬', '7': '৭', '8': '৮', '9': '৯', '10': '১০', '15': '১৫' };
+      if (dropLang === 'bn') {
+        const bnCount = bnNums[dropCount] || dropCount;
+        initialDosage = `প্রতিবার ${bnCount} ফোঁটা করে (${dropTimes})`;
+        initialUnit = 'ফোঁটা';
+      } else {
+        const enTimes = DROP_FREQUENCY_MAP[dropTimes]?.en || dropTimes;
+        initialDosage = `${dropCount} drops each time (${enTimes})`;
+        initialUnit = 'drops';
+      }
+    }
+
     setCurrentMed({
       type: medType,
-      brandName: med.brandName,
-      genericName: med.genericName,
-      strength: med.strength || '',
-      dosage: med.defaultDosage || '1+0+1',
-      unit: med.defaultUnit || defaultUnit,
+      brandName: bName,
+      genericName: gName,
+      strength: str,
+      dosage: initialDosage,
+      unit: initialUnit,
       instruction: '', // Blank by default as requested
       duration: '', // Blank by default as requested
       isFraction: med.defaultDosage?.includes('1/2') || med.defaultUnit?.includes('১/২') || false,
       fractionDetail: med.defaultDosage?.includes('1/2') ? { num: 1, den: 2, label: '1/2' } : null
     });
-    setSearchTerm(med.brandName);
+    setSearchTerm(bName);
     setShowSuggestions(false);
   };
 
@@ -175,35 +226,57 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
     }
   };
 
-  // Apply fraction to dosage (e.g. 1/2)
+  // Apply fraction to dosage (e.g. 1/2) with toggle unselect support
   const applyFractionDosage = (frac) => {
+    let targetDosage = '';
+    let isFraction = false;
+    let fractionDetail = null;
+
     if (frac.label === '1/2') {
-      setCurrentMed(prev => ({
-        ...prev,
-        dosage: '1/2+0+1/2',
-        isFraction: true,
-        fractionDetail: { num: 1, den: 2, label: '1/2' }
-      }));
+      targetDosage = '1/2+0+1/2';
+      isFraction = true;
+      fractionDetail = { num: 1, den: 2, label: '1/2' };
     } else if (frac.label === '1/4') {
-      setCurrentMed(prev => ({
-        ...prev,
-        dosage: '1/4+0+1/4',
-        isFraction: true,
-        fractionDetail: { num: 1, den: 4, label: '1/4' }
-      }));
+      targetDosage = '1/4+0+1/4';
+      isFraction = true;
+      fractionDetail = { num: 1, den: 4, label: '1/4' };
+    } else if (frac.label === '3/4') {
+      targetDosage = '3/4+0+3/4';
+      isFraction = true;
+      fractionDetail = { num: 3, den: 4, label: '3/4' };
     } else if (frac.label === '1 1/2') {
-      setCurrentMed(prev => ({
-        ...prev,
-        dosage: '1 1/2+0+1 1/2',
-        isFraction: true,
-        fractionDetail: { num: 1, den: 2, whole: 1, label: '1 1/2' }
-      }));
+      targetDosage = '1 1/2+0+1 1/2';
+      isFraction = true;
+      fractionDetail = { num: 1, den: 2, whole: 1, label: '1 1/2' };
     } else {
+      targetDosage = `${frac.label}+0+${frac.label}`;
+      isFraction = false;
+      fractionDetail = null;
+    }
+
+    // Toggle behavior: if already selected or matches current dosage, unselect (clear dosage)
+    if (
+      currentMed.dosage === targetDosage || 
+      currentMed.dosage === frac.label ||
+      (frac.label === '1/2' && currentMed.dosage === '1/2+0+1/2')
+    ) {
       setCurrentMed(prev => ({
         ...prev,
-        dosage: `${frac.label}+0+${frac.label}`,
+        dosage: '',
         isFraction: false,
         fractionDetail: null
+      }));
+    } else {
+      const isDrop = currentMed.type === 'Drop';
+      const unitForDrop = isDrop 
+        ? (currentMed.unit || (dropLang === 'en' ? 'drops' : 'ফোঁটা'))
+        : currentMed.unit;
+      setCurrentMed(prev => ({
+        ...prev,
+        dosage: targetDosage,
+        unit: unitForDrop,
+        isFraction,
+        fractionDetail
       }));
     }
   };
@@ -221,20 +294,40 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
     }));
   };
 
-  // Drop builder states: drops count and frequency per day
+  // Drop builder states: drops count, frequency per day and language (bn / en)
   const [dropCount, setDropCount] = useState('2');
   const [dropTimes, setDropTimes] = useState('দিনে ৩ বার');
+  const [dropLang, setDropLang] = useState('bn'); // 'bn' | 'en'
 
-  // Sync drop state into currentMed.dosage whenever dropCount or dropTimes changes
-  const applyDropDosage = (count, times) => {
-    const bnNums = { '1': '১', '2': '২', '3': '৩', '4': '৪', '5': '৫', '6': '৬', '7': '৭', '8': '৮', '9': '৯', '10': '১০', '15': '১৫' };
-    const bnCount = bnNums[count] || count;
-    const dosageStr = `প্রতিবার ${bnCount} ফোঁটা করে (${times})`;
+  const DROP_FREQUENCY_MAP = {
+    'দিনে ১ বার': { en: 'Once daily (1 time)', labelEn: '1 time daily' },
+    'দিনে ২ বার': { en: 'Twice daily (2 times)', labelEn: '2 times daily' },
+    'দিনে ৩ বার': { en: '3 times daily', labelEn: '3 times daily' },
+    'দিনে ৪ বার': { en: '4 times daily', labelEn: '4 times daily' },
+    'প্রতি ৪ ঘন্টা পর পর': { en: 'Every 4 hours', labelEn: 'Every 4 hrs' },
+    'প্রতি ৬ ঘন্টা পর পর': { en: 'Every 6 hours', labelEn: 'Every 6 hrs' },
+    'প্রতি ১২ ঘন্টা পর পর': { en: 'Every 12 hours', labelEn: 'Every 12 hrs' },
+    'প্রতি ২৪ ঘন্টা পর পর': { en: 'Every 24 hours', labelEn: 'Every 24 hrs' },
+    'প্রয়োজনে': { en: 'As needed (SOS)', labelEn: 'SOS (as needed)' },
+  };
+
+  // Sync drop state into currentMed.dosage whenever dropCount, dropTimes or dropLang changes
+  const applyDropDosage = (count, times, lang = dropLang) => {
+    let dosageStr = '';
+    const unitStr = lang === 'en' ? 'drops' : 'ফোঁটা';
+    if (lang === 'en') {
+      const enTimes = DROP_FREQUENCY_MAP[times]?.en || times;
+      dosageStr = `${count} drops each time (${enTimes})`;
+    } else {
+      const bnNums = { '1': '১', '2': '২', '3': '৩', '4': '৪', '5': '৫', '6': '৬', '7': '৭', '8': '৮', '9': '৯', '10': '১০', '15': '১৫' };
+      const bnCount = bnNums[count] || count;
+      dosageStr = `প্রতিবার ${bnCount} ফোঁটা করে (${times})`;
+    }
 
     setCurrentMed(prev => ({
       ...prev,
       type: 'Drop',
-      unit: '',
+      unit: unitStr,
       dosage: dosageStr
     }));
   };
@@ -285,33 +378,74 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
         </button>
       </div>
 
+      {/* Recent Medicines Quick Suggestions (Limit 10) */}
+      {recentMedicines.length > 0 && (
+        <div className="mb-4 p-2.5 bg-teal-50/60 rounded-xl border border-teal-100">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-bold text-teal-800 flex items-center gap-1.5">
+              <History className="w-3 h-3 text-teal-600" />
+              <span>Recent Medicines (সর্বশেষ ব্যবহৃত ঔষধ - সর্বোচ্চ ১০টি):</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setRecentMedicines([]);
+                localStorage.removeItem(RECENT_MEDICINES_KEY);
+              }}
+              className="text-[10px] text-teal-600 hover:text-teal-800 underline cursor-pointer"
+            >
+              ক্লিয়ার
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {recentMedicines.map((medItem, idx) => {
+              const isAdded = medicines.some(m => 
+                (m.brandName || '').toLowerCase() === (medItem.brandName || '').toLowerCase() &&
+                m.type === medItem.type
+              );
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    handleSelectMedicine({
+                      type: medItem.type,
+                      brandName: medItem.brandName,
+                      genericName: medItem.genericName,
+                      strength: medItem.strength,
+                      defaultDosage: medItem.dosage,
+                      defaultUnit: medItem.unit
+                    });
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border flex items-center gap-1.5 cursor-pointer ${
+                    isAdded
+                      ? 'bg-teal-700 text-white border-teal-800 shadow-xs'
+                      : 'bg-white text-slate-800 border-slate-200 hover:bg-teal-50 hover:border-teal-300 hover:text-teal-900 shadow-2xs'
+                  }`}
+                  title={`${medItem.type} ${medItem.brandName} ${medItem.strength || ''}`}
+                >
+                  <span className="text-[10px] px-1 py-0.2 rounded font-bold uppercase bg-teal-100 text-teal-800">
+                    {medItem.type}
+                  </span>
+                  <span>{medItem.brandName}</span>
+                  {medItem.strength && (
+                    <span className="text-[10px] text-slate-400 font-normal">({medItem.strength})</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Input Builder Form */}
       <div className="bg-slate-50/70 rounded-xl p-3.5 sm:p-4 border border-slate-200/60 mb-5 space-y-3.5">
         
-        {/* Row 1: Search & Autocomplete + Dosage Type */}
+        {/* Row 1: Search & Autocomplete with Type Selector inside */}
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 relative">
           
-          {/* Medicine Type */}
-          <div className="col-span-12 sm:col-span-3">
-            <label className="block text-[11px] font-semibold text-slate-600 mb-1">Type (ধরণ)</label>
-            <select
-              value={currentMed.type}
-              onChange={(e) => setCurrentMed({ ...currentMed, type: e.target.value })}
-              className="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-teal-900 focus:ring-2 focus:ring-teal-500 cursor-pointer"
-            >
-              <option value="Tab">Tab (ট্যাবলেট)</option>
-              <option value="Cap">Cap (ক্যাপসুল)</option>
-              <option value="Syp">Syp (সিরাপ)</option>
-              <option value="Drop">Drop (ড্রপ)</option>
-              <option value="Inj">Inj (ইনজেকশন)</option>
-              <option value="Inhaler">Inhaler (ইনহেলার)</option>
-              <option value="Sachet">Sachet (স্যাশে)</option>
-              <option value="Ointment">Oint (মলম)</option>
-            </select>
-          </div>
-
-          {/* Medicine Search & Name Input */}
-          <div className="col-span-12 sm:col-span-6 relative">
+          {/* Medicine Search & Name Input with Type Selector attached */}
+          <div className="col-span-12 sm:col-span-9 relative">
             <label className="block text-[11px] font-medium text-slate-600 mb-1 flex items-center justify-between">
               <span>Medicine Name * (ব্র্যান্ড বা জেনেরিকের নাম)</span>
               <span className="text-[10px] text-teal-600 font-semibold flex items-center gap-1">
@@ -319,36 +453,55 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
                 ২১,০০০+ লাইভ ডেটাবেজ
               </span>
             </label>
-            <div className="relative">
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={currentMed.brandName}
-                onChange={(e) => {
-                  setCurrentMed({ ...currentMed, brandName: e.target.value });
-                  setSearchTerm(e.target.value);
-                  setShowSuggestions(true);
-                }}
-                onFocus={() => setShowSuggestions(true)}
-                placeholder="Type 1-2 letters (e.g. Napa, Seclo, Maxpro, Cef-3, Ace)..."
-                className="w-full pl-8 pr-8 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-              />
-              <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5" />
-              
-              {isSearchingOnline ? (
-                <Loader2 className="w-4 h-4 text-teal-600 animate-spin absolute right-2.5 top-2.5" />
-              ) : currentMed.brandName ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCurrentMed({ ...currentMed, brandName: '', genericName: '', strength: '' });
-                    setSearchTerm('');
+            <div className="relative flex items-center">
+              {/* Type selector inside / attached to left of medicine search */}
+              <select
+                value={currentMed.type}
+                onChange={(e) => setCurrentMed({ ...currentMed, type: e.target.value })}
+                className="h-[38px] px-2.5 py-1.5 bg-teal-50 border border-r-0 border-slate-300 rounded-l-lg text-xs font-bold text-teal-900 hover:bg-teal-100/70 focus:ring-2 focus:ring-teal-500 cursor-pointer shrink-0 transition-colors"
+                title="ঔষধের ধরণ (যেমন: Tab, Cap, Syp, Drop, Inj ইত্যাদি)"
+              >
+                <option value="Tab">Tab</option>
+                <option value="Cap">Cap</option>
+                <option value="Syp">Syp</option>
+                <option value="Drop">Drop</option>
+                <option value="Inj">Inj</option>
+                <option value="Inhaler">Inhaler</option>
+                <option value="Sachet">Sachet</option>
+                <option value="Ointment">Oint</option>
+              </select>
+
+              <div className="relative flex-1">
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={currentMed.brandName}
+                  onChange={(e) => {
+                    setCurrentMed({ ...currentMed, brandName: e.target.value });
+                    setSearchTerm(e.target.value);
+                    setShowSuggestions(true);
                   }}
-                  className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              ) : null}
+                  onFocus={() => setShowSuggestions(true)}
+                  placeholder="ঔষধের নাম বা ধরণ লিখুন (যেমন: Napa, Napa Drop, Napa Syrup, Cef-3, Ace)..."
+                  className="w-full pl-8 pr-8 py-2 bg-white border border-slate-300 rounded-r-lg text-xs font-medium focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                />
+                <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5" />
+                
+                {isSearchingOnline ? (
+                  <Loader2 className="w-4 h-4 text-teal-600 animate-spin absolute right-2.5 top-2.5" />
+                ) : currentMed.brandName ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentMed({ ...currentMed, brandName: '', genericName: '', strength: '' });
+                      setSearchTerm('');
+                    }}
+                    className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                ) : null}
+              </div>
             </div>
 
             {/* Suggestions Dropdown */}
@@ -469,6 +622,8 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
               >
                 {frac.label === '1/4' ? (
                   <StackedFraction num={1} den={4} size="sm" />
+                ) : frac.label === '3/4' ? (
+                  <StackedFraction num={3} den={4} size="sm" />
                 ) : frac.label === '1 1/2' ? (
                   <StackedFraction num={1} den={2} whole={1} size="sm" />
                 ) : frac.label === '2 1/2' ? (
@@ -503,40 +658,79 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
 
           {/* Special Drop (ড্রপ / ফোঁটা ও দিনের বার) Interactive Builder Bar - Only shown when medicine type is Drop */}
           {currentMed.type === 'Drop' && (
-            <div className="pt-2 pb-2 px-3 border-t border-sky-200/80 bg-gradient-to-r from-sky-50/90 via-sky-50/50 to-teal-50/40 -mx-3 rounded-lg space-y-2">
+            <div className="pt-2 pb-2.5 px-3 border border-sky-200/90 bg-gradient-to-r from-sky-50 via-teal-50/40 to-sky-50/60 -mx-1 sm:-mx-2 rounded-xl space-y-2.5 shadow-2xs">
               <div className="flex flex-wrap items-center justify-between gap-1 text-[11px]">
-                <span className="font-bold text-sky-950 flex items-center gap-1.5">
-                  <span className="text-sm">💧</span>
-                  <span>Drop Builder (ড্রপ ও দিনের পরিমাণ নির্বাচন):</span>
-                </span>
-                <span className="text-[10.5px] font-semibold text-sky-800 bg-sky-100/80 px-2 py-0.5 rounded border border-sky-200">
-                  {currentMed.dosage?.includes('ফোঁটা') ? currentMed.dosage : `প্রতিবার ২ ফোঁটা করে (${dropTimes})`}
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-sky-950 flex items-center gap-1.5">
+                    <span className="text-sm">💧</span>
+                    <span>Drop Builder (ড্রপ ও পরিমাণ নির্বাচন):</span>
+                  </span>
+
+                  {/* Language Switch: বাংলা / English */}
+                  <div className="inline-flex items-center bg-white p-0.5 rounded-lg border border-sky-200 shadow-2xs text-[10px]">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDropLang('bn');
+                        applyDropDosage(dropCount, dropTimes, 'bn');
+                      }}
+                      className={`px-2 py-0.5 rounded-md font-bold transition-all cursor-pointer ${
+                        dropLang === 'bn'
+                          ? 'bg-teal-700 text-white shadow-2xs'
+                          : 'text-slate-600 hover:text-teal-900'
+                      }`}
+                      title="বাংলা ভাষায় প্রেসক্রিপশনে লিখুন"
+                    >
+                      বাংলা
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDropLang('en');
+                        applyDropDosage(dropCount, dropTimes, 'en');
+                      }}
+                      className={`px-2 py-0.5 rounded-md font-bold transition-all cursor-pointer ${
+                        dropLang === 'en'
+                          ? 'bg-teal-700 text-white shadow-2xs'
+                          : 'text-slate-600 hover:text-teal-900'
+                      }`}
+                      title="Write in English on prescription"
+                    >
+                      English
+                    </button>
+                  </div>
+                </div>
+
+                <span className="text-[10.5px] font-semibold text-sky-900 bg-white/90 px-2.5 py-0.5 rounded-lg border border-sky-200 shadow-2xs">
+                  {currentMed.dosage ? `${currentMed.dosage}${currentMed.unit ? ` (${currentMed.unit})` : ''}` : `প্রতিবার ${dropCount} ফোঁটা করে (${dropTimes})`}
                 </span>
               </div>
 
               {/* Step 1: কত ফোঁটা নির্বাচন */}
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[11px] font-semibold text-slate-600 min-w-[70px]">কত ফোঁটা:</span>
+                <span className="text-[11px] font-semibold text-slate-700 min-w-[70px]">
+                  {dropLang === 'bn' ? 'কত ফোঁটা:' : 'Drop count:'}
+                </span>
                 {[
-                  { count: '1', label: '১ ফোঁটা' },
-                  { count: '2', label: '২ ফোঁটা' },
-                  { count: '3', label: '৩ ফোঁটা' },
-                  { count: '4', label: '৪ ফোঁটা' },
-                  { count: '5', label: '৫ ফোঁটা' },
-                  { count: '6', label: '৬ ফোঁটা' },
-                  { count: '8', label: '৮ ফোঁটা' },
-                  { count: '10', label: '১০ ফোঁটা' },
-                  { count: '15', label: '১৫ ফোঁটা' },
+                  { count: '1', bnLabel: '১ ফোঁটা', enLabel: '1 drop' },
+                  { count: '2', bnLabel: '২ ফোঁটা', enLabel: '2 drops' },
+                  { count: '3', bnLabel: '৩ ফোঁটা', enLabel: '3 drops' },
+                  { count: '4', bnLabel: '৪ ফোঁটা', enLabel: '4 drops' },
+                  { count: '5', bnLabel: '৫ ফোঁটা', enLabel: '5 drops' },
+                  { count: '6', bnLabel: '৬ ফোঁটা', enLabel: '6 drops' },
+                  { count: '8', bnLabel: '৮ ফোঁটা', enLabel: '8 drops' },
+                  { count: '10', bnLabel: '১০ ফোঁটা', enLabel: '10 drops' },
+                  { count: '15', bnLabel: '১৫ ফোঁটা', enLabel: '15 drops' },
                 ].map(dp => {
-                  const bnNums = { '1': '১', '2': '২', '3': '৩', '4': '৪', '5': '৫', '6': '৬', '7': '৭', '8': '৮', '9': '৯', '10': '১০', '15': '১৫' };
                   const isSelected = dropCount === dp.count && currentMed.type === 'Drop';
+                  const label = dropLang === 'bn' ? dp.bnLabel : dp.enLabel;
                   return (
                     <button
                       key={dp.count}
                       type="button"
                       onClick={() => {
                         setDropCount(dp.count);
-                        applyDropDosage(dp.count, dropTimes);
+                        applyDropDosage(dp.count, dropTimes, dropLang);
                       }}
                       className={`px-2 py-1 rounded-md text-[11px] font-semibold border transition-all cursor-pointer ${
                         isSelected
@@ -544,7 +738,7 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
                           : 'bg-white text-sky-900 border-sky-200 hover:bg-sky-100'
                       }`}
                     >
-                      {dp.label}
+                      {label}
                     </button>
                   );
                 })}
@@ -552,26 +746,32 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
 
               {/* Step 2: দিনে কতবার নির্বাচন */}
               <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-sky-100">
-                <span className="text-[11px] font-semibold text-slate-600 min-w-[70px]">দিনে কতবার:</span>
+                <span className="text-[11px] font-semibold text-slate-700 min-w-[70px]">
+                  {dropLang === 'bn' ? 'দিনে কতবার:' : 'Frequency:'}
+                </span>
                 {[
-                  { times: 'দিনে ১ বার', label: 'দিনে ১ বার (1 time)' },
-                  { times: 'দিনে ২ বার', label: 'দিনে ২ বার (2 times)' },
-                  { times: 'দিনে ৩ বার', label: 'দিনে ৩ বার (3 times)' },
-                  { times: 'দিনে ৪ বার', label: 'দিনে ৪ বার (4 times)' },
-                  { times: 'প্রতি ৪ ঘন্টা পর পর', label: '৪ ঘন্টা পর পর' },
-                  { times: 'প্রতি ৬ ঘন্টা পর পর', label: '৬ ঘন্টা পর পর' },
-                  { times: 'প্রতি ১২ ঘন্টা পর পর', label: '১২ ঘন্টা পর পর' },
-                  { times: 'প্রতি ২৪ ঘন্টা পর পর', label: '২৪ ঘন্টা পর পর' },
-                  { times: 'প্রয়োজনে', label: 'প্রয়োজনে (SOS)' },
+                  { times: 'দিনে ১ বার', labelBn: 'দিনে ১ বার', labelEn: '1 time daily' },
+                  { times: 'দিনে ২ বার', labelBn: 'দিনে ২ বার', labelEn: '2 times daily' },
+                  { times: 'দিনে ৩ বার', labelBn: 'দিনে ৩ বার', labelEn: '3 times daily' },
+                  { times: 'দিনে ৪ বার', labelBn: 'দিনে ৪ বার', labelEn: '4 times daily' },
+                  { times: 'প্রতি ৪ ঘন্টা পর পর', labelBn: '৪ ঘন্টা পর পর', labelEn: 'Every 4 hrs' },
+                  { times: 'প্রতি ৬ ঘন্টা পর পর', labelBn: '৬ ঘন্টা পর পর', labelEn: 'Every 6 hrs' },
+                  { times: 'প্রতি ১২ ঘন্টা পর পর', labelBn: '১২ ঘন্টা পর পর', labelEn: 'Every 12 hrs' },
+                  { times: 'প্রতি ২৪ ঘন্টা পর পর', labelBn: '২৪ ঘন্টা পর পর', labelEn: 'Every 24 hrs' },
+                  { times: 'প্রয়োজনে', labelBn: 'প্রয়োজনে (SOS)', labelEn: 'SOS (as needed)' },
                 ].map(dt => {
-                  const isSelected = dropTimes === dt.times && currentMed.type === 'Drop' && currentMed.dosage?.includes(dt.times);
+                  const enFreq = DROP_FREQUENCY_MAP[dt.times]?.en || dt.times;
+                  const isSelected = dropTimes === dt.times && currentMed.type === 'Drop' && (
+                    currentMed.dosage?.includes(dt.times) || currentMed.dosage?.includes(enFreq)
+                  );
+                  const label = dropLang === 'bn' ? dt.labelBn : dt.labelEn;
                   return (
                     <button
                       key={dt.times}
                       type="button"
                       onClick={() => {
                         setDropTimes(dt.times);
-                        applyDropDosage(dropCount, dt.times);
+                        applyDropDosage(dropCount, dt.times, dropLang);
                       }}
                       className={`px-2 py-0.5 rounded text-[11px] font-medium border transition-all cursor-pointer ${
                         isSelected
@@ -579,7 +779,7 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
                           : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-teal-50 hover:text-teal-900'
                       }`}
                     >
-                      {dt.label}
+                      {label}
                     </button>
                   );
                 })}
@@ -595,13 +795,28 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
                 key={freq.code}
                 type="button"
                 onClick={() => {
-                  const isFrac = freq.code.includes('1/2');
-                  setCurrentMed({ 
-                    ...currentMed, 
-                    dosage: freq.code,
-                    isFraction: isFrac,
-                    fractionDetail: isFrac ? { num: 1, den: 2, label: '1/2' } : null
-                  });
+                  if (currentMed.dosage === freq.code) {
+                    // Unselect if clicked again
+                    setCurrentMed({
+                      ...currentMed,
+                      dosage: '',
+                      isFraction: false,
+                      fractionDetail: null
+                    });
+                  } else {
+                    const isFrac = freq.code.includes('1/2');
+                    const isDrop = currentMed.type === 'Drop';
+                    const unitForDrop = isDrop 
+                      ? (currentMed.unit || (dropLang === 'en' ? 'drops' : 'ফোঁটা'))
+                      : currentMed.unit;
+                    setCurrentMed({ 
+                      ...currentMed, 
+                      dosage: freq.code,
+                      unit: unitForDrop,
+                      isFraction: isFrac,
+                      fractionDetail: isFrac ? { num: 1, den: 2, label: '1/2' } : null
+                    });
+                  }
                 }}
                 className={`px-2 py-1 rounded-md text-[11px] font-medium transition-all border cursor-pointer ${
                   currentMed.dosage === freq.code
@@ -622,7 +837,13 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
             {/* Special Highlighted 1/2 Cup Unit */}
             <button
               type="button"
-              onClick={() => setCurrentMed({ ...currentMed, unit: '১/২ কাপ (Half Cup)' })}
+              onClick={() => {
+                if (currentMed.unit?.includes('১/২ কাপ')) {
+                  setCurrentMed({ ...currentMed, unit: '' });
+                } else {
+                  setCurrentMed({ ...currentMed, unit: '১/২ কাপ (Half Cup)' });
+                }
+              }}
               className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all border flex items-center gap-1 cursor-pointer ${
                 currentMed.unit?.includes('১/২ কাপ')
                   ? 'bg-amber-600 text-white border-amber-700 shadow-xs'
@@ -637,7 +858,13 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
               <button
                 key={u.id}
                 type="button"
-                onClick={() => setCurrentMed({ ...currentMed, unit: u.label })}
+                onClick={() => {
+                  if (currentMed.unit === u.label) {
+                    setCurrentMed({ ...currentMed, unit: '' });
+                  } else {
+                    setCurrentMed({ ...currentMed, unit: u.label });
+                  }
+                }}
                 className={`px-2 py-1 rounded-md text-[11px] font-medium transition-all border cursor-pointer ${
                   currentMed.unit === u.label
                     ? 'bg-teal-600 text-white border-teal-700'
@@ -682,8 +909,18 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
                 <button
                   key={inst}
                   type="button"
-                  onClick={() => setCurrentMed({ ...currentMed, instruction: inst })}
-                  className="px-2 py-0.5 rounded text-[10px] bg-white border border-slate-200 text-slate-600 hover:bg-teal-50 hover:text-teal-800 transition-colors cursor-pointer"
+                  onClick={() => {
+                    if (currentMed.instruction === inst) {
+                      setCurrentMed({ ...currentMed, instruction: '' });
+                    } else {
+                      setCurrentMed({ ...currentMed, instruction: inst });
+                    }
+                  }}
+                  className={`px-2 py-0.5 rounded text-[10px] border transition-colors cursor-pointer ${
+                    currentMed.instruction === inst
+                      ? 'bg-teal-600 text-white border-teal-700 font-bold'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-teal-50 hover:text-teal-800'
+                  }`}
                 >
                   {inst.split(' (')[0]}
                 </button>
@@ -696,19 +933,50 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
             <label className="block text-[11px] font-medium text-slate-600 mb-1">
               Duration (স্থায়িত্ব / কতদিন)
             </label>
-            <input
-              type="text"
-              value={currentMed.duration}
-              onChange={(e) => setCurrentMed({ ...currentMed, duration: e.target.value })}
-              className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium focus:ring-1 focus:ring-teal-500 mb-1.5"
-            />
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <input
+                type="text"
+                value={currentMed.duration}
+                onChange={(e) => setCurrentMed({ ...currentMed, duration: e.target.value })}
+                placeholder="যেমন: ৩ দিন / 5 days / ১ মাস"
+                className="flex-1 px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium focus:ring-1 focus:ring-teal-500"
+              />
+              {/* Quick Custom Day selector / counter */}
+              <div className="flex items-center gap-0.5 bg-white border border-slate-300 rounded-lg px-1 py-1 shrink-0">
+                <input
+                  type="number"
+                  min="1"
+                  max="365"
+                  placeholder="দিন"
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val) {
+                      setCurrentMed({ ...currentMed, duration: `${val} দিন` });
+                    }
+                  }}
+                  className="w-12 text-center text-xs font-bold text-teal-800 bg-transparent outline-none"
+                  title="কাস্টম দিন লিখুন (যেমন: ৪, ৮, ১২)"
+                />
+                <span className="text-[10px] text-slate-500 font-semibold pr-1">দিন</span>
+              </div>
+            </div>
             <div className="flex flex-wrap gap-1">
               {DURATION_PRESETS.slice(0, 7).map((dur) => (
                 <button
                   key={dur}
                   type="button"
-                  onClick={() => setCurrentMed({ ...currentMed, duration: dur })}
-                  className="px-2 py-0.5 rounded text-[10px] bg-white border border-slate-200 text-slate-600 hover:bg-teal-50 hover:text-teal-800 transition-colors cursor-pointer"
+                  onClick={() => {
+                    if (currentMed.duration === dur) {
+                      setCurrentMed({ ...currentMed, duration: '' });
+                    } else {
+                      setCurrentMed({ ...currentMed, duration: dur });
+                    }
+                  }}
+                  className={`px-2 py-0.5 rounded text-[10px] border transition-colors cursor-pointer ${
+                    currentMed.duration === dur
+                      ? 'bg-teal-600 text-white border-teal-700 font-bold'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-teal-50 hover:text-teal-800'
+                  }`}
                 >
                   {dur}
                 </button>

@@ -205,6 +205,81 @@ export function App() {
 
     setEditingRecordId(currentRecordId);
     saveRecordsToStorage(updated, newRecord);
+
+    // Update Recent Suggestions permanently only when prescription is saved/printed
+    try {
+      // 1. Recent Complaints
+      if (complaints && complaints.length > 0) {
+        const RECENT_COMPLAINTS_KEY = 'amar_rx_recent_complaints';
+        const savedComplaints = JSON.parse(localStorage.getItem(RECENT_COMPLAINTS_KEY) || '[]');
+        let mergedComplaints = [...savedComplaints];
+        complaints.forEach(item => {
+          if (!item.text) return;
+          mergedComplaints = [
+            { text: item.text, duration: item.duration || '3 days' },
+            ...mergedComplaints.filter(c => c.text !== item.text)
+          ];
+        });
+        localStorage.setItem(RECENT_COMPLAINTS_KEY, JSON.stringify(mergedComplaints.slice(0, 10)));
+      }
+
+      // 2. Recent Diagnoses
+      if (diagnosis && diagnosis.trim()) {
+        const RECENT_DIAGNOSES_KEY = 'amar_rx_recent_diagnoses';
+        const savedDiagnoses = JSON.parse(localStorage.getItem(RECENT_DIAGNOSES_KEY) || '[]');
+        const diagItems = diagnosis.split(',').map(d => d.trim()).filter(Boolean);
+        let mergedDiagnoses = [...savedDiagnoses];
+        diagItems.forEach(d => {
+          mergedDiagnoses = [d, ...mergedDiagnoses.filter(x => x !== d)];
+        });
+        localStorage.setItem(RECENT_DIAGNOSES_KEY, JSON.stringify(mergedDiagnoses.slice(0, 10)));
+      }
+
+      // 3. Recent Investigations
+      if (investigations && investigations.length > 0) {
+        const RECENT_INVESTIGATIONS_KEY = 'amar_rx_recent_investigations';
+        const savedInv = JSON.parse(localStorage.getItem(RECENT_INVESTIGATIONS_KEY) || '[]');
+        let mergedInv = [...savedInv];
+        investigations.forEach(inv => {
+          if (!inv) return;
+          mergedInv = [inv, ...mergedInv.filter(x => x !== inv)];
+        });
+        localStorage.setItem(RECENT_INVESTIGATIONS_KEY, JSON.stringify(mergedInv.slice(0, 10)));
+      }
+
+      // 4. Recent Medicines
+      if (medicines && medicines.length > 0) {
+        const RECENT_MEDICINES_KEY = 'amar_rx_recent_medicines';
+        const savedMeds = JSON.parse(localStorage.getItem(RECENT_MEDICINES_KEY) || '[]');
+        let mergedMeds = [...savedMeds];
+        medicines.forEach(m => {
+          if (!m.brandName) return;
+          mergedMeds = [
+            {
+              type: m.type || 'Tab',
+              brandName: m.brandName,
+              genericName: m.genericName || '',
+              strength: m.strength || '',
+              dosage: m.dosage || '1+0+1',
+              unit: m.unit || '',
+              instruction: m.instruction || '',
+              duration: m.duration || ''
+            },
+            ...mergedMeds.filter(x => 
+              (x.brandName || '').toLowerCase() !== (m.brandName || '').toLowerCase() ||
+              x.type !== m.type
+            )
+          ];
+        });
+        localStorage.setItem(RECENT_MEDICINES_KEY, JSON.stringify(mergedMeds.slice(0, 10)));
+      }
+
+      // Notify all sections that recents have updated for the next patient/prescription
+      window.dispatchEvent(new Event('rx_recent_updated'));
+    } catch (err) {
+      console.warn('Failed to sync recent suggestions:', err);
+    }
+
     return newRecord;
   };
 
