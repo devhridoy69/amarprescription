@@ -2,7 +2,7 @@ import React from 'react';
 import { 
   Eye, Edit3, Columns, Sun, Moon, Type,
   LayoutDashboard, LogIn, LogOut, ShieldAlert,
-  RotateCcw, Sparkles
+  RotateCcw, Sparkles, Wifi, WifiOff, CloudUpload
 } from 'lucide-react';
 
 export const Navbar = ({ 
@@ -21,6 +21,8 @@ export const Navbar = ({
   savedCount = 0,
   currentUser = null,
   adminUser = null,
+  isOnline = true,
+  pendingSyncCount = 0,
   onOpenAdminPanel = () => {},
   onOpenAuth = () => {},
   onLogout = () => {}
@@ -119,6 +121,40 @@ export const Navbar = ({
         {/* RIGHT: Action Controls */}
         <div className="flex items-center gap-2 shrink-0">
           
+          {/* Network & Offline Auto-Sync Badge */}
+          <div 
+            className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all ${
+              !isOnline
+                ? 'bg-amber-50 text-amber-800 border-amber-300 animate-pulse'
+                : pendingSyncCount > 0
+                ? 'bg-blue-50 text-blue-800 border-blue-300'
+                : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+            }`}
+            title={!isOnline ? 'ইন্টারনেট অফলাইন - নতুন প্রেসক্রিপশন লোকাল স্টোরেজে সেভ হবে, নেট আসলেই ক্লাউডে সিংক হয়ে যাবে' : 'ইন্টারনেট অনলাইন - ক্লাউড সিংক সক্রিয়'}
+          >
+            {!isOnline ? (
+              <>
+                <WifiOff className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                <span>অফলাইন মোড</span>
+                {pendingSyncCount > 0 && (
+                  <span className="px-1.5 py-0.2 bg-amber-200 text-amber-900 rounded-full text-[10px] font-bold">
+                    {pendingSyncCount}
+                  </span>
+                )}
+              </>
+            ) : pendingSyncCount > 0 ? (
+              <>
+                <CloudUpload className="w-3.5 h-3.5 text-blue-600 shrink-0 animate-bounce" />
+                <span>সিংক হচ্ছে ({pendingSyncCount})</span>
+              </>
+            ) : (
+              <>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>অনলাইন</span>
+              </>
+            )}
+          </div>
+
           {/* Group 1: Clinical Tools (Dashboard, Templates, Font) */}
           <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
             {/* Dashboard Button */}

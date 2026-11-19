@@ -16,6 +16,12 @@ import { DEFAULT_DOCTOR } from './data/defaultDoctor';
 import { PRESCRIPTION_TEMPLATES } from './data/templatesData';
 import { FONT_PAIR_PRESETS } from './data/fontPresets';
 import { fetchPrescriptionsFromCloud, savePrescriptionToCloud, deletePrescriptionFromCloud } from './lib/supabase';
+import { 
+  downloadMedicinesForOffline, 
+  queuePendingPrescription, 
+  getPendingPrescriptionsCount, 
+  syncPendingPrescriptionsToCloud 
+} from './lib/offlineSync';
 
 export function App() {
   // Detect if user visited via QR code link (?rx=... or ?id=...)
@@ -159,6 +165,45 @@ export function App() {
     loadCloudRecords();
   }, [currentUser, adminUser]);
 
+  // Offline & Online Network Detection + Sync State
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
+
+  // Background Cache: Download 21k medicines into IndexedDB for 100% offline access
+  useEffect(() => {
+    downloadMedicinesForOffline();
+
+    // Check pending count initially
+    getPendingPrescriptionsCount().then(setPendingSyncCount);
+
+    const handleOnline = async () => {
+      setIsOnline(true);
+      // Auto-sync any queued offline prescriptions to Supabase cloud!
+      const synced = await syncPendingPrescriptionsToCloud();
+      if (synced > 0) {
+        getPendingPrescriptionsCount().then(setPendingSyncCount);
+      }
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+
+    const handleSyncedEvent = () => {
+      getPendingPrescriptionsCount().then(setPendingSyncCount);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('rx_offline_synced', handleSyncedEvent);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('rx_offline_synced', handleSyncedEvent);
+    };
+  }, []);
+
   // Save records to doctor's separate localStorage and async backup to Supabase
   const saveRecordsToStorage = (records, recordToSync = null) => {
     setPatientRecords(records);
@@ -169,11 +214,22 @@ export function App() {
       console.error('Failed to save patient records to storage:', e);
     }
 
-    // Async push to Supabase cloud tagged with doctor's phone
+    // Async push to Supabase cloud if online, or queue for offline auto-sync
     if (recordToSync) {
-      savePrescriptionToCloud(recordToSync, currentUser?.phone).catch(err => {
-        console.warn('Cloud sync error:', err);
-      });
+      if (navigator.onLine) {
+        savePrescriptionToCloud(recordToSync, currentUser?.phone).catch(async (err) => {
+          console.warn('Cloud sync error, queuing locally:', err);
+          await queuePendingPrescription(recordToSync, currentUser?.phone);
+          const count = await getPendingPrescriptionsCount();
+          setPendingSyncCount(count);
+        });
+      } else {
+        // Queue for offline auto-sync
+        queuePendingPrescription(recordToSync, currentUser?.phone).then(async () => {
+          const count = await getPendingPrescriptionsCount();
+          setPendingSyncCount(count);
+        });
+      }
     }
   };
 
@@ -638,6 +694,8 @@ export function App() {
             savedCount={patientRecords.length}
             currentUser={currentUser}
             adminUser={adminUser}
+            isOnline={isOnline}
+            pendingSyncCount={pendingSyncCount}
             onOpenAdminPanel={() => setIsAdminPanelOpen(true)}
             onOpenAuth={() => setIsAuthModalOpen(true)}
             onLogout={handleLogout}

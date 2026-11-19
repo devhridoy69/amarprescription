@@ -12,6 +12,7 @@ import {
   DURATION_PRESETS 
 } from '../data/medicinesData';
 import { searchMedicinesOnline } from '../lib/supabase';
+import { searchMedicinesOffline } from '../lib/offlineSync';
 import { StackedFraction, renderWithFractions } from './StackedFraction';
 
 const RECENT_MEDICINES_KEY = 'amar_rx_recent_medicines';
@@ -97,14 +98,22 @@ export const MedicineSection = ({ medicines, onAddMedicine, onRemoveMedicine, on
     debounceTimerRef.current = setTimeout(async () => {
       setIsSearchingOnline(true);
       try {
-        const results = await searchMedicinesOnline(searchTerm.trim(), 20);
-        setOnlineSuggestions(results);
+        // 1. Try local IndexedDB offline search first (0ms latency, works without net!)
+        let results = await searchMedicinesOffline(searchTerm.trim(), 20);
+        
+        // 2. If no local results or online is available, fallback to Supabase query
+        if (!results || results.length === 0) {
+          if (navigator.onLine) {
+            results = await searchMedicinesOnline(searchTerm.trim(), 20);
+          }
+        }
+        setOnlineSuggestions(results || []);
       } catch (e) {
         console.error(e);
       } finally {
         setIsSearchingOnline(false);
       }
-    }, 180);
+    }, 120);
 
     return () => {
       if (debounceTimerRef.current) {
