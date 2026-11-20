@@ -201,6 +201,71 @@ export async function searchMedicinesOnline(query, limit = 25) {
 }
 
 /**
+ * Fetch all investigations from Supabase 'investigationchart' table
+ * with local caching for instant search and offline support
+ */
+const INVESTIGATIONS_CACHE_KEY = 'amar_rx_investigations_cache';
+const INVESTIGATIONS_SYNC_TIME_KEY = 'amar_rx_investigations_last_sync';
+
+export async function fetchInvestigationsChart() {
+  // 1. Try local storage cache first for instant UI response
+  let cachedList = [];
+  try {
+    const raw = localStorage.getItem(INVESTIGATIONS_CACHE_KEY);
+    if (raw) {
+      cachedList = JSON.parse(raw);
+    }
+  } catch (e) {}
+
+  // Check sync timestamp (re-sync every 2 days if online)
+  let shouldFetchOnline = true;
+  try {
+    const lastSync = localStorage.getItem(INVESTIGATIONS_SYNC_TIME_KEY);
+    if (lastSync && cachedList.length > 500) {
+      const diff = Date.now() - Number(lastSync);
+      if (diff < 2 * 24 * 60 * 60 * 1000) {
+        shouldFetchOnline = false;
+      }
+    }
+  } catch (e) {}
+
+  if (!navigator.onLine) {
+    return cachedList;
+  }
+
+  // 2. Fetch all from Supabase table if needed or cache is empty
+  if (shouldFetchOnline || cachedList.length === 0) {
+    try {
+      const { data, error } = await supabase
+        .from('investigationchart')
+        .select('id, test_name')
+        .order('id', { ascending: true })
+        .limit(3000);
+
+      if (!error && data && data.length > 0) {
+        const cleanedList = data
+          .map(d => (d.test_name || '').trim())
+          .filter(name => name.length > 0 && name.toUpperCase() !== 'N/A');
+
+        // Deduplicate
+        const uniqueList = Array.from(new Set(cleanedList));
+
+        try {
+          localStorage.setItem(INVESTIGATIONS_CACHE_KEY, JSON.stringify(uniqueList));
+          localStorage.setItem(INVESTIGATIONS_SYNC_TIME_KEY, String(Date.now()));
+        } catch (e) {}
+
+        return uniqueList;
+      }
+    } catch (err) {
+      console.warn('Failed to fetch from investigationchart:', err);
+    }
+  }
+
+  return cachedList;
+}
+
+/**
  * Fetch a single prescription by ID or rxId for public patient download / QR viewing
  */
 export async function fetchSinglePrescriptionForPublic(prescriptionIdOrRxId) {

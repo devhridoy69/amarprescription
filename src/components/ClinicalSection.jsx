@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { COMMON_COMPLAINTS, COMPLAINT_DURATIONS } from '../data/complaintsData';
 import { COMMON_INVESTIGATIONS, COMMON_DIAGNOSES } from '../data/investigationsData';
+import { fetchInvestigationsChart } from '../lib/supabase';
 
 const RECENT_COMPLAINTS_KEY = 'amar_rx_recent_complaints';
 const RECENT_DIAGNOSES_KEY = 'amar_rx_recent_diagnoses';
@@ -22,6 +23,29 @@ export const ClinicalSection = ({
   const [customDiagnosis, setCustomDiagnosis] = useState('');
   const [customInvestigation, setCustomInvestigation] = useState('');
   const [investigationSearch, setInvestigationSearch] = useState('');
+  const [allInvestigations, setAllInvestigations] = useState(() => {
+    try {
+      const cached = localStorage.getItem('amar_rx_investigations_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return COMMON_INVESTIGATIONS;
+  });
+
+  // Load from Supabase investigationchart table on mount
+  useEffect(() => {
+    let isMounted = true;
+    fetchInvestigationsChart().then((chartList) => {
+      if (isMounted && Array.isArray(chartList) && chartList.length > 0) {
+        // Merge with COMMON_INVESTIGATIONS so nothing is lost
+        const set = new Set([...COMMON_INVESTIGATIONS, ...chartList]);
+        setAllInvestigations(Array.from(set));
+      }
+    });
+    return () => { isMounted = false; };
+  }, []);
   
   // Collapse toggles for mobile compactness
   const [isComplaintsOpen, setIsComplaintsOpen] = useState(true);
@@ -663,8 +687,8 @@ export const ClinicalSection = ({
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && investigationSearch.trim()) {
                       const query = investigationSearch.trim().toLowerCase();
-                      const match = COMMON_INVESTIGATIONS.find(t => t.toLowerCase() === query) 
-                                 || COMMON_INVESTIGATIONS.find(t => t.toLowerCase().includes(query));
+                      const match = allInvestigations.find(t => t.toLowerCase() === query) 
+                                 || allInvestigations.find(t => t.toLowerCase().includes(query));
                       addInvestigation(match || investigationSearch.trim());
                     }
                   }}
@@ -685,16 +709,26 @@ export const ClinicalSection = ({
 
               {/* Autocomplete / Filtered Dropdown results when searching */}
               {investigationSearch.trim() && (
-                <div className="mt-1.5 p-2 bg-white rounded-xl border border-purple-200 shadow-md max-h-48 overflow-y-auto space-y-1 z-20">
+                <div className="mt-1.5 p-2 bg-white rounded-xl border border-purple-200 shadow-md max-h-56 overflow-y-auto space-y-1 z-20">
                   {(() => {
                     const query = investigationSearch.trim().toLowerCase();
-                    const filtered = COMMON_INVESTIGATIONS.filter(test => test.toLowerCase().includes(query));
-                    const exactMatch = filtered.some(t => t.toLowerCase() === query);
+                    // Prioritize exact or prefix matches, limit to top 40 for optimal rendering
+                    const matchingList = allInvestigations.filter(test => test.toLowerCase().includes(query));
+                    matchingList.sort((a, b) => {
+                      const aStarts = a.toLowerCase().startsWith(query);
+                      const bStarts = b.toLowerCase().startsWith(query);
+                      if (aStarts && !bStarts) return -1;
+                      if (!aStarts && bStarts) return 1;
+                      return a.localeCompare(b);
+                    });
+                    const filtered = matchingList.slice(0, 40);
+                    const exactMatch = matchingList.some(t => t.toLowerCase() === query);
 
                     return (
                       <>
-                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1 pb-1">
-                          সার্চ ফলাফল ({filtered.length})
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1 pb-1 flex items-center justify-between">
+                          <span>সার্চ ফলাফল ({matchingList.length})</span>
+                          <span className="text-purple-600 font-semibold">{allInvestigations.length} টেস্ট ডাটাবেস</span>
                         </div>
                         {filtered.length > 0 ? (
                           filtered.map((test) => {
