@@ -596,15 +596,16 @@ export const PrescriptionPreview = ({
             margin: 0 !important;
             padding: 0 !important;
             background: #ffffff !important;
-            height: auto !important;
+            width: 100% !important;
+            height: 100% !important;
           }
           .prescription-paper {
             width: 100% !important;
             max-width: 100% !important;
-            height: auto !important;
-            min-height: auto !important;
+            height: ${settings.paperSize === 'Letter' ? '279mm' : '297mm'} !important;
+            min-height: ${settings.paperSize === 'Letter' ? '279mm' : '297mm'} !important;
             box-sizing: border-box !important;
-            padding: 8mm 12mm 6mm 12mm !important; /* Compact, safe medical margin */
+            padding: 8mm 12mm 8mm 12mm !important; /* Compact, safe medical margin */
             margin: 0 !important;
             border: none !important;
             box-shadow: none !important;
@@ -614,6 +615,7 @@ export const PrescriptionPreview = ({
             justify-content: space-between !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
+            overflow: hidden !important;
           }
           /* Strictly prevent accidental 2nd page when 1 page is chosen */
           .prescription-paper:last-child {
@@ -623,6 +625,7 @@ export const PrescriptionPreview = ({
           .prescription-footer {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
+            margin-top: auto !important;
           }
           .no-print {
             display: none !important;

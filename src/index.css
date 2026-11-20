@@ -229,10 +229,10 @@
     border-radius: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
-    height: auto !important;
-    min-height: auto !important;
+    height: 100% !important;
+    min-height: 100% !important;
     box-sizing: border-box !important;
-    padding: 8mm 12mm 6mm 12mm !important;
+    padding: 8mm 12mm 8mm 12mm !important;
     margin: 0 !important;
     transform: none !important;
     background-color: #ffffff !important;
@@ -242,6 +242,7 @@
     justify-content: space-between !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+    overflow: hidden !important;
   }
 
   .prescription-footer {
