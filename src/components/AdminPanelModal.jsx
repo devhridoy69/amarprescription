@@ -3,7 +3,7 @@ import {
   ShieldAlert, ShieldCheck, Users, Clock, CheckCircle2, 
   XCircle, Ban, Trash2, Calendar, Search, RefreshCw, 
   X, Phone, Award, Stethoscope, AlertTriangle, Key, LogOut,
-  Sliders, UserCheck, UserX, FileText, ChevronRight, Edit3, Save, Sparkles, Building, Lock, UserPlus, QrCode, Crown, Settings2, Plus
+  Menu, Sliders, UserCheck, UserX, FileText, ChevronRight, Edit3, Save, Sparkles, Building, Lock, UserPlus, QrCode, Crown, Settings2, Plus
 } from 'lucide-react';
 import { 
   adminFetchAllUsers, 
@@ -26,6 +26,8 @@ export const AdminPanelModal = ({
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'pending' | 'approved' | 'rejected'
+  const [planFilter, setPlanFilter] = useState('all');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [notification, setNotification] = useState(null);
 
   // Modal Sub-state: Edit Doctor Details
@@ -301,10 +303,11 @@ export const AdminPanelModal = ({
         (u.specialty || '').toLowerCase().includes(q);
 
       if (!matchSearch) return false;
-      if (statusFilter === 'all') return true;
-      return u.status === statusFilter;
+      const matchStatus = statusFilter === 'all' || u.status === statusFilter;
+      const matchPlan = planFilter === 'all' || normalizePlanId(u.plan) === planFilter;
+      return matchStatus && matchPlan;
     });
-  }, [users, searchTerm, statusFilter]);
+  }, [users, searchTerm, statusFilter, planFilter]);
 
   if (!isOpen) return null;
 
@@ -320,7 +323,7 @@ export const AdminPanelModal = ({
       <div className="bg-[#111214] text-slate-200 rounded-3xl shadow-2xl border border-white/5 w-full max-w-6xl max-h-[92vh] flex flex-col md:flex-row overflow-hidden font-sans">
         
         {/* ======================= LEFT SIDEBAR (Ember Navigation) ======================= */}
-        <div className="w-full md:w-64 bg-[#0d0e10] border-b md:border-b-0 md:border-r border-white/5 p-4 flex flex-col justify-between shrink-0">
+        <div className={`${isMobileSidebarOpen ? 'flex' : 'hidden'} md:flex w-full md:w-64 bg-[#0d0e10] border-b md:border-b-0 md:border-r border-white/5 p-4 flex-col justify-between shrink-0 transition-all`}>
           <div className="space-y-5">
             {/* Brand Logo & Switcher */}
             <div className="flex items-center justify-between px-1">
@@ -431,17 +434,27 @@ export const AdminPanelModal = ({
 
                 return plans.map((p) => {
                   const count = users.filter(u => normalizePlanId(u.plan) === p.id).length;
+                  const isSelected = planFilter === p.id;
                   return (
-                    <div 
+                    <button 
                       key={p.id}
-                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-colors"
+                      type="button"
+                      onClick={() => setPlanFilter(isSelected ? 'all' : p.id)}
+                      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
+                        isSelected 
+                          ? 'bg-[#22242a] text-white font-semibold shadow-xs ring-1 ring-white/10' 
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                      }`}
                     >
                       <div className="flex items-center gap-2">
-                        <span className={"w-2 h-2 rounded-full " + (colorDots[p.id] || 'bg-slate-500')}></span>
+                        <span className={"w-2 h-2 rounded-full shrink-0 " + (colorDots[p.id] || 'bg-slate-500')}></span>
                         <span className="truncate">{p.name}</span>
                       </div>
-                      <span className="text-[11px] font-mono text-slate-500">{count}</span>
-                    </div>
+                      <div className="flex items-center gap-1.5">
+                        {isSelected && <span className="text-[9px] px-1 py-0.2 rounded bg-white/10 text-teal-300">Active</span>}
+                        <span className="text-[11px] font-mono text-slate-400">{count}</span>
+                      </div>
+                    </button>
                   );
                 });
               })()}
@@ -472,15 +485,25 @@ export const AdminPanelModal = ({
           
           {/* Top Bar Header */}
           <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between gap-3 bg-[#111214]">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-slate-400">Master Terminal</span>
-                <span className="text-slate-600">/</span>
-                <span className="text-xs font-bold text-white">Doctor Accounts</span>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+                className="md:hidden p-2 rounded-xl bg-[#1b1c21] hover:bg-[#24252c] text-slate-300 border border-white/5 cursor-pointer"
+                title="Toggle Menu"
+              >
+                <Menu className="w-4 h-4" />
+              </button>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-400">Master Terminal</span>
+                  <span className="text-slate-600">/</span>
+                  <span className="text-xs font-bold text-white">Doctor Accounts</span>
+                </div>
+                <h1 className="text-lg sm:text-2xl font-bold text-white tracking-tight mt-0.5">
+                  Overview <span className="text-slate-500 font-normal text-base sm:text-lg">2026</span>
+                </h1>
               </div>
-              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight mt-0.5">
-                Overview <span className="text-slate-500 font-normal text-lg">2026</span>
-              </h1>
             </div>
 
             <div className="flex items-center gap-2">
