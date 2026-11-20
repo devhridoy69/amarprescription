@@ -39,13 +39,20 @@ export const PrescriptionPreview = ({
   const userPlan = currentUser?.plan || doctor?.plan || 'free';
   const perms = getPlanPermissions(userPlan);
 
-  // Smart Header QR Code logic
-  const canShowQr = Boolean(patient.rxId && (doctor.show_qr === true || (perms.canUseQrCode && doctor.show_qr !== false)));
+  // Smart Header QR Code logic:
+  // If in public preview (hideToolbar=true) or doctor has show_qr configured or enterprise plan
+  const canShowQr = Boolean(
+    patient.rxId && (
+      hideToolbar || 
+      doctor.show_qr === true || 
+      (perms.canUseQrCode && doctor.show_qr !== false)
+    )
+  );
 
   // Watermark logic: admin toggle takes top priority, else plan permissions remove watermark
   const shouldShowWatermark = (doctor.has_watermark !== undefined 
     ? Boolean(doctor.has_watermark) 
-    : !perms.canRemoveWatermark) && doctor.showAyanTechBranding !== false;
+    : (hideToolbar ? false : !perms.canRemoveWatermark)) && doctor.showAyanTechBranding !== false;
 
   // Safe fallback settings if props are undefined
   const settings = {
@@ -546,8 +553,8 @@ export const PrescriptionPreview = ({
                 <span>•</span>
                 <span className="font-bold text-teal-800">Developed By Ayan Tech 01780960370</span>
 
-                {/* On-screen Lock Upgrade Pill beside the branding watermark for Free Plan */}
-                {!perms.canRemoveWatermark && (
+                {/* On-screen Lock Upgrade Pill beside the branding watermark for Free Plan (hidden in public view and print) */}
+                {!perms.canRemoveWatermark && !hideToolbar && (
                   <button
                     type="button"
                     onClick={onOpenPricing}

@@ -201,10 +201,11 @@ export const AdminPanelModal = ({
   };
 
   const handleDelete = async (user) => {
-    if (!window.confirm(`সতর্কতা: আপনি কি ডাক্তার "${user.full_name}" (${user.phone}) অ্যাকাউন্টটি ডাটাবেস থেকে স্থায়ীভাবে মুছে ফেলতে চান?`)) return;
+    if (!window.confirm(`⚠️ চূড়ান্ত সতর্কতা: আপনি কি ডাক্তার "${user.full_name}" (${user.phone})-এর অ্যাকাউন্ট এবং তার সংরক্ষিত সকল প্রেসক্রিপশন ডাটাবেস থেকে স্থায়ীভাবে মুছে ফেলতে চান?`)) return;
     await adminDeleteUser(user.id, user.phone);
-    showToast(`"${user.full_name}" অ্যাকাউন্ট মুছে ফেলা হয়েছে।`);
-    loadUsers();
+    showToast(`"${user.full_name}"-এর অ্যাকাউন্ট ও সকল সংরক্ষিত প্রেসক্রিপশন সফলভাবে মুছে ফেলা হয়েছে।`);
+    await loadUsers();
+    await loadPrescriptionsStats();
   };
 
   const handleOpenEditModal = (user) => {

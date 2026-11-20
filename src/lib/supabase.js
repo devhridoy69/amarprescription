@@ -410,7 +410,10 @@ export function slimPrescriptionPayload(record, doctorPhone = null) {
     phone: doc.phone || cleanPhone || '',
     chamber_name: doc.chamber_name || '',
     address: doc.address || '',
-    visiting_hours: doc.visiting_hours || ''
+    visiting_hours: doc.visiting_hours || '',
+    show_qr: doc.show_qr !== undefined ? doc.show_qr : (record.show_qr !== undefined ? record.show_qr : true),
+    has_watermark: doc.has_watermark !== undefined ? doc.has_watermark : (record.has_watermark !== undefined ? record.has_watermark : false),
+    plan: doc.plan || record.plan || 'enterprise'
   };
 
   const patient = record.patient || {};
@@ -1137,16 +1140,48 @@ export async function updateUserPassword(phone, currentPassword, newPassword) {
 }
 
 export async function adminDeleteUser(userId, phone) {
-  // Delete from localStorage
-  const localList = getLocalUsers().filter(u => u.id !== userId && u.phone !== phone);
+  const cleanPhone = String(phone || '').trim().replace(/\s+/g, '');
+
+  // 1. Delete user from localStorage
+  const localList = getLocalUsers().filter(u => u.id !== userId && u.phone !== cleanPhone);
   saveLocalUsers(localList);
 
-  // Delete from Supabase cloud
+  // Clean local prescription cache & chamber profiles for this doctor
+  try {
+    localStorage.removeItem(`amar_rx_records_${cleanPhone}`);
+    localStorage.removeItem(`amar_rx_chambers_${cleanPhone}`);
+    localStorage.removeItem(`amar_rx_active_chamber_${cleanPhone}`);
+  } catch (e) {}
+
+  // 2. Delete user account from Supabase 'doctor_users' table
   try {
     await supabase
       .from('doctor_users')
       .delete()
-      .eq('phone', phone);
+      .or(`phone.eq.${cleanPhone},id.eq.${userId}`);
+  } catch (e) {
+    console.warn('Supabase delete user account notice:', e);
+  }
+
+  // 3. Delete ALL prescriptions created by this doctor from Supabase 'prescriptions' table
+  // Protecting system rows (sys_*)
+  try {
+    await supabase
+      .from('prescriptions')
+      .delete()
+      .not('id', 'like', 'sys_%')
+      .eq('full_data->>doctorPhone', cleanPhone);
+  } catch (e) {
+    console.warn('Supabase delete user prescriptions notice:', e);
+  }
+
+  // 4. Remove doctor's plan and custom chamber settings from cloud system rows if present
+  try {
+    const plansMap = await fetchDoctorPlansFromCloud();
+    if (plansMap[cleanPhone]) {
+      delete plansMap[cleanPhone];
+      await saveDoctorPlansToCloud(plansMap);
+    }
   } catch (e) {}
 
   return true;
