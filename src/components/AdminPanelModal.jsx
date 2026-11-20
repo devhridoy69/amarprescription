@@ -3,7 +3,8 @@ import {
   ShieldAlert, ShieldCheck, Users, Clock, CheckCircle2, 
   XCircle, Ban, Trash2, Calendar, Search, RefreshCw, 
   X, Phone, Award, Stethoscope, AlertTriangle, Key, LogOut,
-  Menu, Sliders, UserCheck, UserX, FileText, ChevronRight, Edit3, Save, Sparkles, Building, Lock, UserPlus, QrCode, Crown, Settings2, Plus
+  Menu, Sliders, UserCheck, UserX, FileText, ChevronRight, Edit3, Save, Sparkles, Building, Lock, UserPlus, QrCode, Crown, Settings2, Plus,
+  FileCheck, Activity, Download, Eye, ExternalLink, BarChart3, Database, UserMinus
 } from 'lucide-react';
 import { 
   adminFetchAllUsers, 
@@ -11,7 +12,8 @@ import {
   adminUpdateUserFullDetails, 
   adminDeleteUser,
   updateAdminMasterPassword,
-  adminCreateUser
+  adminCreateUser,
+  adminFetchPrescriptionsStats
 } from '../lib/supabase';
 import { getPlansConfig, savePlansConfig, getPlanPermissions, normalizePlanId } from '../data/plansConfig';
 
@@ -64,6 +66,23 @@ export const AdminPanelModal = ({
   const [createUserLoading, setCreateUserLoading] = useState(false);
   const [createUserError, setCreateUserError] = useState('');
 
+  // Prescription Stats State
+  const [rxStats, setRxStats] = useState({ totalCount: 0, countsByDoctor: {}, prescriptions: [] });
+  const [rxStatsLoading, setRxStatsLoading] = useState(false);
+  const [selectedDoctorRxModal, setSelectedDoctorRxModal] = useState(null); // Doctor object for viewing prescription ledger
+
+  const loadPrescriptionsStats = async () => {
+    setRxStatsLoading(true);
+    try {
+      const stats = await adminFetchPrescriptionsStats();
+      setRxStats(stats);
+    } catch (e) {
+      console.warn('Failed to load rx stats:', e);
+    } finally {
+      setRxStatsLoading(false);
+    }
+  };
+
   const loadUsers = async () => {
     setLoading(true);
     try {
@@ -79,6 +98,7 @@ export const AdminPanelModal = ({
   useEffect(() => {
     if (isOpen) {
       loadUsers();
+      loadPrescriptionsStats();
     }
   }, [isOpen]);
 
@@ -540,11 +560,14 @@ export const AdminPanelModal = ({
               </button>
 
               <button
-                onClick={loadUsers}
+                onClick={() => {
+                  loadUsers();
+                  loadPrescriptionsStats();
+                }}
                 className="p-2 bg-[#1b1c21] hover:bg-[#24252c] text-slate-300 border border-white/5 rounded-xl transition-all cursor-pointer"
-                title="Refresh data"
+                title="Refresh users and prescription statistics"
               >
-                <RefreshCw className={"w-3.5 h-3.5 " + (loading ? 'animate-spin' : '')} />
+                <RefreshCw className={"w-3.5 h-3.5 " + (loading || rxStatsLoading ? 'animate-spin' : '')} />
               </button>
 
               <button
@@ -558,7 +581,7 @@ export const AdminPanelModal = ({
           </div>
 
           {/* Ember-style Top Stat Cards Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-5 border-b border-white/5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-5 border-b border-white/5">
             
             {/* Card 1: Total Doctors with Card Graphics */}
             <div className="bg-[#17181c] p-4 rounded-2xl border border-white/5 flex items-center justify-between relative overflow-hidden">
@@ -574,13 +597,30 @@ export const AdminPanelModal = ({
               </div>
               
               {/* Subtle credit card visual graphic like Ember */}
-              <div className="w-16 h-11 rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 border border-white/10 shadow-lg p-1.5 flex flex-col justify-between shrink-0 opacity-80">
+              <div className="w-14 h-10 rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 border border-white/10 shadow-lg p-1.5 flex flex-col justify-between shrink-0 opacity-80">
                 <div className="w-2.5 h-2 rounded bg-amber-400/80"></div>
                 <div className="font-mono text-[7px] text-slate-400">•••• 2026</div>
               </div>
             </div>
 
-            {/* Card 2: Active & Approved */}
+            {/* Card 2: Total Prescriptions Saved */}
+            <div className="bg-[#17181c] p-4 rounded-2xl border border-white/5 flex items-center justify-between relative overflow-hidden">
+              <div className="space-y-1">
+                <span className="text-xs text-slate-400 font-medium">Saved Prescriptions</span>
+                <div className="text-2xl font-bold font-mono text-teal-400 tracking-tight flex items-center gap-1.5">
+                  <span>{rxStats.totalCount || 0}</span>
+                  {rxStatsLoading && <RefreshCw className="w-3.5 h-3.5 animate-spin text-teal-500" />}
+                </div>
+                <div className="text-[11px] text-slate-500">
+                  Across all doctor accounts
+                </div>
+              </div>
+              <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-400 flex items-center justify-center">
+                <FileCheck className="w-5 h-5" />
+              </div>
+            </div>
+
+            {/* Card 3: Active & Approved */}
             <div className="bg-[#17181c] p-4 rounded-2xl border border-white/5 flex items-center justify-between">
               <div className="space-y-1">
                 <span className="text-xs text-slate-400 font-medium">Active Approved</span>
@@ -596,7 +636,7 @@ export const AdminPanelModal = ({
               </div>
             </div>
 
-            {/* Card 3: Pending Approval */}
+            {/* Card 4: Pending Approval */}
             <div className="bg-[#17181c] p-4 rounded-2xl border border-white/5 flex items-center justify-between">
               <div className="space-y-1">
                 <span className="text-xs text-slate-400 font-medium">Pending Review</span>
@@ -604,7 +644,7 @@ export const AdminPanelModal = ({
                   {pendingUsers}
                 </div>
                 <div className="text-[11px] text-slate-500">
-                  Awaiting license verification
+                  Awaiting license check
                 </div>
               </div>
               <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
@@ -643,6 +683,8 @@ export const AdminPanelModal = ({
 
                 const todayStr = new Date().toISOString().split('T')[0];
                 const isExpired = user.valid_until && user.valid_until < todayStr;
+                const cleanPhone = String(user.phone || '').trim().replace(/\s+/g, '');
+                const userRxCount = rxStats.countsByDoctor[cleanPhone] || 0;
 
                 return (
                   <div
@@ -656,6 +698,17 @@ export const AdminPanelModal = ({
                         <span className="font-bold text-sm text-white">
                           {user.full_name || 'Dr. User'}
                         </span>
+
+                        {/* Prescriptions Saved Badge with Click-to-view */}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedDoctorRxModal(user)}
+                          className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 transition-all flex items-center gap-1 cursor-pointer"
+                          title="Click to view all prescriptions created by this doctor"
+                        >
+                          <FileText className="w-2.5 h-2.5 text-teal-400" />
+                          <span>{userRxCount} Rx Saved</span>
+                        </button>
                         
                         {/* Status Badges */}
                         {isPending && (
@@ -1782,6 +1835,115 @@ export const AdminPanelModal = ({
               </div>
 
             </form>
+
+          </div>
+        </div>
+      )}
+
+      {/* ===================== SUB-MODAL: DOCTOR SAVED PRESCRIPTIONS LEDGER ===================== */}
+      {selectedDoctorRxModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#17181c] border border-white/10 rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden text-slate-200">
+            
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-[#1f2026]">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-400 flex items-center justify-center">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <span>{selectedDoctorRxModal.full_name || 'Dr. User'}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-300 border border-teal-500/20 font-mono">
+                      {selectedDoctorRxModal.phone}
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    সংরক্ষিত প্রেসক্রিপশন হিস্ট্রি ও পেশেন্ট অডিট লেজার
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedDoctorRxModal(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Sub-header / Stats */}
+            {(() => {
+              const cleanDocPhone = String(selectedDoctorRxModal.phone || '').trim().replace(/\s+/g, '');
+              const docPrescriptions = (rxStats.prescriptions || []).filter(r => r.doctorPhone === cleanDocPhone);
+              const totalSaved = docPrescriptions.length;
+
+              return (
+                <>
+                  <div className="px-6 py-3 bg-[#111214] border-b border-white/5 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-400">মোট প্রেসক্রিপশন:</span>
+                      <span className="font-mono font-bold text-teal-400 text-sm">{totalSaved} টি</span>
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      {selectedDoctorRxModal.specialty || selectedDoctorRxModal.degrees || 'General Physician'} • BMDC: {selectedDoctorRxModal.bmdc_reg || 'N/A'}
+                    </div>
+                  </div>
+
+                  {/* Prescriptions List */}
+                  <div className="flex-1 overflow-y-auto p-6 space-y-3">
+                    {totalSaved === 0 ? (
+                      <div className="py-16 text-center text-slate-500 text-xs border border-dashed border-white/5 rounded-xl">
+                        এই ডাক্তারের এখনো কোনো সংরক্ষিত প্রেসক্রিপশন পাওয়া যায়নি।
+                      </div>
+                    ) : (
+                      docPrescriptions.map((rx, idx) => (
+                        <div
+                          key={rx.id || idx}
+                          className="p-3.5 rounded-xl bg-[#1f2026]/70 border border-white/5 hover:border-white/15 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-white text-sm">{rx.patientName}</span>
+                              <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 border border-white/5">
+                                {rx.rxId}
+                              </span>
+                            </div>
+                            {rx.diagnosis && (
+                              <div className="text-slate-300 text-[11px] line-clamp-1">
+                                <span className="text-slate-500 font-medium">Diagnosis:</span> {rx.diagnosis}
+                              </div>
+                            )}
+                            <div className="flex items-center gap-3 text-[10px] text-slate-500 font-mono">
+                              <span>তারিখ: {rx.date}</span>
+                              {rx.nextVisit && <span>পরবর্তী সাক্ষাৎ: {rx.nextVisit}</span>}
+                              <span>ওষুধ সংখ্যা: {rx.medicinesCount}</span>
+                            </div>
+                          </div>
+
+                          <div className="shrink-0 flex items-center gap-2">
+                            <span className="text-[10px] font-mono px-2 py-0.8 rounded-md bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                              Cloud Synced
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </>
+              );
+            })()}
+
+            {/* Footer */}
+            <div className="px-6 py-3 bg-[#0d0e10] border-t border-white/5 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setSelectedDoctorRxModal(null)}
+                className="px-4 py-1.5 bg-[#1c1d22] hover:bg-[#25262c] text-slate-300 border border-white/5 rounded-xl text-xs font-semibold cursor-pointer"
+              >
+                বন্ধ করুন (Close)
+              </button>
+            </div>
 
           </div>
         </div>

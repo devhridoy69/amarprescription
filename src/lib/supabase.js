@@ -1210,3 +1210,78 @@ export async function adminCreateUser({ fullName, phone, password, degrees = '',
 
   return { success: true, data: payload };
 }
+
+/**
+ * Admin: Fetch all prescriptions summary & per-doctor prescription counts
+ * Returns:
+ * - totalPrescriptions: total count
+ * - prescriptionsByDoctor: map of doctorPhone -> count
+ * - prescriptions: array of recent prescriptions with doctor & patient info
+ */
+export async function adminFetchPrescriptionsStats() {
+  const counts = {};
+  let totalCount = 0;
+  let allPrescriptions = [];
+
+  // 1. Fetch from Supabase
+  try {
+    const { data, error } = await supabase
+      .from('prescriptions')
+      .select('id, date, created_at, rx_id, patient_name, diagnosis, next_visit, full_data')
+      .not('id', 'like', 'sys_%')
+      .order('date', { ascending: false });
+
+    if (!error && Array.isArray(data)) {
+      data.forEach(item => {
+        const phone = item.full_data?.doctorPhone || item.full_data?.doctor?.phone || 'unknown';
+        const cleanPhone = String(phone).trim().replace(/\s+/g, '');
+        counts[cleanPhone] = (counts[cleanPhone] || 0) + 1;
+        totalCount++;
+        allPrescriptions.push({
+          id: item.id,
+          date: item.date,
+          createdAt: item.created_at,
+          rxId: item.rx_id || item.full_data?.patient?.rxId || '—',
+          patientName: item.patient_name || item.full_data?.patient?.name || 'Unknown Patient',
+          diagnosis: item.diagnosis || item.full_data?.diagnosis || '',
+          nextVisit: item.next_visit || item.full_data?.nextVisit || '',
+          doctorPhone: cleanPhone,
+          doctorName: item.full_data?.doctor?.full_name || item.full_data?.doctor?.name || '',
+          medicinesCount: Array.isArray(item.full_data?.medicines) ? item.full_data.medicines.length : 0
+        });
+      });
+    }
+  } catch (e) {
+    console.warn('Supabase adminFetchPrescriptionsStats notice:', e);
+  }
+
+  // 2. Also incorporate local cache if offline or local prescriptions exist
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('amar_rx_records_')) {
+        const phone = key.replace('amar_rx_records_', '').trim();
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const list = JSON.parse(raw);
+          if (Array.isArray(list)) {
+            // If supabase had 0 for this phone, use local count
+            if (!counts[phone]) {
+              counts[phone] = list.length;
+              totalCount += list.length;
+            } else {
+              counts[phone] = Math.max(counts[phone], list.length);
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {}
+
+  return {
+    totalCount,
+    countsByDoctor: counts,
+    prescriptions: allPrescriptions
+  };
+}
+
