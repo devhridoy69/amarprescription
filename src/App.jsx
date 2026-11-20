@@ -13,11 +13,18 @@ import AdminPanelModal from './components/AdminPanelModal';
 import MobileSectionTabs from './components/MobileSectionTabs';
 import PublicPrescriptionView from './components/PublicPrescriptionView';
 import PricingModal from './components/PricingModal';
+import { ChamberModal } from './components/ChamberModal';
 import { getPlansConfig, getPlanPermissions, normalizePlanId } from './data/plansConfig';
 import { DEFAULT_DOCTOR } from './data/defaultDoctor';
 import { PRESCRIPTION_TEMPLATES } from './data/templatesData';
 import { FONT_PAIR_PRESETS } from './data/fontPresets';
-import { fetchPrescriptionsFromCloud, savePrescriptionToCloud, deletePrescriptionFromCloud } from './lib/supabase';
+import { 
+  fetchPrescriptionsFromCloud, 
+  savePrescriptionToCloud, 
+  deletePrescriptionFromCloud,
+  fetchChamberProfilesFromCloud,
+  saveChamberProfilesToCloud
+} from './lib/supabase';
 import { 
   downloadMedicinesForOffline, 
   queuePendingPrescription, 
@@ -65,17 +72,23 @@ export function App() {
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (e) {}
-    return [];
+    const savedDoc = typeof window !== 'undefined' ? localStorage.getItem('amar_rx_doctor') : null;
+    const docData = savedDoc ? JSON.parse(savedDoc) : DEFAULT_DOCTOR;
+    return [{ ...DEFAULT_DOCTOR, ...docData, id: 'chamber_main' }];
   });
 
   const [activeChamberId, setActiveChamberId] = useState(() => {
     try {
       const userPhone = JSON.parse(localStorage.getItem('amar_rx_current_user') || '{}')?.phone || 'default';
-      return localStorage.getItem(`amar_rx_active_chamber_${userPhone}`) || null;
+      return localStorage.getItem(`amar_rx_active_chamber_${userPhone}`) || 'chamber_main';
     } catch (e) {
-      return null;
+      return 'chamber_main';
     }
   });
+
+  // Dedicated Chamber Add / Edit Modal states
+  const [isChamberModalOpen, setIsChamberModalOpen] = useState(false);
+  const [editingChamberProfile, setEditingChamberProfile] = useState(null);
 
   // Doctor state: initialize from user account if logged in, else default
   const [doctor, setDoctor] = useState(() => {
@@ -212,6 +225,17 @@ export function App() {
           try {
             localStorage.setItem(docKey, JSON.stringify(cloudData));
           } catch (e) {}
+        }
+
+        // Also sync chamber profiles from Supabase cloud
+        if (currentUser?.phone) {
+          const cloudChambers = await fetchChamberProfilesFromCloud(currentUser.phone);
+          if (cloudChambers && Array.isArray(cloudChambers) && cloudChambers.length > 0) {
+            setChamberProfiles(cloudChambers);
+            try {
+              localStorage.setItem(`amar_rx_chambers_${currentUser.phone}`, JSON.stringify(cloudChambers));
+            } catch (e) {}
+          }
         }
       } catch (err) {
         console.warn('Initial cloud sync notice:', err);
@@ -579,36 +603,29 @@ export function App() {
     localStorage.setItem('amar_rx_print_settings', JSON.stringify(newSettings));
   };
 
-  // Persist doctor profile and sync with chamber profiles
+  // Persist doctor profile and sync with active chamber profile
   const handleSaveDoctor = (updatedDoctor) => {
     setDoctor(updatedDoctor);
     localStorage.setItem('amar_rx_doctor', JSON.stringify(updatedDoctor));
 
-    // Also update or add to doctor's chamber profiles
     const userPhone = currentUser?.phone || 'default';
-    const chamberId = activeChamberId || ('chamber_' + Date.now());
+    const chamberId = activeChamberId || 'chamber_main';
 
     setChamberProfiles(prev => {
-      const idx = prev.findIndex(p => p.id === chamberId || p.chamberName === updatedDoctor.chamberName);
+      const idx = prev.findIndex(p => p.id === chamberId);
       let updatedList;
       if (idx >= 0) {
         updatedList = [...prev];
-        updatedList[idx] = { ...updatedDoctor, id: prev[idx].id };
+        updatedList[idx] = { ...prev[idx], ...updatedDoctor };
       } else {
         updatedList = [...prev, { ...updatedDoctor, id: chamberId }];
       }
       try {
         localStorage.setItem(`amar_rx_chambers_${userPhone}`, JSON.stringify(updatedList));
+        saveChamberProfilesToCloud(userPhone, updatedList);
       } catch (e) {}
       return updatedList;
     });
-
-    if (!activeChamberId) {
-      setActiveChamberId(chamberId);
-      try {
-        localStorage.setItem(`amar_rx_active_chamber_${userPhone}`, chamberId);
-      } catch (e) {}
-    }
   };
 
   // Switch Active Chamber Profile
@@ -628,13 +645,98 @@ export function App() {
     } catch (e) {}
   };
 
+  // Add New Chamber (Opens ChamberModal in new mode)
+  const handleAddNewChamber = () => {
+    const perms = getPlanPermissions(currentUser?.plan);
+    if (!perms.canSwitchChambers && chamberProfiles.length >= 1) {
+      setIsPricingModalOpen(true);
+      alert('মাল্টিপল চেম্বার যুক্ত করার জন্য Enterprise VIP প্যাকেজ প্রয়োজন।');
+      return;
+    }
+    setEditingChamberProfile(null);
+    setIsChamberModalOpen(true);
+  };
+
+  // Edit Existing Chamber (Opens ChamberModal in edit mode)
+  const handleEditChamberProfile = (chamber) => {
+    setEditingChamberProfile(chamber);
+    setIsChamberModalOpen(true);
+  };
+
+  // Save Chamber from ChamberModal (Add new or Update existing)
+  const handleSaveChamber = (chamberData, isNew = false, setAsActive = true) => {
+    const userPhone = currentUser?.phone || 'default';
+    let updatedList;
+
+    if (isNew) {
+      updatedList = [...chamberProfiles, chamberData];
+    } else {
+      updatedList = chamberProfiles.map(p => (p.id === chamberData.id ? { ...p, ...chamberData } : p));
+    }
+
+    setChamberProfiles(updatedList);
+    try {
+      localStorage.setItem(`amar_rx_chambers_${userPhone}`, JSON.stringify(updatedList));
+      saveChamberProfilesToCloud(userPhone, updatedList);
+    } catch (e) {}
+
+    if (setAsActive || activeChamberId === chamberData.id) {
+      setActiveChamberId(chamberData.id);
+      setDoctor(prev => ({ ...prev, ...chamberData }));
+      try {
+        localStorage.setItem(`amar_rx_active_chamber_${userPhone}`, chamberData.id);
+        localStorage.setItem('amar_rx_doctor', JSON.stringify({ ...doctor, ...chamberData }));
+      } catch (e) {}
+    }
+  };
+
+  // Restore Default Main Chamber
+  const handleRestoreMainChamber = () => {
+    const userPhone = currentUser?.phone || 'default';
+    const mainChamber = {
+      ...DEFAULT_DOCTOR,
+      ...doctor,
+      id: 'chamber_main',
+      chamberName: DEFAULT_DOCTOR.chamberName,
+      chamberAddress: DEFAULT_DOCTOR.chamberAddress,
+      visitingHours: DEFAULT_DOCTOR.visitingHours,
+      appointmentPhone: DEFAULT_DOCTOR.phone
+    };
+
+    let updatedList;
+    const exists = chamberProfiles.some(p => p.id === 'chamber_main');
+    if (exists) {
+      updatedList = chamberProfiles.map(p => (p.id === 'chamber_main' ? mainChamber : p));
+    } else {
+      updatedList = [mainChamber, ...chamberProfiles];
+    }
+
+    setChamberProfiles(updatedList);
+    setActiveChamberId('chamber_main');
+    setDoctor(mainChamber);
+
+    try {
+      localStorage.setItem(`amar_rx_chambers_${userPhone}`, JSON.stringify(updatedList));
+      localStorage.setItem(`amar_rx_active_chamber_${userPhone}`, 'chamber_main');
+      localStorage.setItem('amar_rx_doctor', JSON.stringify(mainChamber));
+      saveChamberProfilesToCloud(userPhone, updatedList);
+    } catch (e) {}
+
+    alert('প্রধান চেম্বার ("' + DEFAULT_DOCTOR.chamberName + '") সফলভাবে রিস্টোর ও সক্রিয় করা হয়েছে!');
+  };
+
   // Delete a Chamber Profile
   const handleDeleteChamberProfile = (profileId) => {
+    if (chamberProfiles.length <= 1) {
+      alert('কমপক্ষে একটি চেম্বার প্রোফাইল অবশ্যই থাকতে হবে।');
+      return;
+    }
     const userPhone = currentUser?.phone || 'default';
     const remaining = chamberProfiles.filter(p => p.id !== profileId);
     setChamberProfiles(remaining);
     try {
       localStorage.setItem(`amar_rx_chambers_${userPhone}`, JSON.stringify(remaining));
+      saveChamberProfilesToCloud(userPhone, remaining);
     } catch (e) {}
 
     if (activeChamberId === profileId && remaining.length > 0) {
@@ -888,6 +990,9 @@ export function App() {
             activeChamberId={activeChamberId}
             onSelectChamberProfile={handleSelectChamberProfile}
             onDeleteChamberProfile={handleDeleteChamberProfile}
+            onAddNewChamber={handleAddNewChamber}
+            onEditChamberProfile={handleEditChamberProfile}
+            onRestoreMainChamber={handleRestoreMainChamber}
             onOpenPricing={() => setIsPricingModalOpen(true)}
           />
 
@@ -1071,6 +1176,16 @@ export function App() {
         onClose={() => setIsPricingModalOpen(false)}
         currentPlan={normalizePlanId(currentUser?.plan)}
         plansConfig={plansConfig}
+      />
+
+      {/* Dedicated Chamber Add & Edit Modal */}
+      <ChamberModal
+        isOpen={isChamberModalOpen}
+        onClose={() => setIsChamberModalOpen(false)}
+        editingChamber={editingChamberProfile}
+        baseDoctor={doctor}
+        onSaveChamber={handleSaveChamber}
+        darkMode={darkMode}
       />
 
       {/* Doctor Authentication Modal for manual re-login if already logged in */}

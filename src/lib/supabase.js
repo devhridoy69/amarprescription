@@ -696,6 +696,65 @@ export async function saveDoctorPlanToCloud(phone, planData) {
 }
 
 /**
+ * Chamber Profiles Cloud Synchronization:
+ * Saves and fetches doctors' multiple chamber profiles from Supabase cloud
+ * so they persist across any browser, device, or cache clear.
+ */
+export async function fetchChamberProfilesFromCloud(phone) {
+  if (!phone) return null;
+  const cleanPhone = String(phone).trim().replace(/\s+/g, '');
+  try {
+    const { data, error } = await supabase
+      .from('prescriptions')
+      .select('full_data')
+      .eq('id', 'sys_doctor_chambers')
+      .maybeSingle();
+
+    if (!error && data && data.full_data && data.full_data[cleanPhone]) {
+      return data.full_data[cleanPhone];
+    }
+  } catch (e) {
+    console.warn('Fetch sys_doctor_chambers notice:', e);
+  }
+  return null;
+}
+
+export async function saveChamberProfilesToCloud(phone, chambers) {
+  if (!phone || !Array.isArray(chambers)) return false;
+  const cleanPhone = String(phone).trim().replace(/\s+/g, '');
+  try {
+    let cloudMap = {};
+    try {
+      const { data } = await supabase
+        .from('prescriptions')
+        .select('full_data')
+        .eq('id', 'sys_doctor_chambers')
+        .maybeSingle();
+      if (data && data.full_data) {
+        cloudMap = data.full_data;
+      }
+    } catch (e) {}
+
+    const payload = {
+      id: 'sys_doctor_chambers',
+      date: new Date().toISOString().split('T')[0],
+      full_data: {
+        ...cloudMap,
+        [cleanPhone]: chambers
+      }
+    };
+
+    await supabase
+      .from('prescriptions')
+      .upsert(payload, { onConflict: 'id' });
+    return true;
+  } catch (e) {
+    console.warn('Save sys_doctor_chambers notice:', e);
+    return false;
+  }
+}
+
+/**
  * Register Doctor (Supabase + Local fallback)
  */
 export async function registerDoctorOnline({ fullName, phone, password, degrees = '', specialty = '', bmdcReg = '' }) {

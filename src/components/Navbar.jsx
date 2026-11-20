@@ -33,6 +33,9 @@ export const Navbar = ({
   activeChamberId = null,
   onSelectChamberProfile = () => {},
   onDeleteChamberProfile = () => {},
+  onAddNewChamber = () => {},
+  onEditChamberProfile = () => {},
+  onRestoreMainChamber = () => {},
   onOpenPricing = () => {}
 }) => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -432,6 +435,20 @@ export const Navbar = ({
                             {isActive && (
                               <Check className="w-4 h-4 text-teal-600 stroke-[2.5]" />
                             )}
+                            {/* Edit chamber button */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEditChamberProfile(prof);
+                                setIsProfileMenuOpen(false);
+                              }}
+                              className="p-1 text-slate-400 hover:text-teal-600 rounded transition-colors cursor-pointer"
+                              title="এই চেম্বারের তথ্য এডিট করুন"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            {/* Delete chamber button */}
                             {chamberProfiles.length > 1 && !isLocked && (
                               <button
                                 type="button"
@@ -439,10 +456,10 @@ export const Navbar = ({
                                   e.stopPropagation();
                                   onDeleteChamberProfile(prof.id);
                                 }}
-                                className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-600 rounded transition-opacity cursor-pointer"
-                                title="প্রোফাইল মুছুন"
+                                className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors cursor-pointer"
+                                title="চেম্বার মুছুন"
                               >
-                                <Trash2 className="w-3 h-3" />
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             )}
                           </div>
@@ -453,6 +470,7 @@ export const Navbar = ({
 
                   {/* Add New Chamber Profile / Settings Actions */}
                   <div className="p-1.5 pt-2 border-t border-slate-100 space-y-1">
+                    {/* Add New Chamber Button */}
                     <button
                       type="button"
                       onClick={() => {
@@ -462,20 +480,51 @@ export const Navbar = ({
                           onOpenPricing();
                           return;
                         }
-                        onOpenDoctorSettings();
+                        onAddNewChamber();
                         setIsProfileMenuOpen(false);
                       }}
-                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 rounded-xl transition-colors cursor-pointer"
+                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 rounded-xl transition-colors cursor-pointer shadow-2xs"
                     >
                       <span className="flex items-center gap-2">
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>নতুন চেম্বার প্রোফাইল যুক্ত / এডিট করুন</span>
+                        <Plus className="w-3.5 h-3.5 text-teal-600" />
+                        <span>+ নতুন চেম্বার যোগ করুন (Add Chamber)</span>
                       </span>
                       {!getPlanPermissions(currentUser.plan).canSwitchChambers && (
                         <span className="text-[9px] bg-amber-200 text-amber-950 font-black px-1.5 py-0.5 rounded">
                           Enterprise VIP
                         </span>
                       )}
+                    </button>
+
+                    {/* Edit Doctor & Current Chamber Full Settings */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onOpenDoctorSettings();
+                        setIsProfileMenuOpen(false);
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Settings className="w-3.5 h-3.5 text-slate-500" />
+                        <span>ডাক্তার প্রোফাইল ও চেম্বার সেটিংস</span>
+                      </span>
+                    </button>
+
+                    {/* Restore / Add Default Main Chamber */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onRestoreMainChamber();
+                        setIsProfileMenuOpen(false);
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-1.5 text-[11px] font-semibold text-amber-800 hover:bg-amber-50 rounded-xl transition-colors cursor-pointer"
+                      title="ডিফল্ট প্রধান চেম্বারটি তালিকায় ফিরিয়ে আনুন বা যুক্ত করুন"
+                    >
+                      <span className="flex items-center gap-2">
+                        <RotateCcw className="w-3 h-3 text-amber-600" />
+                        <span>ডিফল্ট প্রধান চেম্বার রিস্টোর / অ্যাড</span>
+                      </span>
                     </button>
                   </div>
                 </div>
