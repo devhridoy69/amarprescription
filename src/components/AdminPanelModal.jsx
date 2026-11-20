@@ -3,7 +3,7 @@ import {
   ShieldAlert, ShieldCheck, Users, Clock, CheckCircle2, 
   XCircle, Ban, Trash2, Calendar, Search, RefreshCw, 
   X, Phone, Award, Stethoscope, AlertTriangle, Key, LogOut,
-  Sliders, UserCheck, UserX, FileText, ChevronRight, Edit3, Save, Sparkles, Building, Lock, UserPlus, QrCode
+  Sliders, UserCheck, UserX, FileText, ChevronRight, Edit3, Save, Sparkles, Building, Lock, UserPlus, QrCode, Crown, Settings2, Plus
 } from 'lucide-react';
 import { 
   adminFetchAllUsers, 
@@ -13,6 +13,7 @@ import {
   updateAdminMasterPassword,
   adminCreateUser
 } from '../lib/supabase';
+import { getPlansConfig, savePlansConfig, getPlanPermissions } from '../data/plansConfig';
 
 export const AdminPanelModal = ({ 
   isOpen, 
@@ -40,6 +41,11 @@ export const AdminPanelModal = ({
   });
   const [adminPassLoading, setAdminPassLoading] = useState(false);
   const [adminPassError, setAdminPassError] = useState('');
+
+  // Plans & Pricing Config State
+  const [plansConfig, setPlansConfig] = useState(getPlansConfig);
+  const [isPlanSettingsModalOpen, setIsPlanSettingsModalOpen] = useState(false);
+  const [editPlanConfig, setEditPlanConfig] = useState(getPlansConfig);
 
   // Modal Sub-state: Create New Doctor by Admin
   const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
@@ -79,6 +85,21 @@ export const AdminPanelModal = ({
     setTimeout(() => setNotification(null), 3500);
   };
 
+  // Sync active logged-in doctor session if updated by admin
+  const syncActiveUserIfMatches = (phone, updates) => {
+    try {
+      const raw = localStorage.getItem('amar_rx_current_user');
+      if (raw) {
+        const active = JSON.parse(raw);
+        if (active.phone === phone) {
+          const updated = { ...active, ...updates };
+          localStorage.setItem('amar_rx_current_user', JSON.stringify(updated));
+          window.dispatchEvent(new CustomEvent('amar_rx_user_updated', { detail: updated }));
+        }
+      }
+    } catch (e) {}
+  };
+
   // Approval with days and default watermark option
   const handleApprove = async (user, days = 30, withWatermark = true) => {
     const validUntil = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -91,6 +112,7 @@ export const AdminPanelModal = ({
     const currentVal = user.has_watermark !== false; // Default true if not set
     const newVal = !currentVal;
     await adminUpdateUserFullDetails(user.id, user.phone, { has_watermark: newVal });
+    syncActiveUserIfMatches(user.phone, { has_watermark: newVal });
     showToast(`"${user.full_name}"-এর প্রেসক্রিপশনে Watermark ${newVal ? 'যুক্ত করা হয়েছে' : 'মুছে ফেলা হয়েছে (Clean Paper)'}।`);
     loadUsers();
   };
@@ -99,8 +121,34 @@ export const AdminPanelModal = ({
     const currentVal = user.show_qr !== false; // Default true if not set
     const newVal = !currentVal;
     await adminUpdateUserFullDetails(user.id, user.phone, { show_qr: newVal });
+    syncActiveUserIfMatches(user.phone, { show_qr: newVal });
     showToast(`"${user.full_name}"-এর প্রেসক্রিপশনে QR Code ${newVal ? 'অন (Active)' : 'বন্ধ (Disabled)'} করা হয়েছে।`);
     loadUsers();
+  };
+
+  const handleUpdateDoctorPlan = async (user, newPlan) => {
+    const updates = { plan: newPlan };
+    if (newPlan === 'free') {
+      updates.has_watermark = true;
+      updates.show_qr = false;
+    } else {
+      const perms = getPlanPermissions(newPlan);
+      updates.has_watermark = !perms.canRemoveWatermark;
+      updates.show_qr = perms.canUseQrCode;
+    }
+    await adminUpdateUserFullDetails(user.id, user.phone, updates);
+    syncActiveUserIfMatches(user.phone, updates);
+    showToast(`"${user.full_name}"-কে ${newPlan} প্ল্যান অ্যাসাইন করা হয়েছে।`);
+    loadUsers();
+  };
+
+  const handleSavePlanConfig = (e) => {
+    e.preventDefault();
+    savePlansConfig(editPlanConfig);
+    setPlansConfig(editPlanConfig);
+    setIsPlanSettingsModalOpen(false);
+    showToast('প্যাকেজ ও প্রাইসিং কনফিগ সফলভাবে আপডেট করা হয়েছে!');
+    window.dispatchEvent(new Event('amar_rx_plans_updated'));
   };
 
   const handleReject = async (user) => {
@@ -141,6 +189,7 @@ export const AdminPanelModal = ({
       valid_until: user.valid_until || '',
       has_watermark: user.has_watermark !== false,
       show_qr: user.show_qr !== false,
+      plan: user.plan || 'free',
       status: user.status || 'approved'
     });
   };
@@ -149,6 +198,7 @@ export const AdminPanelModal = ({
     e.preventDefault();
     if (!editingDoctor) return;
     await adminUpdateUserFullDetails(editingDoctor.id, editingDoctor.phone, editFormData);
+    syncActiveUserIfMatches(editingDoctor.phone, editFormData);
     showToast(`ডাক্তার "${editFormData.full_name}"-এর সকল তথ্য সফলভাবে আপডেট করা হয়েছে।`);
     setEditingDoctor(null);
     loadUsers();
@@ -278,6 +328,17 @@ export const AdminPanelModal = ({
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setEditPlanConfig(getPlansConfig());
+                setIsPlanSettingsModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-black transition-all cursor-pointer shadow-xs"
+              title="প্রিমিয়াম প্যাকেজের নাম, মূল্য, প্রেসক্রিপশন লিমিট ও ফিচার টেক্সট এডিট করুন"
+            >
+              <Crown className="w-3.5 h-3.5 fill-slate-950" />
+              <span>প্যাকেজ ও প্রাইস সেটিংস</span>
+            </button>
             <button
               onClick={() => {
                 setCreateUserError('');
@@ -550,6 +611,24 @@ export const AdminPanelModal = ({
                         <span>QR Code: {showQr ? 'Active (ON)' : 'Hidden (OFF)'}</span>
                       </button>
 
+                      {/* Doctor Subscription Plan Selector */}
+                      <div className="flex items-center gap-1 bg-amber-50/90 px-2 py-0.5 rounded-full border border-amber-300">
+                        <Crown className="w-2.5 h-2.5 text-amber-700" />
+                        <select
+                          value={user.plan || 'free'}
+                          onChange={(e) => handleUpdateDoctorPlan(user, e.target.value)}
+                          className="bg-transparent text-[10px] font-black text-amber-950 border-none outline-hidden cursor-pointer"
+                          title="ডাক্তারের সাবস্ক্রিপশন প্ল্যান পরিবর্তন করুন"
+                        >
+                          <option value="free">Free Plan</option>
+                          {(plansConfig.plans || []).map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
                     </div>
 
                     {/* Metadata & Contact */}
@@ -811,6 +890,34 @@ export const AdminPanelModal = ({
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">সাবস্ক্রিপশন প্ল্যান (Subscription Plan)</label>
+                <select
+                  value={editFormData.plan || 'free'}
+                  onChange={(e) => {
+                    const newPlan = e.target.value;
+                    const updates = { plan: newPlan };
+                    if (newPlan === 'free') {
+                      updates.has_watermark = true;
+                      updates.show_qr = false;
+                    } else {
+                      const perms = getPlanPermissions(newPlan);
+                      updates.has_watermark = !perms.canRemoveWatermark;
+                      updates.show_qr = perms.canUseQrCode;
+                    }
+                    setEditFormData({ ...editFormData, ...updates });
+                  }}
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-teal-900"
+                >
+                  <option value="free">Free Plan</option>
+                  {(plansConfig.plans || []).map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({p.badgeText || p.tagline || p.period})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Validity Date, Watermark & QR Code Toggle */}
@@ -1160,6 +1267,434 @@ export const AdminPanelModal = ({
                   <span>{createUserLoading ? 'তৈরি হচ্ছে...' : 'অ্যাকাউন্ট তৈরি ও অনুমোদন'}</span>
                 </button>
               </div>
+            </form>
+
+          </div>
+        </div>
+      )}
+
+      {/* Dynamic Plans & Pricing Settings Modal */}
+      {isPlanSettingsModalOpen && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-200">
+            
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center shadow-xs">
+                  <Crown className="w-4 h-4 fill-slate-950" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white">প্যাকেজ, প্রেসক্রিপশন লিমিট ও প্রাইসিং কনফিগারেশন</h3>
+                  <p className="text-[11px] text-teal-300">এডমিন প্যানেল থেকে প্যাকেজ লিমিট (৫০০ থেকে ১০০০), ফিচার ও মূল্য নিয়ন্ত্রণ করুন</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPlanSettingsModalOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePlanConfig} className="p-6 overflow-y-auto space-y-6 text-xs">
+              
+              {/* Free Plan Policy & Limit Editor */}
+              <div className="p-4 bg-slate-100 rounded-2xl border border-slate-300 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 bg-slate-800 text-white rounded-md text-[10px] font-black uppercase">
+                      ডিফল্ট মোড
+                    </span>
+                    <span className="font-black text-sm text-slate-900">Free Plan (ফ্রি মোড পলিসি ও লিমিট)</span>
+                  </div>
+                  <span className="text-[11px] text-slate-500 font-semibold hidden sm:inline">
+                    নতুন রেজিস্টার করা সকল ডাক্তার এই পলিসিতে থাকবেন
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-white p-3 rounded-xl border border-slate-200">
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1">
+                      ফ্রি প্রেসক্রিপশন লিমিট (Rx Limit)
+                    </label>
+                    <input
+                      type="number"
+                      value={editPlanConfig.freePlan?.prescriptionLimit ?? 100}
+                      onChange={(e) => {
+                        const val = Number(e.target.value) || 100;
+                        setEditPlanConfig({
+                          ...editPlanConfig,
+                          freePlan: { ...(editPlanConfig.freePlan || {}), prescriptionLimit: val }
+                        });
+                      }}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold font-mono text-teal-900"
+                    />
+                    <span className="text-[10px] text-slate-500 mt-0.5 block">
+                      প্রতি মাসে সর্বোচ্চ সেভ ও প্রিন্ট সীমা
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col justify-center">
+                    <span className="text-xs font-bold text-slate-700">Watermark:</span>
+                    <span className="text-[11px] text-teal-800 font-bold">অন (ব্র্যান্ডিংযুক্ত)</span>
+                    <span className="text-[10px] text-slate-500">এডমিন চাইলে টগল করতে পারেন</span>
+                  </div>
+
+                  <div className="flex flex-col justify-center">
+                    <span className="text-xs font-bold text-slate-700">Smart QR Code:</span>
+                    <span className="text-[11px] text-rose-700 font-bold">লকড (🔒 বন্ধ)</span>
+                    <span className="text-[10px] text-slate-500">স্ক্রিনে লকড ব্যাজ দেখাবে</span>
+                  </div>
+
+                  <div className="flex flex-col justify-center">
+                    <span className="text-xs font-bold text-slate-700">Multiple Chamber:</span>
+                    <span className="text-[11px] text-rose-700 font-bold">লকড (🔒 বন্ধ)</span>
+                    <span className="text-[10px] text-slate-500">সিঙ্গেল চেম্বার সক্রিয়</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Header: Dynamic Plans List */}
+              <div className="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                <div>
+                  <span className="font-bold text-slate-800 text-sm block">প্যাকেজ তালিকা ({editPlanConfig.plans?.length || 0} টি প্যাক)</span>
+                  <span className="text-[10px] text-slate-500">এডমিন প্যানেল থেকে যেকোনো নতুন প্ল্যান তৈরি করুন অথবা এডিট / ডিলিট করুন</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newId = 'plan_' + Date.now();
+                    const newPlan = {
+                      id: newId,
+                      name: 'নতুন প্যাকেজ',
+                      tagline: 'প্যাকেজের সংক্ষিপ্ত বিবরণ',
+                      badgeText: 'প্যাকেজ হাইলাইট টেক্সট',
+                      price: '৭৯৯',
+                      period: 'মাসিক',
+                      badge: 'Pro',
+                      popular: false,
+                      color: 'teal',
+                      features: [
+                        'Watermark Remove (ক্লিন প্যাড প্রিন্টিং)',
+                        '১০০০টি প্রেসক্রিপশন সেভ ও প্রিন্ট',
+                        'Daily Cloud Backup'
+                      ],
+                      permissions: {
+                        removeWatermark: true,
+                        qrCode: false,
+                        multipleChambers: false,
+                        prescriptionLimit: 1000
+                      }
+                    };
+                    setEditPlanConfig({
+                      ...editPlanConfig,
+                      plans: [...(editPlanConfig.plans || []), newPlan]
+                    });
+                  }}
+                  className="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>+ নতুন প্ল্যান যোগ করুন</span>
+                </button>
+              </div>
+
+              {/* Dynamic Plans List Editor */}
+              <div className="space-y-4">
+                {(editPlanConfig.plans || []).map((p, pIdx) => (
+                  <div 
+                    key={p.id || pIdx}
+                    className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-3 relative group"
+                  >
+                    <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-slate-800 text-white flex items-center justify-center text-[10px] font-bold">
+                          {pIdx + 1}
+                        </span>
+                        <span className="font-black text-sm text-slate-900">{p.name || 'প্যাকেজ'}</span>
+                        <label className="flex items-center gap-1 text-[11px] font-bold text-amber-700 cursor-pointer ml-2">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(p.popular)}
+                            onChange={(e) => {
+                              const updated = [...editPlanConfig.plans];
+                              updated[pIdx] = { ...updated[pIdx], popular: e.target.checked };
+                              setEditPlanConfig({ ...editPlanConfig, plans: updated });
+                            }}
+                            className="rounded text-amber-600 focus:ring-amber-500"
+                          />
+                          <span>Most Popular Badge</span>
+                        </label>
+                      </div>
+
+                      {editPlanConfig.plans.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm(`আপনি কি "${p.name}" প্যাকেজটি ডিলিট করতে চান?`)) {
+                              const updated = editPlanConfig.plans.filter((_, idx) => idx !== pIdx);
+                              setEditPlanConfig({ ...editPlanConfig, plans: updated });
+                            }
+                          }}
+                          className="text-rose-500 hover:text-rose-700 p-1 rounded-lg hover:bg-rose-50 flex items-center gap-1 text-xs font-semibold cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>মুছে ফেলুন</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">প্যাকেজের নাম</label>
+                        <input
+                          type="text"
+                          value={p.name}
+                          onChange={(e) => {
+                            const updated = [...editPlanConfig.plans];
+                            updated[pIdx] = { ...updated[pIdx], name: e.target.value };
+                            setEditPlanConfig({ ...editPlanConfig, plans: updated });
+                          }}
+                          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">মূল্য (Price in BDT)</label>
+                        <input
+                          type="text"
+                          value={p.price}
+                          onChange={(e) => {
+                            const updated = [...editPlanConfig.plans];
+                            updated[pIdx] = { ...updated[pIdx], price: e.target.value };
+                            setEditPlanConfig({ ...editPlanConfig, plans: updated });
+                          }}
+                          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">বিলিং মেয়াদ (Period)</label>
+                        <input
+                          type="text"
+                          value={p.period}
+                          onChange={(e) => {
+                            const updated = [...editPlanConfig.plans];
+                            updated[pIdx] = { ...updated[pIdx], period: e.target.value };
+                            setEditPlanConfig({ ...editPlanConfig, plans: updated });
+                          }}
+                          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">ব্যাজ নাম (যেমন: Pro, VIP)</label>
+                        <input
+                          type="text"
+                          value={p.badge || ''}
+                          onChange={(e) => {
+                            const updated = [...editPlanConfig.plans];
+                            updated[pIdx] = { ...updated[pIdx], badge: e.target.value };
+                            setEditPlanConfig({ ...editPlanConfig, plans: updated });
+                          }}
+                          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">ট্যাগলাইন (সংক্ষিপ্ত বর্ণনা)</label>
+                        <input
+                          type="text"
+                          value={p.tagline || ''}
+                          onChange={(e) => {
+                            const updated = [...editPlanConfig.plans];
+                            updated[pIdx] = { ...updated[pIdx], tagline: e.target.value };
+                            setEditPlanConfig({ ...editPlanConfig, plans: updated });
+                          }}
+                          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-medium"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1">
+                          হাইলাইট পিল টেক্সট (যেমন: Watermark Remove + 30 Days Cloud Backup)
+                        </label>
+                        <input
+                          type="text"
+                          value={p.badgeText || ''}
+                          onChange={(e) => {
+                            const updated = [...editPlanConfig.plans];
+                            updated[pIdx] = { ...updated[pIdx], badgeText: e.target.value };
+                            setEditPlanConfig({ ...editPlanConfig, plans: updated });
+                          }}
+                          placeholder="e.g. Watermark Remove + 30 Days Cloud Backup"
+                          className="w-full px-3 py-2 bg-white border border-teal-300 rounded-xl font-semibold text-teal-900"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Permissions & Dynamic Limits Controls */}
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-white p-3 rounded-xl border border-slate-200">
+                      <div>
+                        <label className="block font-bold text-slate-800 mb-1">
+                          প্রেসক্রিপশন লিমিট (Rx Limit)
+                        </label>
+                        <input
+                          type="text"
+                          value={p.permissions?.prescriptionLimit === Infinity ? '' : (p.permissions?.prescriptionLimit ?? '')}
+                          placeholder="খালি রাখলে আনলিমিটেড (∞)"
+                          onChange={(e) => {
+                            const valStr = e.target.value.trim();
+                            const val = valStr === '' ? Infinity : Number(valStr);
+                            const updated = [...editPlanConfig.plans];
+                            const currPerms = updated[pIdx].permissions || {};
+                            updated[pIdx] = { 
+                              ...updated[pIdx], 
+                              permissions: { ...currPerms, prescriptionLimit: val } 
+                            };
+                            setEditPlanConfig({ ...editPlanConfig, plans: updated });
+                          }}
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold font-mono text-teal-900"
+                        />
+                        <span className="text-[10px] text-slate-500 mt-0.5 block">
+                          {p.permissions?.prescriptionLimit === Infinity || !p.permissions?.prescriptionLimit ? 'আনলিমিটেড (∞)' : `${p.permissions.prescriptionLimit} টি`}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col justify-center">
+                        <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
+                          <input
+                            type="checkbox"
+                            checked={p.permissions?.removeWatermark !== false}
+                            onChange={(e) => {
+                              const updated = [...editPlanConfig.plans];
+                              const currPerms = updated[pIdx].permissions || {};
+                              updated[pIdx] = {
+                                ...updated[pIdx],
+                                permissions: { ...currPerms, removeWatermark: e.target.checked }
+                              };
+                              setEditPlanConfig({ ...editPlanConfig, plans: updated });
+                            }}
+                            className="rounded text-teal-600 focus:ring-teal-500 w-4 h-4"
+                          />
+                          <span>Clean Pad (Watermark Remove)</span>
+                        </label>
+                        <span className="text-[10px] text-slate-500 pl-6">ক্লিন প্যাড প্রিন্টিং</span>
+                      </div>
+
+                      <div className="flex flex-col justify-center">
+                        <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(p.permissions?.qrCode)}
+                            onChange={(e) => {
+                              const updated = [...editPlanConfig.plans];
+                              const currPerms = updated[pIdx].permissions || {};
+                              updated[pIdx] = {
+                                ...updated[pIdx],
+                                permissions: { ...currPerms, qrCode: e.target.checked }
+                              };
+                              setEditPlanConfig({ ...editPlanConfig, plans: updated });
+                            }}
+                            className="rounded text-teal-600 focus:ring-teal-500 w-4 h-4"
+                          />
+                          <span>Smart QR Code</span>
+                        </label>
+                        <span className="text-[10px] text-slate-500 pl-6">অনলাইনে রোগী ভেরিফিকেশন</span>
+                      </div>
+
+                      <div className="flex flex-col justify-center">
+                        <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(p.permissions?.multipleChambers)}
+                            onChange={(e) => {
+                              const updated = [...editPlanConfig.plans];
+                              const currPerms = updated[pIdx].permissions || {};
+                              updated[pIdx] = {
+                                ...updated[pIdx],
+                                permissions: { ...currPerms, multipleChambers: e.target.checked }
+                              };
+                              setEditPlanConfig({ ...editPlanConfig, plans: updated });
+                            }}
+                            className="rounded text-teal-600 focus:ring-teal-500 w-4 h-4"
+                          />
+                          <span>Multiple Chambers</span>
+                        </label>
+                        <span className="text-[10px] text-slate-500 pl-6">একাধিক চেম্বার সুইচিং</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">
+                        ফিচারসমূহ (প্রতি লাইনে একটি করে ফিচার লিখুন)
+                      </label>
+                      <textarea
+                        rows={4}
+                        value={(p.features || []).join('\n')}
+                        onChange={(e) => {
+                          const updated = [...editPlanConfig.plans];
+                          updated[pIdx] = { 
+                            ...updated[pIdx], 
+                            features: e.target.value.split('\n').filter(Boolean) 
+                          };
+                          setEditPlanConfig({ ...editPlanConfig, plans: updated });
+                        }}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-medium"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Payment & Contact Info */}
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">WhatsApp Support Number</label>
+                  <input
+                    type="text"
+                    value={editPlanConfig.contact.whatsapp}
+                    onChange={(e) => setEditPlanConfig({
+                      ...editPlanConfig,
+                      contact: { ...editPlanConfig.contact, whatsapp: e.target.value }
+                    })}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-mono font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">bKash / Nagad Number Info</label>
+                  <input
+                    type="text"
+                    value={editPlanConfig.contact.bkash}
+                    onChange={(e) => setEditPlanConfig({
+                      ...editPlanConfig,
+                      contact: { ...editPlanConfig.contact, bkash: e.target.value, nagad: e.target.value }
+                    })}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-mono font-bold"
+                  />
+                </div>
+              </div>
+
+              {/* Form Action Buttons */}
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsPlanSettingsModalOpen(false)}
+                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-xl font-semibold hover:bg-slate-50 cursor-pointer"
+                >
+                  বাতিল (Cancel)
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl font-black shadow-md cursor-pointer flex items-center gap-1.5"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>প্যাকেজ সেটিংস সেভ করুন</span>
+                </button>
+              </div>
+
             </form>
 
           </div>

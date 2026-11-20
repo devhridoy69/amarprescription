@@ -1,5 +1,5 @@
 import { openDB } from 'idb';
-import { supabase } from './supabase';
+import { supabase, slimPrescriptionPayload } from './supabase';
 
 const DB_NAME = 'amar_rx_offline_db';
 const DB_VERSION = 1;
@@ -39,9 +39,8 @@ export async function downloadMedicinesForOffline(onProgress = null) {
     const lastSync = await db.get(STORE_METADATA, 'medicines_last_sync');
     const existingCount = await db.count(STORE_MEDICINES);
 
-    // If already downloaded and recent (< 7 days), skip re-download
-    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-    if (existingCount > 15000 && lastSync && (Date.now() - lastSync < sevenDaysMs)) {
+    // SUPER-SAVE EGRESS: Once cached (> 15000), NEVER re-download automatically to save bandwidth!
+    if (existingCount > 15000) {
       if (onProgress) onProgress({ status: 'ready', count: existingCount });
       return;
     }
@@ -236,6 +235,7 @@ export async function syncPendingPrescriptionsToCloud() {
 
     let syncedCount = 0;
     for (const record of pendingList) {
+      const slimData = slimPrescriptionPayload(record, record.doctorPhone);
       const payload = {
         id: String(record.id),
         date: record.date || new Date().toISOString().split('T')[0],
@@ -245,7 +245,7 @@ export async function syncPendingPrescriptionsToCloud() {
         patient_gender: record.patient?.gender || null,
         diagnosis: record.diagnosis || null,
         next_visit: record.nextVisit || null,
-        full_data: record
+        full_data: slimData || record
       };
 
       const { error } = await supabase

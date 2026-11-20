@@ -12,6 +12,8 @@ import AuthModal from './components/AuthModal';
 import AdminPanelModal from './components/AdminPanelModal';
 import MobileSectionTabs from './components/MobileSectionTabs';
 import PublicPrescriptionView from './components/PublicPrescriptionView';
+import PricingModal from './components/PricingModal';
+import { getPlansConfig, getPlanPermissions } from './data/plansConfig';
 import { DEFAULT_DOCTOR } from './data/defaultDoctor';
 import { PRESCRIPTION_TEMPLATES } from './data/templatesData';
 import { FONT_PAIR_PRESETS } from './data/fontPresets';
@@ -93,8 +95,9 @@ export function App() {
           chamberAddress: u.chamber_address || DEFAULT_DOCTOR.chamberAddress,
           visitingHours: u.visiting_hours || DEFAULT_DOCTOR.visitingHours,
           appointmentPhone: u.appointment_phone || DEFAULT_DOCTOR.appointmentPhone,
-          has_watermark: u.has_watermark !== false,
-          show_qr: u.show_qr !== false
+          has_watermark: u.has_watermark,
+          show_qr: u.show_qr,
+          plan: u.plan || 'free'
         };
       }
       const savedDoc = localStorage.getItem('amar_rx_doctor');
@@ -135,6 +138,35 @@ export function App() {
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+  const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
+  const [plansConfig, setPlansConfig] = useState(getPlansConfig);
+
+  // Listen to plan config updates from admin panel
+  useEffect(() => {
+    const handlePlanUpdate = () => {
+      setPlansConfig(getPlansConfig());
+    };
+    window.addEventListener('amar_rx_plans_updated', handlePlanUpdate);
+    return () => window.removeEventListener('amar_rx_plans_updated', handlePlanUpdate);
+  }, []);
+
+  // Listen to user plan/watermark updates from admin panel in real-time
+  useEffect(() => {
+    const handleUserUpdate = (e) => {
+      if (e.detail) {
+        setCurrentUser(e.detail);
+        setDoctor(prev => ({
+          ...prev,
+          ...e.detail,
+          has_watermark: e.detail.has_watermark,
+          show_qr: e.detail.show_qr,
+          plan: e.detail.plan || 'free'
+        }));
+      }
+    };
+    window.addEventListener('amar_rx_user_updated', handleUserUpdate);
+    return () => window.removeEventListener('amar_rx_user_updated', handleUserUpdate);
+  }, []);
   const [adminUser, setAdminUser] = useState(() => {
     try {
       const saved = localStorage.getItem('amar_rx_admin_user');
@@ -287,6 +319,18 @@ export function App() {
       r.id === currentRecordId || 
       (r.patient?.rxId && patient.rxId && r.patient.rxId === patient.rxId)
     );
+
+    // If saving a new prescription, enforce subscription usage limit
+    if (existingIdx < 0) {
+      const perms = getPlanPermissions(currentUser?.plan);
+      const maxLimit = perms.prescriptionLimit;
+
+      if (patientRecords.length >= maxLimit) {
+        alert(`আপনার ${perms.name} প্রেসক্রিপশন সেভ ও প্রিন্টের লিমিট (${maxLimit === Infinity ? 'আনলিমিটেড' : maxLimit + 'টি'}) পূর্ণ হয়ে গেছে। আরও প্রেসক্রিপশন সেভ করতে দয়া করে আপনার প্ল্যান আপগ্রেড করুন।`);
+        setIsPricingModalOpen(true);
+        return null;
+      }
+    }
 
     let updated;
     if (existingIdx >= 0) {
@@ -569,6 +613,12 @@ export function App() {
 
   // Switch Active Chamber Profile
   const handleSelectChamberProfile = (profile) => {
+    const perms = getPlanPermissions(currentUser?.plan);
+    if (!perms.canSwitchChambers && chamberProfiles.length > 1 && profile.id !== chamberProfiles[0]?.id) {
+      setIsPricingModalOpen(true);
+      alert('মাল্টিপল চেম্বার সুইচিং (পপুলার, ইবনে সিনা বা একাধিক চেম্বার আলাদা পরিচালনা) ফিচারটি আপনার বর্তমান প্ল্যানে অন্তর্ভুক্ত নয়। আপগ্রেড করতে প্রাইসিং প্ল্যান দেখুন।');
+      return;
+    }
     setActiveChamberId(profile.id);
     setDoctor(profile);
     const userPhone = currentUser?.phone || 'default';
@@ -649,6 +699,15 @@ export function App() {
   };
 
   const handlePrint = () => {
+    const perms = getPlanPermissions(currentUser?.plan);
+    const maxLimit = perms.prescriptionLimit;
+
+    if (!editingRecordId && patientRecords.length >= maxLimit) {
+      alert(`আপনার ${perms.name} প্রেসক্রিপশন প্রিন্ট ও সেভের লিমিট (${maxLimit === Infinity ? 'আনলিমিটেড' : maxLimit + 'টি'}) পূর্ণ হয়ে গেছে। আরও প্রেসক্রিপশন প্রিন্ট করতে দয়া করে আপনার প্ল্যান আপগ্রেড করুন।`);
+      setIsPricingModalOpen(true);
+      return;
+    }
+
     // Auto-save to patient records upon print so history is always current
     saveCurrentPrescriptionToHistory();
     window.print();
@@ -684,8 +743,9 @@ export function App() {
         chamberAddress: userData.chamber_address || DEFAULT_DOCTOR.chamberAddress,
         visitingHours: userData.visiting_hours || DEFAULT_DOCTOR.visitingHours,
         appointmentPhone: userData.appointment_phone || DEFAULT_DOCTOR.appointmentPhone,
-        has_watermark: userData.has_watermark !== false,
-        show_qr: userData.show_qr !== false
+        has_watermark: userData.has_watermark,
+        show_qr: userData.show_qr,
+        plan: userData.plan || 'free'
       };
       setDoctor(initialDoc);
 
@@ -828,6 +888,7 @@ export function App() {
             activeChamberId={activeChamberId}
             onSelectChamberProfile={handleSelectChamberProfile}
             onDeleteChamberProfile={handleDeleteChamberProfile}
+            onOpenPricing={() => setIsPricingModalOpen(true)}
           />
 
       {/* Main Content Area */}
@@ -951,6 +1012,8 @@ export function App() {
                   onSelectFontId={handleSelectFontId}
                   fontPresets={FONT_PAIR_PRESETS}
                   onPrint={handlePrint}
+                  currentUser={currentUser}
+                  onOpenPricing={() => setIsPricingModalOpen(true)}
                 />
               </div>
             </div>
@@ -998,6 +1061,16 @@ export function App() {
         onNewPrescription={handleNewPrescription}
         darkMode={darkMode}
         activeEditingRecordId={editingRecordId}
+        currentUser={currentUser}
+        onOpenPricing={() => setIsPricingModalOpen(true)}
+      />
+
+      {/* Pricing & Plan Details Modal */}
+      <PricingModal
+        isOpen={isPricingModalOpen}
+        onClose={() => setIsPricingModalOpen(false)}
+        currentPlan={currentUser?.plan || 'free'}
+        plansConfig={plansConfig}
       />
 
       {/* Doctor Authentication Modal for manual re-login if already logged in */}

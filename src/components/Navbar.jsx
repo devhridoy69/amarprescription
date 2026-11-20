@@ -3,8 +3,9 @@ import {
   Eye, Edit3, Columns, Sun, Moon, Type,
   LayoutDashboard, LogIn, LogOut, ShieldAlert,
   RotateCcw, Sparkles, Wifi, WifiOff, CloudUpload,
-  ChevronDown, Building2, Plus, Check, Trash2, Settings, User
+  ChevronDown, Building2, Plus, Check, Trash2, Settings, User, Crown, Lock
 } from 'lucide-react';
+import { getPlanPermissions } from '../data/plansConfig';
 
 export const Navbar = ({ 
   viewMode, 
@@ -31,7 +32,8 @@ export const Navbar = ({
   chamberProfiles = [],
   activeChamberId = null,
   onSelectChamberProfile = () => {},
-  onDeleteChamberProfile = () => {}
+  onDeleteChamberProfile = () => {},
+  onOpenPricing = () => {}
 }) => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef(null);
@@ -233,7 +235,53 @@ export const Navbar = ({
               <span className="hidden sm:inline">Admin Panel</span>
             </button>
           ) : currentUser ? (
-            <div className="relative" ref={profileMenuRef}>
+            <div className="flex items-center gap-2">
+              
+              {/* Premium Status Pill & Dynamic Usage Limit Display */}
+              {(() => {
+                const perms = getPlanPermissions(currentUser.plan);
+                const isEnterprise = perms.canSwitchChambers && perms.canUseQrCode;
+                const isStandard = perms.id === 'standard' || perms.id === 'standard_pro';
+                const limit = perms.prescriptionLimit === Infinity ? '∞' : perms.prescriptionLimit;
+                const isNearLimit = typeof limit === 'number' && savedCount >= limit;
+
+                return (
+                  <button
+                    type="button"
+                    onClick={onOpenPricing}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-xs border ${
+                      isEnterprise
+                        ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 border-amber-400'
+                        : isStandard
+                          ? 'bg-teal-700 hover:bg-teal-800 text-white border-teal-600'
+                          : 'bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-900 border-slate-300 hover:border-amber-400'
+                    }`}
+                    title="প্ল্যানের বিস্তারিত ফিচার ও ব্যবহারের সীমা দেখতে ক্লিক করুন"
+                  >
+                    <Crown className={`w-3.5 h-3.5 ${isEnterprise ? 'fill-slate-950 text-slate-950' : isStandard ? 'text-teal-200 fill-teal-200' : 'text-slate-400'}`} />
+                    <span>
+                      {perms.name}
+                    </span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded font-black font-mono ${
+                      isEnterprise 
+                        ? 'bg-amber-400 text-slate-950' 
+                        : isStandard
+                          ? isNearLimit ? 'bg-rose-500 text-white animate-pulse' : 'bg-teal-900/60 text-teal-100'
+                          : isNearLimit ? 'bg-rose-500 text-white animate-pulse' : 'bg-slate-200 text-slate-700'
+                    }`}>
+                      {limit === '∞' ? '∞ Unlimited' : `${savedCount}/${limit}`}
+                    </span>
+                    {!isEnterprise && (
+                      <span className="text-[9px] bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded font-black hidden sm:flex items-center gap-1 shadow-2xs">
+                        <Lock className="w-2.5 h-2.5" />
+                        <span>UPGRADE</span>
+                      </span>
+                    )}
+                  </button>
+                );
+              })()}
+
+              <div className="relative" ref={profileMenuRef}>
               <div className="flex items-center gap-1.5 bg-teal-50 border border-teal-200 py-1 px-2.5 rounded-xl">
                 <button
                   type="button"
@@ -242,14 +290,30 @@ export const Navbar = ({
                   title="চেম্বার প্রোফাইল পরিবর্তন বা সেটিংস ওপেন করুন"
                 >
                   <div className="w-7 h-7 rounded-lg bg-teal-700 text-white flex items-center justify-center text-xs font-extrabold shadow-2xs shrink-0">
-                    {currentUser.full_name ? currentUser.full_name.charAt(0).toUpperCase() : 'D'}
+                    {(() => {
+                      const name = doctor?.name || currentUser.full_name || '';
+                      const cleaned = name.replace(/^(Dr\.|ডাঃ)\s*/i, '').trim();
+                      const firstChar = cleaned.charAt(0).toUpperCase();
+                      if (!firstChar || /^\d$/.test(firstChar)) {
+                        return <User className="w-3.5 h-3.5 text-white" />;
+                      }
+                      return firstChar;
+                    })()}
                   </div>
                   <div className="hidden sm:block leading-tight">
                     <span className="block text-xs font-bold text-teal-950 truncate max-w-[130px]">
-                      {doctor?.chamberName || currentUser.full_name || 'Dr. Chamber'}
+                      {(() => {
+                        if (doctor?.name && !/^\d+$/.test(doctor.name.trim())) {
+                          return doctor.name;
+                        }
+                        if (currentUser.full_name && !/^\d+$/.test(currentUser.full_name.trim())) {
+                          return currentUser.full_name;
+                        }
+                        return 'ডাঃ চেম্বার';
+                      })()}
                     </span>
-                    <span className="block text-[10px] text-teal-700 font-mono">
-                      {currentUser.phone}
+                    <span className="block text-[10px] text-teal-700 truncate max-w-[130px]">
+                      {doctor?.chamberName || (currentUser.phone ? `মোবাইল: ${currentUser.phone}` : 'চেম্বার প্রোফাইল')}
                     </span>
                   </div>
                   <ChevronDown className={`w-3.5 h-3.5 text-teal-700 transition-transform ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
@@ -278,49 +342,97 @@ export const Navbar = ({
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-600 font-semibold truncate mt-0.5">
-                      {currentUser.full_name}
+                      {doctor?.name || currentUser.full_name || 'আমার চেম্বার'}
                     </p>
                   </div>
 
+                  {/* Chamber Switching Locked Notification for Non-Enterprise Users */}
+                  {(() => {
+                    const perms = getPlanPermissions(currentUser.plan);
+                    if (!perms.canSwitchChambers) {
+                      return (
+                        <div className="mx-2 my-2 p-2.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl">
+                          <div className="flex items-center justify-between gap-1.5">
+                            <div className="flex items-center gap-1.5 text-amber-950">
+                              <Crown className="w-3.5 h-3.5 text-amber-600 fill-amber-500 shrink-0" />
+                              <span className="text-[11px] font-black">মাল্টিপল চেম্বার সুইচিং</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsProfileMenuOpen(false);
+                                onOpenPricing();
+                              }}
+                              className="px-2 py-0.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-lg text-[10px] transition-colors cursor-pointer shrink-0 shadow-2xs"
+                            >
+                              VIP আনলক
+                            </button>
+                          </div>
+                          <p className="text-[10px] text-amber-800 font-medium mt-1 leading-tight">
+                            পপুলার, ইবনে সিনা বা একাধিক চেম্বার সুইচিং সুবিধা Enterprise VIP প্ল্যানে অন্তর্ভুক্ত।
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+
                   {/* Profile List */}
                   <div className="max-h-56 overflow-y-auto p-1.5 space-y-1">
-                    {chamberProfiles.map((prof) => {
+                    {chamberProfiles.map((prof, idx) => {
                       const isActive = prof.id === activeChamberId;
+                      const perms = getPlanPermissions(currentUser.plan);
+                      const isLocked = !perms.canSwitchChambers && idx > 0;
+
                       return (
                         <div
                           key={prof.id}
                           className={`group flex items-center justify-between p-2 rounded-xl border transition-all text-left ${
                             isActive
                               ? 'bg-teal-50/80 border-teal-300 shadow-2xs'
-                              : 'bg-white hover:bg-slate-50 border-transparent hover:border-slate-200'
+                              : isLocked
+                                ? 'bg-slate-50/80 border-slate-200 opacity-60'
+                                : 'bg-white hover:bg-slate-50 border-transparent hover:border-slate-200'
                           }`}
                         >
                           <button
                             type="button"
                             onClick={() => {
+                              if (isLocked) {
+                                setIsProfileMenuOpen(false);
+                                onOpenPricing();
+                                return;
+                              }
                               onSelectChamberProfile(prof);
                               setIsProfileMenuOpen(false);
                             }}
-                            className="flex-1 min-w-0 pr-2 cursor-pointer"
+                            className="flex-1 min-w-0 pr-2 cursor-pointer flex items-center gap-1.5"
                           >
-                            <div className="flex items-center gap-1.5">
-                              <Building2 className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-teal-700' : 'text-slate-400'}`} />
-                              <span className={`text-xs font-bold truncate block ${isActive ? 'text-teal-900' : 'text-slate-800'}`}>
-                                {prof.chamberName || 'Unnamed Chamber'}
-                              </span>
+                            <Building2 className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-teal-700' : 'text-slate-400'}`} />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className={`text-xs font-bold truncate block ${isActive ? 'text-teal-900' : 'text-slate-800'}`}>
+                                  {prof.chamberName || 'Unnamed Chamber'}
+                                </span>
+                                {isLocked && (
+                                  <span className="text-[9px] bg-amber-100 text-amber-900 px-1 rounded font-bold shrink-0">
+                                    🔒 VIP
+                                  </span>
+                                )}
+                              </div>
+                              {prof.chamberAddress && (
+                                <p className="text-[10px] text-slate-500 truncate">
+                                  {prof.chamberAddress}
+                                </p>
+                              )}
                             </div>
-                            {prof.chamberAddress && (
-                              <p className="text-[10px] text-slate-500 truncate pl-5">
-                                {prof.chamberAddress}
-                              </p>
-                            )}
                           </button>
 
                           <div className="flex items-center gap-1 shrink-0">
                             {isActive && (
                               <Check className="w-4 h-4 text-teal-600 stroke-[2.5]" />
                             )}
-                            {chamberProfiles.length > 1 && (
+                            {chamberProfiles.length > 1 && !isLocked && (
                               <button
                                 type="button"
                                 onClick={(e) => {
@@ -344,17 +456,31 @@ export const Navbar = ({
                     <button
                       type="button"
                       onClick={() => {
+                        const perms = getPlanPermissions(currentUser.plan);
+                        if (!perms.canSwitchChambers && chamberProfiles.length >= 1) {
+                          setIsProfileMenuOpen(false);
+                          onOpenPricing();
+                          return;
+                        }
                         onOpenDoctorSettings();
                         setIsProfileMenuOpen(false);
                       }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 rounded-xl transition-colors cursor-pointer"
+                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 rounded-xl transition-colors cursor-pointer"
                     >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>নতুন চেম্বার প্রোফাইল যুক্ত / এডিট করুন</span>
+                      <span className="flex items-center gap-2">
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>নতুন চেম্বার প্রোফাইল যুক্ত / এডিট করুন</span>
+                      </span>
+                      {!getPlanPermissions(currentUser.plan).canSwitchChambers && (
+                        <span className="text-[9px] bg-amber-200 text-amber-950 font-black px-1.5 py-0.5 rounded">
+                          Enterprise VIP
+                        </span>
+                      )}
                     </button>
                   </div>
                 </div>
               )}
+            </div>
             </div>
           ) : (
             <button

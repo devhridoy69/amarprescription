@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { 
   Printer, Layers, Eye, EyeOff, Sliders, ChevronDown, 
-  FileText, ArrowDown, ArrowUp, CheckCircle, Info, QrCode
+  FileText, ArrowDown, ArrowUp, CheckCircle, Info, QrCode, Lock
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { StackedFraction, renderWithFractions } from './StackedFraction';
+import { getPlanPermissions } from '../data/plansConfig';
 
 export const PrescriptionPreview = ({ 
   doctor = {}, 
@@ -29,9 +30,22 @@ export const PrescriptionPreview = ({
   onSelectFontId = () => {},
   fontPresets = [],
   onPrint = null,
-  hideToolbar = false
+  hideToolbar = false,
+  currentUser = null,
+  onOpenPricing = () => {}
 }) => {
   const [showConfig, setShowConfig] = useState(false);
+
+  const userPlan = currentUser?.plan || doctor?.plan || 'free';
+  const perms = getPlanPermissions(userPlan);
+
+  // Smart Header QR Code logic
+  const canShowQr = Boolean(patient.rxId && (doctor.show_qr === true || (perms.canUseQrCode && doctor.show_qr !== false)));
+
+  // Watermark logic: admin toggle takes top priority, else plan permissions remove watermark
+  const shouldShowWatermark = (doctor.has_watermark !== undefined 
+    ? Boolean(doctor.has_watermark) 
+    : !perms.canRemoveWatermark) && doctor.showAyanTechBranding !== false;
 
   // Safe fallback settings if props are undefined
   const settings = {
@@ -105,9 +119,9 @@ export const PrescriptionPreview = ({
                 )}
               </div>
 
-              {/* Middle: Smart Auto QR Code (Controlled by Admin via doctor.show_qr) */}
+              {/* Middle: Smart Auto QR Code (Controlled by Admin via doctor.show_qr or Enterprise Plan) */}
               <div className="col-span-2 flex flex-col items-center justify-center text-center">
-                {patient.rxId && doctor.show_qr !== false && (
+                {canShowQr ? (
                   <div className="flex flex-col items-center">
                     <div className="p-1 bg-white border border-slate-300 rounded shadow-2xs">
                       <QRCodeSVG
@@ -121,6 +135,25 @@ export const PrescriptionPreview = ({
                       Scan for PDF
                     </span>
                   </div>
+                ) : (
+                  /* Screen-only Lock indicator when QR is locked/not enabled (no-print) */
+                  <button
+                    type="button"
+                    onClick={onOpenPricing}
+                    className="no-print group flex flex-col items-center justify-center p-2 rounded-xl border border-dashed border-amber-300 bg-amber-50/70 hover:bg-amber-100 hover:border-amber-400 transition-all cursor-pointer shadow-2xs text-center"
+                    title="স্মার্ট কিউআর কোড আনলক করতে ক্লিক করুন"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-amber-200/90 text-amber-900 flex items-center justify-center mb-1 group-hover:scale-105 transition-transform shadow-2xs">
+                      <Lock className="w-4 h-4 text-amber-800" />
+                    </div>
+                    <span className="text-[7.5px] font-black uppercase tracking-tight text-amber-950 flex items-center gap-0.5 whitespace-nowrap">
+                      <span>Smart QR</span>
+                      <span className="text-[6.5px] bg-amber-400 text-slate-950 px-1 rounded font-black">VIP</span>
+                    </span>
+                    <span className="text-[7px] text-amber-800 font-bold group-hover:underline mt-0.5 flex items-center gap-0.5">
+                      <span>লকড • আপগ্রেড</span>
+                    </span>
+                  </button>
                 )}
               </div>
 
@@ -506,12 +539,25 @@ export const PrescriptionPreview = ({
                 {doctor.emergencyNote}
               </p>
             )}
-            {/* Watermark Branding: Exclusively controlled by Admin via doctor.has_watermark */}
-            {(doctor.has_watermark !== false && doctor.showAyanTechBranding !== false) && (
-              <div className="flex items-center justify-center gap-2 font-medium text-slate-500 pt-0.5">
+            {/* Watermark Branding: Admin override or Plan Default (Free = Watermark On, Standard/Enterprise = Clean Pad) */}
+            {shouldShowWatermark && (
+              <div className="flex items-center justify-center gap-2 font-medium text-slate-500 pt-0.5 flex-wrap">
                 <img src="/logo.png" alt="আমার প্রেসক্রিপশন" className="h-4 w-auto object-contain inline-block" />
                 <span>•</span>
                 <span className="font-bold text-teal-800">Developed By Ayan Tech 01780960370</span>
+
+                {/* On-screen Lock Upgrade Pill beside the branding watermark for Free Plan */}
+                {!perms.canRemoveWatermark && (
+                  <button
+                    type="button"
+                    onClick={onOpenPricing}
+                    className="no-print ml-1.5 inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 rounded-md text-[9px] font-black transition-all cursor-pointer shadow-2xs"
+                    title="ওয়াটারমার্ক রিমুভ ও নিজস্ব ক্লিন প্যাডে প্রিন্ট করতে আপগ্রেড করুন"
+                  >
+                    <Lock className="w-2.5 h-2.5 text-amber-700" />
+                    <span>ওয়াটারমার্ক মুছুন (Pro)</span>
+                  </button>
+                )}
               </div>
             )}
           </div>

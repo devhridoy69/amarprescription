@@ -3,8 +3,9 @@ import {
   LayoutDashboard, History, CalendarCheck, Search, Eye, 
   Printer, Trash2, ArrowUpRight, User, Clock, CheckCircle2, 
   AlertCircle, FileText, ChevronRight, X, Phone, Plus, Filter,
-  TrendingUp, Activity, Check, RefreshCw, Calendar, RotateCcw, Edit3
+  TrendingUp, Activity, Check, RefreshCw, Calendar, RotateCcw, Edit3, Crown
 } from 'lucide-react';
+import { getPlanPermissions } from '../data/plansConfig';
 
 export const DashboardModal = ({ 
   isOpen, 
@@ -16,7 +17,9 @@ export const DashboardModal = ({
   onToggleFollowUpStatus,
   onNewPrescription,
   darkMode = false,
-  activeEditingRecordId = null
+  activeEditingRecordId = null,
+  currentUser = null,
+  onOpenPricing = () => {}
 }) => {
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'history' | 'followups'
   const [searchTerm, setSearchTerm] = useState('');
@@ -177,6 +180,88 @@ export const DashboardModal = ({
           {activeTab === 'overview' && (
             <div className="space-y-6">
               
+              {/* Subscription Plan & Usage Limit Status Banner */}
+              {(() => {
+                const perms = getPlanPermissions(currentUser?.plan);
+                const isEnterprise = perms.canSwitchChambers && perms.canUseQrCode;
+                const limit = perms.prescriptionLimit;
+                const percentage = limit === Infinity ? 100 : Math.min(100, Math.round((totalPatients / limit) * 100));
+
+                return (
+                  <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 text-white shadow-lg border border-teal-800/40 relative overflow-hidden">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-black flex items-center gap-1.5 ${
+                            isEnterprise 
+                              ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950'
+                              : perms.id !== 'free'
+                                ? 'bg-teal-600 text-white' 
+                                : 'bg-slate-700 text-slate-200'
+                          }`}>
+                            <Crown className="w-3.5 h-3.5" />
+                            {perms.name}
+                          </span>
+                          <span className="text-[11px] text-teal-300 font-semibold">
+                            {limit === Infinity 
+                              ? '👑 আনলিমিটেড লাইফটাইম অ্যাক্সেস' 
+                              : `⭐ ক্লিন প্যাড ও ${limit} Rx লিমিট`}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-300">
+                          {isEnterprise 
+                            ? 'আপনার অ্যাকাউন্টে স্মার্ট কিউআর কোড, ক্লিন প্যাড ও মাল্টিপল চেম্বার সুইচিং সক্রিয় রয়েছে।' 
+                            : perms.id !== 'free'
+                              ? `আপনার অ্যাকাউন্টে ব্র্যান্ডিংমুক্ত ক্লিন প্যাড ও ${limit}টি প্রেসক্রিপশন সেভ ও প্রিন্ট সক্রিয়।` 
+                              : `ফ্রি প্ল্যানে ওয়াটারমার্ক ও প্রতি মাসে ${limit}টি প্রেসক্রিপশন ব্যবহারের সুবিধা রয়েছে।`}
+                        </p>
+                      </div>
+
+                      {/* Right: Usage Meter & Upgrade CTA */}
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="text-right">
+                          <span className="text-[11px] text-slate-400 font-bold block uppercase tracking-wider">
+                            প্রেসক্রিপশন ব্যবহার সীমা
+                          </span>
+                          <span className="text-lg font-black font-mono text-teal-300">
+                            {isEnterprise ? `${totalPatients} / ∞ (সীমাহীন)` : `${totalPatients} / ${limit} টি`}
+                          </span>
+                        </div>
+
+                        {!isEnterprise && (
+                          <button
+                            type="button"
+                            onClick={onOpenPricing}
+                            className="px-4 py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 rounded-xl text-xs font-black shadow-md transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+                          >
+                            <Crown className="w-3.5 h-3.5" />
+                            <span>আপগ্রেড করুন</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Progress Bar for Non-Enterprise */}
+                    {!isEnterprise && (
+                      <div className="mt-3 pt-3 border-t border-slate-800">
+                        <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1 font-semibold">
+                          <span>ব্যবহারের অগ্রগতি ({percentage}%)</span>
+                          <span>বাকি রয়েছে: {Math.max(0, limit - totalPatients)} টি</span>
+                        </div>
+                        <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              percentage >= 90 ? 'bg-rose-500' : percentage >= 70 ? 'bg-amber-400' : 'bg-teal-500'
+                            }`}
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* Stat Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="p-4 rounded-xl bg-teal-50 dark:bg-teal-950/40 border border-teal-200/80 dark:border-teal-800/60 flex items-center justify-between">
