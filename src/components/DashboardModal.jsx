@@ -104,7 +104,7 @@ export const DashboardModal = ({
                 Chamber Dashboard & Patient Records
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                রোগীর হিস্ট্রি, রি-প্রিন্ট ও ফলো-আপ ট্র্যাকিং ম্যানেজমেন্ট
+                Patient History, Reprint & Follow-up Tracking Management
               </p>
             </div>
           </div>
@@ -118,7 +118,7 @@ export const DashboardModal = ({
               className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>নতুন প্রেসক্রিপশন</span>
+              <span>New Prescription</span>
             </button>
             <button
               onClick={onClose}
@@ -140,7 +140,7 @@ export const DashboardModal = ({
             }`}
           >
             <LayoutDashboard className="w-4 h-4" />
-            <span>ড্যাশবোর্ড সামারি (Overview)</span>
+            <span>Overview & Stats</span>
           </button>
 
           <button
@@ -152,7 +152,7 @@ export const DashboardModal = ({
             }`}
           >
             <History className="w-4 h-4" />
-            <span>রোগীর ইতিহাস ও রি-প্রিন্ট ({filterByDate ? selectedDatePatients : totalPatients})</span>
+            <span>Patient Records & Reprint ({filterByDate ? selectedDatePatients : totalPatients})</span>
           </button>
 
           <button
@@ -164,10 +164,10 @@ export const DashboardModal = ({
             }`}
           >
             <CalendarCheck className="w-4 h-4" />
-            <span>ফলো-আপ চেকলিস্ট ({pendingFollowUps})</span>
+            <span>Follow-up Checklist ({pendingFollowUps})</span>
             {todayFollowUps > 0 && (
               <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-bold">
-                আজ {todayFollowUps}
+                Today {todayFollowUps}
               </span>
             )}
           </button>
@@ -204,16 +204,16 @@ export const DashboardModal = ({
                           </span>
                           <span className="text-[11px] text-teal-300 font-semibold">
                             {limit === Infinity 
-                              ? '👑 আনলিমিটেড লাইফটাইম অ্যাক্সেস' 
-                              : `⭐ ক্লিন প্যাড ও ${limit} Rx লিমিট`}
+                              ? '👑 Unlimited Lifetime Access' 
+                              : `⭐ Clean Pad & ${limit} Rx Limit`}
                           </span>
                         </div>
                         <p className="text-xs text-slate-300">
                           {isEnterprise 
-                            ? 'আপনার অ্যাকাউন্টে স্মার্ট কিউআর কোড, ক্লিন প্যাড ও মাল্টিপল চেম্বার সুইচিং সক্রিয় রয়েছে।' 
+                            ? 'Smart QR Code, watermark-free pad, and multiple chamber switching active on your account.' 
                             : perms.id !== 'free'
-                              ? `আপনার অ্যাকাউন্টে ব্র্যান্ডিংমুক্ত ক্লিন প্যাড ও ${limit}টি প্রেসক্রিপশন সেভ ও প্রিন্ট সক্রিয়।` 
-                              : `ফ্রি প্ল্যানে ওয়াটারমার্ক ও প্রতি মাসে ${limit}টি প্রেসক্রিপশন ব্যবহারের সুবিধা রয়েছে।`}
+                              ? `Branding-free clean pad and ${limit} prescriptions save & print active.` 
+                              : `Free plan includes default watermark and ${limit} prescriptions per month.`}
                         </p>
                       </div>
 
@@ -221,10 +221,10 @@ export const DashboardModal = ({
                       <div className="flex items-center gap-3 shrink-0">
                         <div className="text-right">
                           <span className="text-[11px] text-slate-400 font-bold block uppercase tracking-wider">
-                            প্রেসক্রিপশন ব্যবহার সীমা
+                            Prescription Usage Limit
                           </span>
                           <span className="text-lg font-black font-mono text-teal-300">
-                            {isEnterprise ? `${totalPatients} / ∞ (সীমাহীন)` : `${totalPatients} / ${limit} টি`}
+                            {isEnterprise ? `${totalPatients} / ∞ (Unlimited)` : `${totalPatients} / ${limit}`}
                           </span>
                         </div>
 
@@ -235,7 +235,7 @@ export const DashboardModal = ({
                             className="px-4 py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 rounded-xl text-xs font-black shadow-md transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
                           >
                             <Crown className="w-3.5 h-3.5" />
-                            <span>আপগ্রেড করুন</span>
+                            <span>Upgrade Plan</span>
                           </button>
                         )}
                       </div>
@@ -245,8 +245,8 @@ export const DashboardModal = ({
                     {!isEnterprise && (
                       <div className="mt-3 pt-3 border-t border-slate-800">
                         <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1 font-semibold">
-                          <span>ব্যবহারের অগ্রগতি ({percentage}%)</span>
-                          <span>বাকি রয়েছে: {Math.max(0, limit - totalPatients)} টি</span>
+                          <span>Usage Progress ({percentage}%)</span>
+                          <span>Remaining: {Math.max(0, limit - totalPatients)}</span>
                         </div>
                         <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
                           <div 
@@ -267,12 +267,12 @@ export const DashboardModal = ({
                 <div className="p-4 rounded-xl bg-teal-50 dark:bg-teal-950/40 border border-teal-200/80 dark:border-teal-800/60 flex items-center justify-between">
                   <div>
                     <span className="text-[11px] font-bold text-teal-800 dark:text-teal-300 uppercase tracking-wider block">
-                      মোট প্রেসক্রাইবড রোগী
+                      Total Patients Prescribed
                     </span>
                     <span className="text-2xl font-black text-teal-950 dark:text-teal-100 font-mono mt-1 block">
                       {totalPatients}
                     </span>
-                    <span className="text-[10px] text-teal-700/80 dark:text-teal-400">হিস্ট্রিতে সংরক্ষিত</span>
+                    <span className="text-[10px] text-teal-700/80 dark:text-teal-400">Saved in History</span>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-teal-600/10 text-teal-700 dark:text-teal-300 flex items-center justify-center">
                     <User className="w-5 h-5" />
@@ -282,7 +282,7 @@ export const DashboardModal = ({
                 <div className="p-4 rounded-xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200/80 dark:border-sky-800/60 flex items-center justify-between">
                   <div>
                     <span className="text-[11px] font-bold text-sky-800 dark:text-sky-300 uppercase tracking-wider block">
-                      আজকের রোগী (Today)
+                      Today's Patients
                     </span>
                     <span className="text-2xl font-black text-sky-950 dark:text-sky-100 font-mono mt-1 block">
                       {todayPatients}
@@ -297,12 +297,12 @@ export const DashboardModal = ({
                 <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 flex items-center justify-between">
                   <div>
                     <span className="text-[11px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider block">
-                      পেন্ডিং ফলো-আপ
+                      Pending Follow-ups
                     </span>
                     <span className="text-2xl font-black text-amber-950 dark:text-amber-100 font-mono mt-1 block">
                       {pendingFollowUps}
                     </span>
-                    <span className="text-[10px] text-amber-700/80 dark:text-amber-400">পরবর্তী সাক্ষাত বাকি</span>
+                    <span className="text-[10px] text-amber-700/80 dark:text-amber-400">Awaiting next visit</span>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-amber-600/10 text-amber-700 dark:text-amber-300 flex items-center justify-center">
                     <CalendarCheck className="w-5 h-5" />
@@ -312,12 +312,12 @@ export const DashboardModal = ({
                 <div className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 flex items-center justify-between">
                   <div>
                     <span className="text-[11px] font-bold text-indigo-800 dark:text-indigo-300 uppercase tracking-wider block">
-                      আজকের ফলো-আপ
+                      Today's Follow-ups
                     </span>
                     <span className="text-2xl font-black text-indigo-950 dark:text-indigo-100 font-mono mt-1 block">
                       {todayFollowUps}
                     </span>
-                    <span className="text-[10px] text-indigo-700/80 dark:text-indigo-400">আজ আসার কথা</span>
+                    <span className="text-[10px] text-indigo-700/80 dark:text-indigo-400">Scheduled for today</span>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-indigo-600/10 text-indigo-700 dark:text-indigo-300 flex items-center justify-center">
                     <Clock className="w-5 h-5" />
@@ -342,7 +342,7 @@ export const DashboardModal = ({
                         // User can search right here
                       }
                     }}
-                    placeholder="রোগীর নাম, ফোন নম্বর (Phone), প্রেসক্রিপশন আইডি দিয়ে খুঁজুন..."
+                    placeholder="Search by patient name, phone, Rx ID, or diagnosis..."
                     className="w-full pl-9 pr-24 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-medium focus:ring-2 focus:ring-teal-500"
                   />
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
@@ -355,7 +355,7 @@ export const DashboardModal = ({
                     </button>
                   ) : (
                     <span className="absolute right-3 top-2 text-[10px] text-teal-600 dark:text-teal-400 font-bold bg-teal-50 dark:bg-teal-950 px-2 py-0.5 rounded border border-teal-200">
-                      দ্রুত সার্চ
+                      Quick Search
                     </span>
                   )}
                 </div>
@@ -366,20 +366,20 @@ export const DashboardModal = ({
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
                     <Clock className="w-4 h-4 text-teal-600" />
-                    <span>সর্বশেষ প্রেসক্রাইব করা রোগীসমূহ</span>
+                    <span>Recent Prescribed Patients</span>
                   </h3>
                   <button
                     onClick={() => setActiveTab('history')}
                     className="text-xs font-bold text-teal-700 dark:text-teal-400 hover:underline flex items-center gap-1 cursor-pointer"
                   >
-                    <span>সবগুলো দেখুন</span>
+                    <span>View All</span>
                     <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
                 {records.length === 0 ? (
                   <div className="py-8 text-center text-slate-400 text-xs">
-                    এখনও কোনো প্রেসক্রিপশন সংরক্ষিত হয়নি। নতুন প্রেসক্রিপশন প্রিন্ট বা সেভ করলে এখানে তালিকা তৈরি হবে।
+                    No prescriptions saved yet. Prescriptions printed or saved will appear here.
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -394,7 +394,7 @@ export const DashboardModal = ({
                           </span>
                           <div>
                             <span className="font-bold text-xs text-slate-900 dark:text-slate-100 block">
-                              {rec.patient?.name || 'নাম উল্লেখ নেই'}
+                              {rec.patient?.name || 'Unnamed Patient'}
                             </span>
                             <span className="text-[11px] text-slate-500 dark:text-slate-400">
                               {rec.patient?.age ? `${rec.patient.age} ${rec.patient.ageUnit || 'Y'}` : ''} • {rec.patient?.gender || 'Male'}
@@ -420,15 +420,15 @@ export const DashboardModal = ({
                                 ? 'bg-teal-600 text-white shadow-xs'
                                 : 'bg-slate-100 hover:bg-teal-50 hover:text-teal-800 dark:bg-slate-700 dark:hover:bg-slate-600'
                             }`}
-                            title="প্রেসক্রিপশনটি ওপেন করে এডিট করুন"
+                            title="Open and edit this prescription"
                           >
                             <Edit3 className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-                            <span>{activeEditingRecordId === rec.id ? 'এডিটিং রানিং' : 'এডিট (Edit)'}</span>
+                            <span>{activeEditingRecordId === rec.id ? 'Editing Now' : 'Edit'}</span>
                           </button>
                           <button
                             onClick={() => onReprintPrescription(rec)}
                             className="p-1 bg-teal-600 hover:bg-teal-700 text-white rounded text-xs transition-all cursor-pointer"
-                            title="সরাসরি ১-ক্লিকে রি-প্রিন্ট"
+                            title="Instant 1-Click Reprint"
                           >
                             <Printer className="w-3.5 h-3.5" />
                           </button>
@@ -455,7 +455,7 @@ export const DashboardModal = ({
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="রোগীর নাম, ফোন নম্বর (Phone), প্রেসক্রিপশন আইডি বা রোগ দিয়ে খুঁজুন..."
+                    placeholder="Search by patient name, phone, Rx ID, or diagnosis..."
                     className="w-full pl-9 pr-8 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-medium focus:ring-2 focus:ring-teal-500"
                   />
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
@@ -473,7 +473,7 @@ export const DashboardModal = ({
                 <div className="flex items-center gap-2 flex-wrap">
                   <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 px-2.5 py-1.5 rounded-lg text-xs">
                     <Calendar className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-                    <span className="font-semibold text-slate-600 dark:text-slate-300 text-[11px]">তারিখ:</span>
+                    <span className="font-semibold text-slate-600 dark:text-slate-300 text-[11px]">Date:</span>
                     <input
                       type="date"
                       value={selectedDate}
@@ -498,7 +498,7 @@ export const DashboardModal = ({
                         : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-teal-50 dark:hover:bg-slate-800'
                     }`}
                   >
-                    আজকের ({todayPatients})
+                    Today ({todayPatients})
                   </button>
 
                   <button
@@ -510,7 +510,7 @@ export const DashboardModal = ({
                         : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
                     }`}
                   >
-                    সকল রিপোর্ট ({totalPatients})
+                    All Records ({totalPatients})
                   </button>
                 </div>
 
@@ -520,14 +520,14 @@ export const DashboardModal = ({
               {filteredRecords.length === 0 ? (
                 <div className="py-12 text-center text-slate-400 text-xs border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
                   {filterByDate 
-                    ? `${selectedDate} তারিখে কোনো প্রেসক্রিপশন সংরক্ষিত নেই। "সকল রিপোর্ট" বাটনে ক্লিক করে সব দেখতে পারেন।`
-                    : 'কোনো প্রেসক্রিপশন হিস্ট্রি নেই।'}
+                    ? `No prescriptions found for ${selectedDate}. Click "All Records" to view full history.`
+                    : 'No prescription history found.'}
                 </div>
               ) : (
                 <div className="space-y-2.5">
                   <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
                     <span>
-                      {filterByDate ? `${selectedDate} তারিখের তালিকা` : 'সর্বমোট সংরক্ষিত তালিকা'} : <strong>{filteredRecords.length} জন রোগী পাওয়া গেছে</strong>
+                      {filterByDate ? `List for ${selectedDate}` : 'Total Saved Records'} : <strong>{filteredRecords.length} patients found</strong>
                     </span>
                   </div>
 
@@ -542,7 +542,7 @@ export const DashboardModal = ({
                             {rec.patient?.rxId || rec.rxId}
                           </span>
                           <span className="font-bold text-sm text-slate-900 dark:text-white">
-                            {rec.patient?.name || 'অজ্ঞাত রোগী'}
+                            {rec.patient?.name || 'Unnamed Patient'}
                           </span>
                           <span className="text-xs text-slate-500 dark:text-slate-400">
                             ({rec.patient?.age ? `${rec.patient.age} ${rec.patient.ageUnit || 'Y'}` : '—'}, {rec.patient?.gender})
@@ -562,17 +562,17 @@ export const DashboardModal = ({
                             </span>
                           )}
                           <span>•</span>
-                          <span>তারিখ: <strong>{rec.date || rec.patient?.date}</strong></span>
+                          <span>Date: <strong>{rec.date || rec.patient?.date}</strong></span>
                           {rec.medicines?.length > 0 && (
                             <>
                               <span>•</span>
-                              <span>ঔষধ: <strong className="text-slate-800 dark:text-slate-200">{rec.medicines.length} টি</strong></span>
+                              <span>Medicines: <strong className="text-slate-800 dark:text-slate-200">{rec.medicines.length} items</strong></span>
                             </>
                           )}
                           {rec.nextVisit && (
                             <>
                               <span>•</span>
-                              <span className="text-amber-700 dark:text-amber-400 font-medium">ফলো-আপ: {rec.nextVisit}</span>
+                              <span className="text-amber-700 dark:text-amber-400 font-medium">Follow-up: {rec.nextVisit}</span>
                             </>
                           )}
                         </div>
@@ -590,29 +590,29 @@ export const DashboardModal = ({
                               ? 'bg-teal-600 text-white shadow-xs'
                               : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100'
                           }`}
-                          title="এই প্রেসক্রিপশনটি ওপেন ও পুনরায় এডিট (Re-edit) করুন"
+                          title="Open and edit this prescription"
                         >
                           <Edit3 className={`w-3.5 h-3.5 ${activeEditingRecordId === rec.id ? 'text-white' : 'text-teal-600 dark:text-teal-400'}`} />
-                          <span>{activeEditingRecordId === rec.id ? 'এডিটিং রানিং' : 'এডিট (Edit)'}</span>
+                          <span>{activeEditingRecordId === rec.id ? 'Editing Now' : 'Edit'}</span>
                         </button>
 
                         <button
                           onClick={() => onReprintPrescription(rec)}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer"
-                          title="১-ক্লিকে রি-প্রিন্ট দিন"
+                          title="Reprint prescription"
                         >
                           <Printer className="w-3.5 h-3.5" />
-                          <span>রি-প্রিন্ট</span>
+                          <span>Reprint</span>
                         </button>
 
                         <button
                           onClick={() => {
-                            if (window.confirm(`আপনি কি "${rec.patient?.name || rec.patient?.rxId || 'এই রোগীর'}" প্রেসক্রিপশন ডাটাবেস ও হিস্ট্রি থেকে সম্পূর্ণ মুছে ফেলতে চান?`)) {
+                            if (window.confirm(`Are you sure you want to delete the prescription for "${rec.patient?.name || rec.patient?.rxId || 'this patient'}"?`)) {
                               onDeleteRecord(rec.id);
                             }
                           }}
                           className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
-                          title="ডাটাবেস ও হিস্ট্রি থেকে ডিলিট করুন"
+                          title="Delete from database and history"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -641,7 +641,7 @@ export const DashboardModal = ({
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                     }`}
                   >
-                    সকল ফলো-আপ ({followUpRecords.length})
+                    All Follow-ups ({followUpRecords.length})
                   </button>
                   <button
                     onClick={() => setStatusFilter('pending')}
@@ -651,7 +651,7 @@ export const DashboardModal = ({
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                     }`}
                   >
-                    পেন্ডিং ({pendingFollowUps})
+                    Pending ({pendingFollowUps})
                   </button>
                   <button
                     onClick={() => setStatusFilter('today')}
@@ -661,7 +661,7 @@ export const DashboardModal = ({
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                     }`}
                   >
-                    আজকের ভিজিট ({todayFollowUps})
+                    Today's Visit ({todayFollowUps})
                   </button>
                   <button
                     onClick={() => setStatusFilter('completed')}
@@ -671,19 +671,19 @@ export const DashboardModal = ({
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                     }`}
                   >
-                    সম্পন্ন ({followUpRecords.length - pendingFollowUps})
+                    Completed ({followUpRecords.length - pendingFollowUps})
                   </button>
                 </div>
 
                 <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                  ফলো-আপ সম্পন্ন হলে চেকবক্সে টিক দিন
+                  Check box when follow-up is completed
                 </div>
               </div>
 
               {/* Follow-up Checklist Items */}
               {filteredFollowUps.length === 0 ? (
                 <div className="py-12 text-center text-slate-400 text-xs border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
-                  কোনো ফলো-আপ রেকর্ড খুঁজে পাওয়া যায়নি।
+                  No follow-up records found.
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -708,7 +708,7 @@ export const DashboardModal = ({
                               ? 'bg-emerald-600 border-emerald-700 text-white'
                               : 'border-slate-300 dark:border-slate-600 hover:border-teal-500 bg-white dark:bg-slate-700'
                           }`}
-                          title={item.isCompleted ? 'আনচেক করুন' : 'ফলো-আপ সম্পন্ন চিহ্নিত করুন'}
+                          title={item.isCompleted ? 'Unmark completed' : 'Mark as completed'}
                         >
                           {item.isCompleted && <Check className="w-4 h-4 stroke-[3]" />}
                         </button>
@@ -716,20 +716,20 @@ export const DashboardModal = ({
                         <div>
                           <div className="flex items-center gap-2">
                             <span className={`font-bold text-xs ${item.isCompleted ? 'line-through text-slate-400' : 'text-slate-900 dark:text-white'}`}>
-                              {item.patient?.name || 'রোগীর নাম নেই'}
+                              {item.patient?.name || 'Unnamed Patient'}
                             </span>
                             <span className="font-mono text-[10px] text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-950 px-1.5 py-0.5 rounded">
                               {item.patient?.rxId || item.rxId}
                             </span>
                             {item.isToday && !item.isCompleted && (
                               <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500 text-white animate-pulse">
-                                আজ প্রত্যাশিত
+                                Due Today
                               </span>
                             )}
                           </div>
                           <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                            লক্ষণ/রোগ: <strong className="text-slate-700 dark:text-slate-300">{item.diagnosis || 'N/A'}</strong> • 
-                            ফলো-আপ সময়: <strong className="text-teal-700 dark:text-teal-400">{item.nextVisit || 'উল্লেখ নেই'}</strong>
+                            Diagnosis: <strong className="text-slate-700 dark:text-slate-300">{item.diagnosis || 'N/A'}</strong> • 
+                            Follow-up Due: <strong className="text-teal-700 dark:text-teal-400">{item.nextVisit || 'Not specified'}</strong>
                           </p>
                         </div>
                       </div>
@@ -741,26 +741,26 @@ export const DashboardModal = ({
                             onClose();
                           }}
                           className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 hover:bg-teal-50 dark:bg-slate-700 text-xs font-bold rounded transition-colors cursor-pointer"
-                          title="প্রেসক্রিপশন ওপেন ও এডিট করুন"
+                          title="Open and edit prescription"
                         >
                           <Edit3 className="w-3 h-3 text-teal-600 dark:text-teal-400" />
-                          <span>এডিট করুন</span>
+                          <span>Edit</span>
                         </button>
                         <button
                           onClick={() => onReprintPrescription(item)}
                           className="p-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded transition-colors cursor-pointer"
-                          title="রি-প্রিন্ট"
+                          title="Reprint"
                         >
                           <Printer className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => {
-                            if (window.confirm(`আপনি কি "${item.patient?.name || item.patient?.rxId || 'এই রোগীর'}" প্রেসক্রিপশন মুছে ফেলতে চান?`)) {
+                            if (window.confirm(`Are you sure you want to delete the prescription for "${item.patient?.name || item.patient?.rxId || 'this patient'}"?`)) {
                               onDeleteRecord(item.id);
                             }
                           }}
                           className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition-colors cursor-pointer"
-                          title="ডিলিট করুন"
+                          title="Delete"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -778,12 +778,12 @@ export const DashboardModal = ({
 
         {/* Modal Footer */}
         <div className="px-5 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-          <span>Amar Prescription Suite • সম্পূর্ণ ডাটা সুরক্ষিত সংরক্ষিত থাকে</span>
+          <span>Amar Prescription Suite • All data securely saved</span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg font-bold transition-all cursor-pointer"
           >
-            বন্ধ করুন
+            Close
           </button>
         </div>
 

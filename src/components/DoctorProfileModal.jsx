@@ -23,12 +23,12 @@ export const DoctorProfileModal = ({ isOpen, onClose, doctor, onSave, currentUse
 
     const userPhone = currentUser?.phone || formData.phone;
     if (!userPhone) {
-      setPassStatus({ type: 'error', text: 'ব্যবহারকারীর ফোন নম্বর পাওয়া যায়নি।' });
+      setPassStatus({ type: 'error', text: 'User phone number not found.' });
       return;
     }
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setPassStatus({ type: 'error', text: 'নতুন পাসওয়ার্ড ও কনফার্ম পাসওয়ার্ড মিলছে না।' });
+      setPassStatus({ type: 'error', text: 'New password and confirm password do not match.' });
       return;
     }
 
@@ -36,14 +36,14 @@ export const DoctorProfileModal = ({ isOpen, onClose, doctor, onSave, currentUse
     try {
       const res = await updateUserPassword(userPhone, passwordData.currentPassword, passwordData.newPassword);
       if (res.success) {
-        setPassStatus({ type: 'success', text: 'পাসওয়ার্ড সফলভাবে পরিবর্তন করা হয়েছে!' });
+        setPassStatus({ type: 'success', text: 'Password changed successfully!' });
         setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
         setTimeout(() => setShowPasswordSection(false), 2000);
       } else {
-        setPassStatus({ type: 'error', text: res.error || 'পাসওয়ার্ড পরিবর্তন ব্যর্থ হয়েছে।' });
+        setPassStatus({ type: 'error', text: res.error || 'Password update failed.' });
       }
     } catch (err) {
-      setPassStatus({ type: 'error', text: 'সার্ভারে সমস্যা হয়েছে।' });
+      setPassStatus({ type: 'error', text: 'Server communication error.' });
     } finally {
       setPassLoading(false);
     }
@@ -75,7 +75,7 @@ export const DoctorProfileModal = ({ isOpen, onClose, doctor, onSave, currentUse
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-800">Doctor & Chamber Settings</h2>
-              <p className="text-xs text-slate-500">ডাঃ ও চেম্বারের তথ্য সেট করুন (প্রেসক্রিপশন হেডারে প্রদর্শিত হবে)</p>
+              <p className="text-xs text-slate-500">Configure doctor credentials and chamber info (displayed on prescription header)</p>
             </div>
           </div>
           <button 
@@ -205,7 +205,7 @@ export const DoctorProfileModal = ({ isOpen, onClose, doctor, onSave, currentUse
                   name="visitingHours"
                   value={formData.visitingHours}
                   onChange={handleChange}
-                  placeholder="e.g. বিকাল ৫:০০ - রাত ৯:০০ (শুক্রবার বন্ধ)"
+                  placeholder="e.g. 5:00 PM - 9:00 PM (Friday Closed)"
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
                 />
               </div>
@@ -260,7 +260,7 @@ export const DoctorProfileModal = ({ isOpen, onClose, doctor, onSave, currentUse
                 name="emergencyNote"
                 value={formData.emergencyNote}
                 onChange={handleChange}
-                placeholder="e.g. জরুরী প্রয়োজনে হাসপাতালের ইমার্জেন্সিতে যোগাযোগ করুন।"
+                placeholder="e.g. For emergencies, please contact the hospital emergency ward immediately."
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
               />
             </div>
@@ -278,10 +278,10 @@ export const DoctorProfileModal = ({ isOpen, onClose, doctor, onSave, currentUse
             >
               <span className="flex items-center gap-2">
                 <Key className="w-4 h-4 text-teal-600" />
-                <span>পাসওয়ার্ড পরিবর্তন করুন (Change Password)</span>
+                <span>Change Password</span>
               </span>
               <span className="text-[11px] text-teal-700">
-                {showPasswordSection ? 'বন্ধ করুন ▲' : 'পরিবর্তন করুন ▼'}
+                {showPasswordSection ? 'Close ▲' : 'Change ▼'}
               </span>
             </button>
 
@@ -297,7 +297,7 @@ export const DoctorProfileModal = ({ isOpen, onClose, doctor, onSave, currentUse
                 )}
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">বর্তমান পাসওয়ার্ড (Current Password)</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Current Password</label>
                   <input
                     type="password"
                     value={passwordData.currentPassword}
@@ -309,22 +309,22 @@ export const DoctorProfileModal = ({ isOpen, onClose, doctor, onSave, currentUse
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">নতুন পাসওয়ার্ড (New Password)</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">New Password</label>
                     <input
                       type="password"
                       value={passwordData.newPassword}
                       onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                      placeholder="মিনিমাম ৬ অক্ষর"
+                      placeholder="Min 6 characters"
                       className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">কনফার্ম নতুন পাসওয়ার্ড</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Confirm New Password</label>
                     <input
                       type="password"
                       value={passwordData.confirmPassword}
                       onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                      placeholder="মিনিমাম ৬ অক্ষর"
+                      placeholder="Min 6 characters"
                       className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-500"
                     />
                   </div>
@@ -338,7 +338,7 @@ export const DoctorProfileModal = ({ isOpen, onClose, doctor, onSave, currentUse
                     className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                   >
                     <Lock className="w-3.5 h-3.5" />
-                    <span>{passLoading ? 'পরিবর্তন হচ্ছে...' : 'পাসওয়ার্ড আপডেট করুন'}</span>
+                    <span>{passLoading ? 'Updating...' : 'Update Password'}</span>
                   </button>
                 </div>
               </div>

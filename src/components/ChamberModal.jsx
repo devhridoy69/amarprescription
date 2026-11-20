@@ -1,32 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Building2, MapPin, Clock, Phone, AlertCircle, Save, Sparkles, Plus, Check } from 'lucide-react';
-
-const CHAMBER_PRESETS = [
-  {
-    name: 'পপুলার ডায়াগনস্টিক সেন্টার',
-    address: 'বাড়ি #১৬, রোড #২, ধানমন্ডি, ঢাকা',
-    hours: 'প্রতিদিন বিকাল ৫:০০ টা - রাত ৯:০০ টা (শুক্রবার বন্ধ)',
-    phone: '০৯৬১৩-৭৮৭৮৭৮'
-  },
-  {
-    name: 'ইবনে সিনা ডায়াগনস্টিক ও কনসালটেশন সেন্টার',
-    address: 'বাড়ি #৪৮, রোড #৯/এ, ধানমন্ডি, ঢাকা',
-    hours: 'শনিবার - বৃহস্পতিবার: সন্ধ্যা ৬:০০ টা - রাত ৯:৩০ টা',
-    phone: '০৯৬১০-০১০৬১৬'
-  },
-  {
-    name: 'ল্যাবএইড স্পেশালাইজড হসপিটাল',
-    address: 'বাড়ি #১, রোড #৪, ধানমন্ডি, ঢাকা-১২০৫',
-    hours: 'প্রতিদিন সকাল ১০:০০ টা - দুপুর ১:০০ টা',
-    phone: '১০৬০৬, ০১৭১১-০০২২১১'
-  },
-  {
-    name: 'নিজস্ব ব্যক্তিগত চেম্বার',
-    address: 'মেডিকেল রোড, ঢাকা',
-    hours: 'প্রতিদিন বিকাল ৪:০০ টা - রাত ৮:০০ টা',
-    phone: '০১৭১১-২২৩৩৪৪'
-  }
-];
+import { X, Building2, MapPin, Clock, Phone, AlertCircle, Save } from 'lucide-react';
 
 export const ChamberModal = ({
   isOpen,
@@ -64,7 +37,7 @@ export const ChamberModal = ({
         setFormData({
           chamberName: '',
           chamberAddress: '',
-          visitingHours: baseDoctor.visitingHours || 'প্রতিদিন বিকাল ৫:০০ টা - রাত ৯:০০ টা',
+          visitingHours: baseDoctor.visitingHours || 'Daily 5:00 PM - 9:00 PM (Friday Closed)',
           appointmentPhone: baseDoctor.appointmentPhone || baseDoctor.phone || '',
           emergencyNote: baseDoctor.emergencyNote || '',
           setAsActive: true
@@ -76,23 +49,13 @@ export const ChamberModal = ({
 
   if (!isOpen) return null;
 
-  const handleApplyPreset = (preset) => {
-    setFormData(prev => ({
-      ...prev,
-      chamberName: preset.name,
-      chamberAddress: preset.address,
-      visitingHours: preset.hours,
-      appointmentPhone: preset.phone
-    }));
-  };
-
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
 
     const name = formData.chamberName.trim();
     if (!name) {
-      setError('অনুগ্রহ করে চেম্বার বা হাসপাতালের নাম লিখুন।');
+      setError('Please enter chamber or hospital name.');
       return;
     }
 
@@ -123,10 +86,10 @@ export const ChamberModal = ({
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-800">
-                {isEditing ? 'চেম্বার প্রোফাইল সম্পাদনা (Edit Chamber)' : 'নতুন চেম্বার যুক্ত করুন (Add New Chamber)'}
+                {isEditing ? 'Edit Chamber Profile' : 'Add New Chamber'}
               </h2>
               <p className="text-[11px] text-slate-500">
-                {isEditing ? 'এই চেম্বারের তথ্য আপডেট করুন' : 'আলাদা চেম্বার, হাসপাতাল বা ক্লিনিকের ঠিকানা যোগ করুন'}
+                {isEditing ? 'Update details for this chamber profile' : 'Add separate chamber, hospital, or consultation center'}
               </p>
             </div>
           </div>
@@ -147,39 +110,17 @@ export const ChamberModal = ({
             </div>
           )}
 
-          {/* Quick Presets (Only when adding or if name is empty) */}
-          {!isEditing && (
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5">
-              <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>দ্রুত ব্যবহারের জন্য চেম্বার প্রি-সেট সিলেক্ট করুন:</span>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {CHAMBER_PRESETS.map((p, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleApplyPreset(p)}
-                    className="px-2.5 py-1 bg-white hover:bg-teal-50 hover:text-teal-800 border border-slate-200 hover:border-teal-300 rounded-lg text-[10px] font-semibold text-slate-700 transition-all cursor-pointer shadow-2xs"
-                  >
-                    + {p.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Chamber Name */}
           <div>
             <label className="block font-bold text-slate-700 mb-1 flex items-center gap-1.5">
               <Building2 className="w-3.5 h-3.5 text-teal-600" />
-              <span>চেম্বার / হাসপাতালের নাম *</span>
+              <span>Chamber / Hospital Name *</span>
             </label>
             <input
               type="text"
               value={formData.chamberName}
               onChange={(e) => setFormData({ ...formData, chamberName: e.target.value })}
-              placeholder="যেমন: পপুলার ডায়াগনস্টিক সেন্টার, ধানমন্ডি"
+              placeholder="e.g. Popular Diagnostic Centre, Dhanmondi"
               className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-slate-800 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-hidden transition-all text-xs"
               required
             />
@@ -189,13 +130,13 @@ export const ChamberModal = ({
           <div>
             <label className="block font-bold text-slate-700 mb-1 flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5 text-teal-600" />
-              <span>চেম্বারের সম্পূর্ণ ঠিকানা (Address) *</span>
+              <span>Chamber Full Address *</span>
             </label>
             <textarea
               rows={2}
               value={formData.chamberAddress}
               onChange={(e) => setFormData({ ...formData, chamberAddress: e.target.value })}
-              placeholder="যেমন: বাড়ি #১৬, রোড #২, ধানমন্ডি আ/এ, ঢাকা-১২০৫"
+              placeholder="e.g. House #16, Road #2, Dhanmondi R/A, Dhaka-1205"
               className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-800 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-hidden transition-all text-xs"
             />
           </div>
@@ -205,13 +146,13 @@ export const ChamberModal = ({
             <div>
               <label className="block font-bold text-slate-700 mb-1 flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 text-teal-600" />
-                <span>রোগী দেখার সময় (Visiting Hours)</span>
+                <span>Visiting Hours / Schedule</span>
               </label>
               <input
                 type="text"
                 value={formData.visitingHours}
                 onChange={(e) => setFormData({ ...formData, visitingHours: e.target.value })}
-                placeholder="যেমন: বিকাল ৫:০০ - রাত ৯:০০ (শুক্রবার বন্ধ)"
+                placeholder="e.g. Daily 5:00 PM - 9:00 PM (Friday Closed)"
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-800 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-hidden transition-all text-xs"
               />
             </div>
@@ -219,13 +160,13 @@ export const ChamberModal = ({
             <div>
               <label className="block font-bold text-slate-700 mb-1 flex items-center gap-1.5">
                 <Phone className="w-3.5 h-3.5 text-teal-600" />
-                <span>সিরিয়াল / বুকিং নম্বর</span>
+                <span>Serial / Appointment Phone</span>
               </label>
               <input
                 type="text"
                 value={formData.appointmentPhone}
                 onChange={(e) => setFormData({ ...formData, appointmentPhone: e.target.value })}
-                placeholder="যেমন: ০১৭৮০-৯৬০৩৭০, ০১৯১২-৩৪৫৬৭৮"
+                placeholder="e.g. +880 1780-960370, 01912-345678"
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-800 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-hidden transition-all text-xs"
               />
             </div>
@@ -234,13 +175,13 @@ export const ChamberModal = ({
           {/* Emergency Note */}
           <div>
             <label className="block font-bold text-slate-700 mb-1">
-              জরুরি বার্তা / নোট (ঐচ্ছিক)
+              Emergency Note / Instructions (Optional)
             </label>
             <input
               type="text"
               value={formData.emergencyNote}
               onChange={(e) => setFormData({ ...formData, emergencyNote: e.target.value })}
-              placeholder="যেমন: সিরিয়ালের জন্য সকাল ৯টার মধ্যে কল দিন"
+              placeholder="e.g. Call before 9:00 AM for serial booking"
               className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-800 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-hidden transition-all text-xs"
             />
           </div>
@@ -254,7 +195,7 @@ export const ChamberModal = ({
                 onChange={(e) => setFormData({ ...formData, setAsActive: e.target.checked })}
                 className="rounded border-slate-300 text-teal-600 focus:ring-teal-500 w-4 h-4 cursor-pointer"
               />
-              <span className="font-bold text-slate-700">সংরক্ষণের পর এই চেম্বারটি এখনই সক্রিয় (Active) করুন</span>
+              <span className="font-bold text-slate-700">Set as active chamber immediately upon save</span>
             </label>
           </div>
 
@@ -265,14 +206,14 @@ export const ChamberModal = ({
               onClick={onClose}
               className="px-4 py-2 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 font-bold transition-colors cursor-pointer"
             >
-              বাতিল
+              Cancel
             </button>
             <button
               type="submit"
               className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold flex items-center gap-1.5 shadow-md shadow-teal-600/20 transition-all cursor-pointer"
             >
               <Save className="w-4 h-4" />
-              <span>{isEditing ? 'আপডেট সংরক্ষণ করুন' : 'চেম্বার যুক্ত করুন'}</span>
+              <span>{isEditing ? 'Save Changes' : 'Save Chamber'}</span>
             </button>
           </div>
         </form>
@@ -281,3 +222,5 @@ export const ChamberModal = ({
     </div>
   );
 };
+
+export default ChamberModal;

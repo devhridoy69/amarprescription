@@ -58,7 +58,7 @@ export const Navbar = ({
         <div className="flex items-center gap-3 shrink-0">
           <img 
             src="/logo.png" 
-            alt="আমার প্রেসক্রিপশন" 
+            alt="Amar Prescription" 
             className="h-9 sm:h-10 w-auto object-contain drop-shadow-xs"
           />
           <div className="hidden xl:block">
@@ -153,12 +153,12 @@ export const Navbar = ({
                 ? 'bg-blue-50 text-blue-800 border-blue-300'
                 : 'bg-emerald-50 text-emerald-800 border-emerald-200'
             }`}
-            title={!isOnline ? 'ইন্টারনেট অফলাইন - নতুন প্রেসক্রিপশন লোকাল স্টোরেজে সেভ হবে, নেট আসলেই ক্লাউডে সিংক হয়ে যাবে' : 'ইন্টারনেট অনলাইন - ক্লাউড সিংক সক্রিয়'}
+            title={!isOnline ? 'Offline - new prescriptions will be saved locally and synced once reconnected' : 'Online - cloud sync active'}
           >
             {!isOnline ? (
               <>
                 <WifiOff className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                <span>অফলাইন মোড</span>
+                <span>Offline</span>
                 {pendingSyncCount > 0 && (
                   <span className="px-1.5 py-0.2 bg-amber-200 text-amber-900 rounded-full text-[10px] font-bold">
                     {pendingSyncCount}
@@ -168,12 +168,12 @@ export const Navbar = ({
             ) : pendingSyncCount > 0 ? (
               <>
                 <CloudUpload className="w-3.5 h-3.5 text-blue-600 shrink-0 animate-bounce" />
-                <span>সিংক হচ্ছে ({pendingSyncCount})</span>
+                <span>Syncing ({pendingSyncCount})</span>
               </>
             ) : (
               <>
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>অনলাইন</span>
+                <span>Online</span>
               </>
             )}
           </div>
@@ -214,7 +214,7 @@ export const Navbar = ({
                 value={selectedFontId}
                 onChange={(e) => onSelectFontId(e.target.value)}
                 className="bg-transparent border-none text-xs font-semibold focus:outline-hidden cursor-pointer max-w-[130px] lg:max-w-[170px] truncate pr-1 text-slate-800"
-                title="Change Typography Font (রিয়েলটাইম ফন্ট নির্বাচন)"
+                title="Change Typography Font"
               >
                 {fontPresets.map((f) => (
                   <option key={f.id} value={f.id} className="bg-white text-slate-900">
@@ -259,7 +259,7 @@ export const Navbar = ({
                           ? 'bg-teal-700 hover:bg-teal-800 text-white border-teal-600'
                           : 'bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-900 border-slate-300 hover:border-amber-400'
                     }`}
-                    title="প্ল্যানের বিস্তারিত ফিচার ও ব্যবহারের সীমা দেখতে ক্লিক করুন"
+                    title="Click to view plan details and usage limits"
                   >
                     <Crown className={`w-3.5 h-3.5 ${isEnterprise ? 'fill-slate-950 text-slate-950' : isStandard ? 'text-teal-200 fill-teal-200' : 'text-slate-400'}`} />
                     <span>
@@ -290,7 +290,7 @@ export const Navbar = ({
                   type="button"
                   onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
                   className="flex items-center gap-2 hover:opacity-85 transition-opacity text-left cursor-pointer"
-                  title="চেম্বার প্রোফাইল পরিবর্তন বা সেটিংস ওপেন করুন"
+                  title="Switch chamber profile or open settings"
                 >
                   <div className="w-7 h-7 rounded-lg bg-teal-700 text-white flex items-center justify-center text-xs font-extrabold shadow-2xs shrink-0">
                     {(() => {
@@ -312,11 +312,11 @@ export const Navbar = ({
                         if (currentUser.full_name && !/^\d+$/.test(currentUser.full_name.trim())) {
                           return currentUser.full_name;
                         }
-                        return 'ডাঃ চেম্বার';
+                        return 'Dr. Chamber';
                       })()}
                     </span>
                     <span className="block text-[10px] text-teal-700 truncate max-w-[130px]">
-                      {doctor?.chamberName || (currentUser.phone ? `মোবাইল: ${currentUser.phone}` : 'চেম্বার প্রোফাইল')}
+                      {doctor?.chamberName || (currentUser.phone ? `Mobile: ${currentUser.phone}` : 'Chamber Profile')}
                     </span>
                   </div>
                   <ChevronDown className={`w-3.5 h-3.5 text-teal-700 transition-transform ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
@@ -326,7 +326,7 @@ export const Navbar = ({
                   type="button"
                   onClick={onLogout}
                   className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors cursor-pointer ml-0.5"
-                  title="লগআউট"
+                  title="Logout"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                 </button>
@@ -341,11 +341,11 @@ export const Navbar = ({
                         Chamber Profiles
                       </span>
                       <span className="text-[10px] bg-teal-50 text-teal-700 px-1.5 py-0.5 rounded font-bold">
-                        {chamberProfiles.length} টি চেম্বার
+                        {chamberProfiles.length} {chamberProfiles.length > 1 ? 'Chambers' : 'Chamber'}
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-600 font-semibold truncate mt-0.5">
-                      {doctor?.name || currentUser.full_name || 'আমার চেম্বার'}
+                      {doctor?.name || currentUser.full_name || 'My Chamber'}
                     </p>
                   </div>
 
@@ -358,7 +358,7 @@ export const Navbar = ({
                           <div className="flex items-center justify-between gap-1.5">
                             <div className="flex items-center gap-1.5 text-amber-950">
                               <Crown className="w-3.5 h-3.5 text-amber-600 fill-amber-500 shrink-0" />
-                              <span className="text-[11px] font-black">মাল্টিপল চেম্বার সুইচিং</span>
+                              <span className="text-[11px] font-black">Multiple Chamber Switch</span>
                             </div>
                             <button
                               type="button"
@@ -368,11 +368,11 @@ export const Navbar = ({
                               }}
                               className="px-2 py-0.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-lg text-[10px] transition-colors cursor-pointer shrink-0 shadow-2xs"
                             >
-                              VIP আনলক
+                              VIP Unlock
                             </button>
                           </div>
                           <p className="text-[10px] text-amber-800 font-medium mt-1 leading-tight">
-                            পপুলার, ইবনে সিনা বা একাধিক চেম্বার সুইচিং সুবিধা Enterprise VIP প্ল্যানে অন্তর্ভুক্ত।
+                            Switching between multiple clinics/chambers is included in the Enterprise VIP plan.
                           </p>
                         </div>
                       );
@@ -444,7 +444,7 @@ export const Navbar = ({
                                 setIsProfileMenuOpen(false);
                               }}
                               className="p-1 text-slate-400 hover:text-teal-600 rounded transition-colors cursor-pointer"
-                              title="এই চেম্বারের তথ্য এডিট করুন"
+                              title="Edit chamber profile"
                             >
                               <Edit3 className="w-3.5 h-3.5" />
                             </button>
@@ -457,7 +457,7 @@ export const Navbar = ({
                                   onDeleteChamberProfile(prof.id);
                                 }}
                                 className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors cursor-pointer"
-                                title="চেম্বার মুছুন"
+                                title="Delete chamber"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
@@ -487,7 +487,7 @@ export const Navbar = ({
                     >
                       <span className="flex items-center gap-2">
                         <Plus className="w-3.5 h-3.5 text-teal-600" />
-                        <span>+ নতুন চেম্বার যোগ করুন (Add Chamber)</span>
+                        <span>+ Add New Chamber</span>
                       </span>
                       {!getPlanPermissions(currentUser.plan).canSwitchChambers && (
                         <span className="text-[9px] bg-amber-200 text-amber-950 font-black px-1.5 py-0.5 rounded">
@@ -507,7 +507,7 @@ export const Navbar = ({
                     >
                       <span className="flex items-center gap-2">
                         <Settings className="w-3.5 h-3.5 text-slate-500" />
-                        <span>ডাক্তার প্রোফাইল ও চেম্বার সেটিংস</span>
+                        <span>Doctor Profile & Chamber Settings</span>
                       </span>
                     </button>
 
@@ -519,11 +519,11 @@ export const Navbar = ({
                         setIsProfileMenuOpen(false);
                       }}
                       className="w-full flex items-center justify-between px-3 py-1.5 text-[11px] font-semibold text-amber-800 hover:bg-amber-50 rounded-xl transition-colors cursor-pointer"
-                      title="ডিফল্ট প্রধান চেম্বারটি তালিকায় ফিরিয়ে আনুন বা যুক্ত করুন"
+                      title="Restore default main chamber to list"
                     >
                       <span className="flex items-center gap-2">
                         <RotateCcw className="w-3 h-3 text-amber-600" />
-                        <span>ডিফল্ট প্রধান চেম্বার রিস্টোর / অ্যাড</span>
+                        <span>Restore Default Main Chamber</span>
                       </span>
                     </button>
                   </div>
@@ -536,10 +536,10 @@ export const Navbar = ({
               type="button"
               onClick={onOpenAuth}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold shadow-xs hover:shadow-md transition-all cursor-pointer"
-              title="ডাক্তার লগইন বা রেজিস্ট্রেশন"
+              title="Doctor login or registration"
             >
               <LogIn className="w-3.5 h-3.5" />
-              <span>লগইন / রেজিস্টার</span>
+              <span>Login / Register</span>
             </button>
           )}
 
@@ -562,7 +562,7 @@ export const Navbar = ({
               type="button"
               onClick={onNewPrescription}
               className="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer border border-transparent hover:border-rose-200"
-              title="New Prescription (নতুন প্রেসক্রিপশন)"
+              title="New Prescription"
             >
               <RotateCcw className="w-4 h-4" />
             </button>
