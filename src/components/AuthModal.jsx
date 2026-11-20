@@ -98,13 +98,13 @@ export const AuthModal = ({
     focus:outline-none focus:border-teal-400/80 focus:ring-1 focus:ring-teal-400/30 transition-all duration-200 backdrop-blur-md`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#07090c] animate-in fade-in duration-300 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#07090c] animate-in fade-in duration-300 overflow-hidden transform-gpu">
 
       {/* ===== GLOBAL FULL SCREEN BACKGROUND IMAGE ===== */}
       <img
         src="/brand-logo.jpg"
         alt="Amar Prescription Background"
-        className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none"
+        className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none transform-gpu"
         style={{ filter: 'brightness(0.65) saturate(1.2) contrast(1.05)' }}
       />
 
@@ -112,13 +112,13 @@ export const AuthModal = ({
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/30 pointer-events-none" />
       <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-transparent to-black/40 pointer-events-none" />
 
-      {/* Ambient background glowing blobs */}
+      {/* Ambient background glowing blobs (GPU-friendly transform-gpu & opacity) */}
       <div
-        className="absolute top-1/3 left-1/4 w-96 h-96 bg-teal-500/20 rounded-full blur-[100px] pointer-events-none"
+        className="absolute top-1/3 left-1/4 w-96 h-96 bg-teal-500/20 rounded-full blur-[64px] pointer-events-none transform-gpu"
         style={{ animation: 'ap-pulse-glow 6s ease-in-out infinite' }}
       />
       <div
-        className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-teal-400/15 rounded-full blur-[120px] pointer-events-none"
+        className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-teal-400/15 rounded-full blur-[64px] pointer-events-none transform-gpu"
         style={{ animation: 'ap-pulse-glow 8s 2s ease-in-out infinite' }}
       />
 
@@ -311,7 +311,7 @@ export const AuthModal = ({
         </div>
 
         {/* ========== RIGHT PANEL — Glassmorphism Transparent Form ========== */}
-        <div className="flex-1 bg-black/20 md:bg-black/25 backdrop-blur-xl border-l border-white/10 flex flex-col items-center justify-center overflow-y-auto px-6 sm:px-10 py-10 shadow-2xl">
+        <div className="flex-1 bg-black/20 md:bg-black/25 backdrop-blur-xl border-l border-white/10 flex flex-col items-center justify-center overflow-y-auto px-6 sm:px-10 py-10 shadow-2xl transform-gpu">
 
           {/* Mobile logo (only shows when left panel is hidden) */}
           <div className="flex md:hidden items-center gap-3 mb-8">
