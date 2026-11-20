@@ -163,9 +163,9 @@ export const MedicineSection = ({
     return matchesSearch && matchesCategory;
   }).slice(0, 8);
 
-  // Debounced search to Supabase (21,000+ medicines)
+  // Debounced search to local IndexedDB (0ms) and Supabase (21,000+ medicines)
   useEffect(() => {
-    if (!searchTerm || searchTerm.trim().length < 2) {
+    if (!searchTerm || searchTerm.trim().length < 1) {
       setOnlineSuggestions([]);
       setIsSearchingOnline(false);
       return;
@@ -178,22 +178,57 @@ export const MedicineSection = ({
     debounceTimerRef.current = setTimeout(async () => {
       setIsSearchingOnline(true);
       try {
-        // 1. Try local IndexedDB offline search first (0ms latency, works without net!)
-        let results = await searchMedicinesOffline(searchTerm.trim(), 20);
+        const query = searchTerm.trim();
+        // 1. Try local IndexedDB offline search first (0ms latency, works completely without net!)
+        let results = await searchMedicinesOffline(query, 25);
         
-        // 2. If no local results or online is available, fallback to Supabase query
-        if (!results || results.length === 0) {
-          if (navigator.onLine) {
-            results = await searchMedicinesOnline(searchTerm.trim(), 20);
+        // 2. If online and local results are less than 5, supplement with Supabase query
+        if (navigator.onLine && (!results || results.length < 5)) {
+          try {
+            const onlineResults = await searchMedicinesOnline(query, 25);
+            if (onlineResults && onlineResults.length > 0) {
+              const existingIds = new Set((results || []).map(r => String(r.id)));
+              const merged = [...(results || [])];
+              for (const item of onlineResults) {
+                if (!existingIds.has(String(item.id))) {
+                  existingIds.add(String(item.id));
+                  merged.push(item);
+                }
+              }
+              results = merged;
+            }
+          } catch (onlineErr) {
+            console.warn('Online medicine query skipped/failed, keeping offline results:', onlineErr);
           }
         }
+
+        // 3. Absolute offline safety net: if still no results, search COMMON_MEDICINES
+        if (!results || results.length === 0) {
+          const lowerQ = query.toLowerCase();
+          results = (COMMON_MEDICINES || []).filter(item => {
+            if (!item) return false;
+            const b = (item.brandName || '').toLowerCase();
+            const g = (item.genericName || '').toLowerCase();
+            return b.includes(lowerQ) || g.includes(lowerQ);
+          }).slice(0, 20);
+        }
+
         setOnlineSuggestions(results || []);
       } catch (e) {
-        console.error(e);
+        console.error('Medicine search error:', e);
+        // Fallback to local
+        const lowerQ = searchTerm.trim().toLowerCase();
+        const fallback = (COMMON_MEDICINES || []).filter(item => {
+          if (!item) return false;
+          const b = (item.brandName || '').toLowerCase();
+          const g = (item.genericName || '').toLowerCase();
+          return b.includes(lowerQ) || g.includes(lowerQ);
+        }).slice(0, 20);
+        setOnlineSuggestions(fallback);
       } finally {
         setIsSearchingOnline(false);
       }
-    }, 120);
+    }, 100);
 
     return () => {
       if (debounceTimerRef.current) {
@@ -202,9 +237,9 @@ export const MedicineSection = ({
     };
   }, [searchTerm]);
 
-  // Merge suggestions: prioritize matching online 21k medicines, then local
+  // Merge suggestions: prioritize online/offline matched results, then fallback to local
   const combinedSuggestions = React.useMemo(() => {
-    if (onlineSuggestions.length > 0) {
+    if (onlineSuggestions && onlineSuggestions.length > 0) {
       return onlineSuggestions;
     }
     return localSuggestions;
@@ -600,7 +635,7 @@ export const MedicineSection = ({
                 <div className="p-2 border-b border-slate-100 flex items-center justify-between bg-slate-50 text-[11px] text-slate-500 sticky top-0 z-10">
                   <span className="flex items-center gap-1">
                     <Database className="w-3 h-3 text-teal-600" />
-                    <span>ক্লিক করে সিলেক্ট করুন (Supabase 21k+ DB)</span>
+                    <span>{navigator.onLine ? 'ক্লিক করে সিলেক্ট করুন (21k+ DB)' : 'অফলাইন সার্চ (Offline Mode)'}</span>
                   </span>
                   <span className="font-semibold text-teal-700">
                     {combinedSuggestions.length} টি পাওয়া গেছে

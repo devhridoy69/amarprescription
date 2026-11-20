@@ -126,14 +126,40 @@ export async function searchMedicinesOffline(query, limit = 25) {
 
     const brandQuery = textTokens.length > 0 ? textTokens.join(' ') : clean;
 
-    const all = await db.getAll(STORE_MEDICINES);
-    if (!all || all.length === 0) return [];
+    let matches = [];
+    const lowerQuery = brandQuery.toLowerCase();
 
-    let matches = all.filter(m => {
-      const b = (m.brandName || '').toLowerCase();
-      const g = (m.genericName || '').toLowerCase();
-      return b.includes(brandQuery) || g.includes(brandQuery);
-    });
+    // Use fast index lookup or cursor if available, otherwise filter memory cache
+    try {
+      const all = await db.getAll(STORE_MEDICINES);
+      if (all && all.length > 0) {
+        matches = all.filter(m => {
+          const b = (m.brandName || '').toLowerCase();
+          const g = (m.genericName || '').toLowerCase();
+          return b.includes(lowerQuery) || g.includes(lowerQuery);
+        });
+      }
+    } catch (dbErr) {
+      console.warn('IndexedDB read warning:', dbErr);
+    }
+
+    // Always fallback to embedded COMMON_MEDICINES if matches are few or DB is empty
+    if (matches.length < limit) {
+      const existingNames = new Set(matches.map(m => (m.brandName || '').toLowerCase() + (m.strength || '')));
+      try {
+        const { COMMON_MEDICINES } = await import('../data/medicinesData');
+        const fallbackMatches = (COMMON_MEDICINES || []).filter(item => {
+          if (!item) return false;
+          const b = (item.brandName || '').toLowerCase();
+          const g = (item.genericName || '').toLowerCase();
+          const matchesTerm = b.includes(lowerQuery) || g.includes(lowerQuery);
+          return matchesTerm && !existingNames.has(b + (item.strength || ''));
+        });
+        matches = [...matches, ...fallbackMatches];
+      } catch (e) {}
+    }
+
+    if (matches.length === 0) return [];
 
     if (targetTypeFilter) {
       matches = matches.filter(item => {
