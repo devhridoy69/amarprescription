@@ -316,468 +316,519 @@ export const AdminPanelModal = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
       
-      {/* Admin Panel Main Container */}
-      <div className="bg-white text-slate-800 rounded-3xl shadow-2xl border border-slate-200 w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden">
+      {/* Ember-style Dark Sleek Container */}
+      <div className="bg-[#111214] text-slate-200 rounded-3xl shadow-2xl border border-white/5 w-full max-w-6xl max-h-[92vh] flex flex-col md:flex-row overflow-hidden font-sans">
         
-        {/* Admin Bar Header */}
-        <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-teal-500/20 border border-teal-500/40 text-teal-400 flex items-center justify-center shadow-inner">
-              <ShieldAlert className="w-6 h-6" />
+        {/* ======================= LEFT SIDEBAR (Ember Navigation) ======================= */}
+        <div className="w-full md:w-64 bg-[#0d0e10] border-b md:border-b-0 md:border-r border-white/5 p-4 flex flex-col justify-between shrink-0">
+          <div className="space-y-5">
+            {/* Brand Logo & Switcher */}
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-white to-slate-400 flex items-center justify-center shadow-xs">
+                  <div className="w-2.5 h-2.5 rounded-full bg-black"></div>
+                </div>
+                <span className="font-bold text-sm tracking-tight text-white">Amar Admin</span>
+              </div>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/5 text-slate-400 font-mono border border-white/5">
+                v2.0
+              </span>
             </div>
+
+            {/* Search Input Box */}
+            <div className="relative">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search doctors..."
+                className="w-full pl-8 pr-12 py-1.5 bg-[#17181c] border border-white/5 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-white/20 transition-all font-medium"
+              />
+              <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2" />
+              <div className="absolute right-2 top-1.5 flex items-center gap-0.5 text-[9px] font-mono text-slate-500 bg-white/5 px-1.5 py-0.5 rounded border border-white/5">
+                <span>⌘</span>
+                <span>K</span>
+              </div>
+            </div>
+
+            {/* Navigation Section */}
+            <div className="space-y-1">
+              <div className="text-[10px] font-semibold text-slate-500 tracking-wider uppercase px-2 mb-2">
+                Navigation
+              </div>
+              
+              <button
+                type="button"
+                onClick={() => setStatusFilter('all')}
+                className={"w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer " + (statusFilter === 'all' ? 'bg-[#22242a] text-white shadow-xs font-semibold' : 'text-slate-400 hover:text-white hover:bg-white/5')}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Users className="w-4 h-4 text-slate-400" />
+                  <span>All Doctors</span>
+                </div>
+                <span className="text-[11px] font-mono text-slate-500">{totalUsers}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStatusFilter('pending')}
+                className={"w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer " + (statusFilter === 'pending' ? 'bg-[#22242a] text-white shadow-xs font-semibold' : 'text-slate-400 hover:text-white hover:bg-white/5')}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Clock className="w-4 h-4 text-amber-400" />
+                  <span>Pending</span>
+                </div>
+                {pendingUsers > 0 && (
+                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-amber-400/10 text-amber-400 border border-amber-400/20">
+                    {pendingUsers}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStatusFilter('approved')}
+                className={"w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer " + (statusFilter === 'approved' ? 'bg-[#22242a] text-white shadow-xs font-semibold' : 'text-slate-400 hover:text-white hover:bg-white/5')}
+              >
+                <div className="flex items-center gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span>Approved</span>
+                </div>
+                <span className="text-[11px] font-mono text-slate-500">{approvedUsers}</span>
+              </button>
+            </div>
+
+            {/* Plans Breakdown Section (Like Ember Plans list) */}
+            <div className="pt-3 border-t border-white/5 space-y-1">
+              <div className="flex items-center justify-between px-2 mb-2">
+                <span className="text-[10px] font-semibold text-slate-500 tracking-wider uppercase">
+                  Plans
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditPlanConfig(getPlansConfig());
+                    setIsPlanSettingsModalOpen(true);
+                  }}
+                  className="text-[10px] text-teal-400 hover:underline cursor-pointer"
+                >
+                  Manage
+                </button>
+              </div>
+
+              {(() => {
+                const plans = plansConfig?.plans || [
+                  { id: 'enterprise', name: 'Enterprise VIP' },
+                  { id: 'standard', name: 'Standard Pro' },
+                  { id: 'free', name: 'Free Plan' }
+                ];
+
+                const colorDots = {
+                  enterprise: 'bg-amber-400',
+                  standard: 'bg-teal-400',
+                  free: 'bg-purple-400'
+                };
+
+                return plans.map((p) => {
+                  const count = users.filter(u => normalizePlanId(u.plan) === p.id).length;
+                  return (
+                    <div 
+                      key={p.id}
+                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={"w-2 h-2 rounded-full " + (colorDots[p.id] || 'bg-slate-500')}></span>
+                        <span className="truncate">{p.name}</span>
+                      </div>
+                      <span className="text-[11px] font-mono text-slate-500">{count}</span>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+
+          {/* Bottom Admin User Pill */}
+          <div className="pt-4 border-t border-white/5 space-y-2">
+            <div className="flex items-center justify-between px-2 text-xs">
+              <div className="min-w-0">
+                <p className="font-semibold text-white truncate text-xs">{adminUser?.full_name || 'System Admin'}</p>
+                <p className="text-[10px] text-slate-500 font-mono truncate">{adminUser?.phone || 'admin'}</p>
+              </div>
+              <button
+                type="button"
+                onClick={onAdminLogout}
+                className="p-1.5 text-slate-500 hover:text-rose-400 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
+                title="Logout"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ======================= RIGHT MAIN CONTENT ======================= */}
+        <div className="flex-1 flex flex-col bg-[#111214] min-w-0 overflow-hidden">
+          
+          {/* Top Bar Header */}
+          <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between gap-3 bg-[#111214]">
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-black tracking-tight text-white leading-tight">
-                  Amar Prescription • Master Admin Panel
-                </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500/20 text-rose-300 border border-rose-500/30 uppercase">
-                  Super Admin Control
-                </span>
+                <span className="text-xs font-semibold text-slate-400">Master Terminal</span>
+                <span className="text-slate-600">/</span>
+                <span className="text-xs font-bold text-white">Doctor Accounts</span>
               </div>
-              <p className="text-xs text-slate-400">
-                ডাক্তার ইউজারদের ডাটা ও প্রোফাইল এডিট, অনুমোদন, ওয়াটারমার্ক নিয়ন্ত্রণ ও ভ্যালিডিটি টাইম সেটিং
-              </p>
+              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight mt-0.5">
+                Overview <span className="text-slate-500 font-normal text-lg">2026</span>
+              </h1>
             </div>
-          </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                setEditPlanConfig(getPlansConfig());
-                setIsPlanSettingsModalOpen(true);
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-black transition-all cursor-pointer shadow-xs"
-              title="প্রিমিয়াম প্যাকেজের নাম, মূল্য, প্রেসক্রিপশন লিমিট ও ফিচার টেক্সট এডিট করুন"
-            >
-              <Crown className="w-3.5 h-3.5 fill-slate-950" />
-              <span>প্যাকেজ ও প্রাইস সেটিংস</span>
-            </button>
-            <button
-              onClick={() => {
-                setCreateUserError('');
-                setCreateUserForm({
-                  fullName: '',
-                  phone: '',
-                  password: '',
-                  degrees: 'MBBS',
-                  specialty: 'General Physician',
-                  bmdcReg: '',
-                  status: 'approved',
-                  validityDays: '30'
-                });
-                setIsCreateUserModalOpen(true);
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
-              title="এডমিন থেকে সরাসরি নতুন ডাক্তার অ্যাকাউন্ট তৈরি করুন"
-            >
-              <UserPlus className="w-3.5 h-3.5 text-white" />
-              <span>+ নতুন ইউজার তৈরি (Create User)</span>
-            </button>
-            <button
-              onClick={() => {
-                setAdminPassError('');
-                setAdminPassForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-                setIsAdminPassModalOpen(true);
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-teal-300 border border-teal-500/30 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs hover:border-teal-400"
-              title="এডমিন পাসওয়ার্ড পরিবর্তন করুন"
-            >
-              <Lock className="w-3.5 h-3.5 text-teal-400" />
-              <span>এডমিন পাসওয়ার্ড (Change Key)</span>
-            </button>
-            <button
-              onClick={loadUsers}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-              title="রিফ্রেশ করুন"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-            <button
-              onClick={onAdminLogout}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
-              title="এডমিন প্যানেল থেকে লগআউট করুন"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>লগআউট (Logout)</span>
-            </button>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer ml-1"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Quick Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 sm:p-5 bg-slate-50 border-b border-slate-200">
-          
-          <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500">সর্বমোট ডাক্তার</span>
-              <Users className="w-4 h-4 text-teal-600" />
-            </div>
-            <div className="text-2xl font-black text-slate-900 mt-1">
-              {totalUsers}
-            </div>
-          </div>
-
-          <div className="bg-white p-3 rounded-2xl border border-amber-200 shadow-2xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-amber-700">অনুমোদনের অপেক্ষায় (Pending)</span>
-              <Clock className="w-4 h-4 text-amber-600 animate-pulse" />
-            </div>
-            <div className="text-2xl font-black text-amber-600 mt-1">
-              {pendingUsers}
-            </div>
-          </div>
-
-          <div className="bg-white p-3 rounded-2xl border border-emerald-200 shadow-2xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-emerald-700">সক্রিয় ইউজার (Approved)</span>
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            </div>
-            <div className="text-2xl font-black text-emerald-600 mt-1">
-              {approvedUsers}
-            </div>
-          </div>
-
-          <div className="bg-white p-3 rounded-2xl border border-rose-200 shadow-2xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-rose-700">স্থগিত / বাতিল (Rejected)</span>
-              <Ban className="w-4 h-4 text-rose-600" />
-            </div>
-            <div className="text-2xl font-black text-rose-600 mt-1">
-              {rejectedUsers}
-            </div>
-          </div>
-
-        </div>
-
-        {/* Filter & Search Bar */}
-        <div className="p-4 sm:p-5 pb-3 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white border-b border-slate-100">
-          
-          {/* Search Box */}
-          <div className="relative flex-1">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="ডাক্তারের নাম, ফোন নম্বর, BMDC নম্বর বা বিশেষজ্ঞতা দিয়ে খুঁজুন..."
-              className="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-teal-500"
-            />
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-            {searchTerm && (
-              <button 
-                onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-3 text-slate-400 hover:text-slate-600"
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setCreateUserError('');
+                  setCreateUserForm({
+                    fullName: '',
+                    phone: '',
+                    password: '',
+                    degrees: 'MBBS',
+                    specialty: 'General Physician',
+                    bmdcReg: '',
+                    status: 'approved',
+                    validityDays: '30'
+                  });
+                  setIsCreateUserModalOpen(true);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-black rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-xs"
               >
-                <X className="w-3.5 h-3.5" />
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>Add Doctor</span>
               </button>
+
+              <button
+                onClick={() => {
+                  setAdminPassError('');
+                  setAdminPassForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                  setIsAdminPassModalOpen(true);
+                }}
+                className="p-2 bg-[#1b1c21] hover:bg-[#24252c] text-slate-300 border border-white/5 rounded-xl transition-all cursor-pointer"
+                title="Admin Security Key"
+              >
+                <Lock className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                onClick={loadUsers}
+                className="p-2 bg-[#1b1c21] hover:bg-[#24252c] text-slate-300 border border-white/5 rounded-xl transition-all cursor-pointer"
+                title="Refresh data"
+              >
+                <RefreshCw className={"w-3.5 h-3.5 " + (loading ? 'animate-spin' : '')} />
+              </button>
+
+              <button
+                onClick={onClose}
+                className="p-2 bg-[#1b1c21] hover:bg-[#24252c] text-slate-400 hover:text-white border border-white/5 rounded-xl transition-all cursor-pointer ml-1"
+                title="Close Modal"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Ember-style Top Stat Cards Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-5 border-b border-white/5">
+            
+            {/* Card 1: Total Doctors with Card Graphics */}
+            <div className="bg-[#17181c] p-4 rounded-2xl border border-white/5 flex items-center justify-between relative overflow-hidden">
+              <div className="space-y-1">
+                <span className="text-xs text-slate-400 font-medium">Registered Doctors</span>
+                <div className="text-2xl font-bold font-mono text-white tracking-tight">
+                  {totalUsers}
+                </div>
+                <div className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
+                  <span>+100%</span>
+                  <span className="text-slate-500 font-normal">cloud synchronized</span>
+                </div>
+              </div>
+              
+              {/* Subtle credit card visual graphic like Ember */}
+              <div className="w-16 h-11 rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 border border-white/10 shadow-lg p-1.5 flex flex-col justify-between shrink-0 opacity-80">
+                <div className="w-2.5 h-2 rounded bg-amber-400/80"></div>
+                <div className="font-mono text-[7px] text-slate-400">•••• 2026</div>
+              </div>
+            </div>
+
+            {/* Card 2: Active & Approved */}
+            <div className="bg-[#17181c] p-4 rounded-2xl border border-white/5 flex items-center justify-between">
+              <div className="space-y-1">
+                <span className="text-xs text-slate-400 font-medium">Active Approved</span>
+                <div className="text-2xl font-bold font-mono text-emerald-400 tracking-tight">
+                  {approvedUsers}
+                </div>
+                <div className="text-[11px] text-slate-500">
+                  Practicing on platform
+                </div>
+              </div>
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+            </div>
+
+            {/* Card 3: Pending Approval */}
+            <div className="bg-[#17181c] p-4 rounded-2xl border border-white/5 flex items-center justify-between">
+              <div className="space-y-1">
+                <span className="text-xs text-slate-400 font-medium">Pending Review</span>
+                <div className="text-2xl font-bold font-mono text-amber-400 tracking-tight">
+                  {pendingUsers}
+                </div>
+                <div className="text-[11px] text-slate-500">
+                  Awaiting license verification
+                </div>
+              </div>
+              <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
+                <Clock className="w-5 h-5" />
+              </div>
+            </div>
+
+          </div>
+
+          {/* Toast Notification */}
+          {notification && (
+            <div className={"mx-5 mt-3 p-2.5 rounded-xl text-xs font-medium flex items-center justify-between " + (notification.type === 'warning' ? 'bg-amber-950/40 text-amber-300 border border-amber-800/60' : 'bg-emerald-950/40 text-emerald-300 border border-emerald-800/60')}>
+              <span>{notification.msg}</span>
+              <button onClick={() => setNotification(null)} className="text-slate-400 hover:text-white cursor-pointer">
+                ✕
+              </button>
+            </div>
+          )}
+
+          {/* Doctor Accounts Ledger List */}
+          <div className="flex-1 overflow-y-auto p-5 space-y-2.5">
+            {filteredUsers.length === 0 ? (
+              <div className="py-16 text-center text-slate-500 text-xs border border-dashed border-white/5 rounded-2xl">
+                {searchTerm 
+                  ? ('No doctors found matching "' + searchTerm + '".')
+                  : 'No doctor records currently found.'}
+              </div>
+            ) : (
+              filteredUsers.map((user) => {
+                const isPending = user.status === 'pending';
+                const isApproved = user.status === 'approved';
+                const isSuspended = user.status === 'suspended';
+                const isRejected = user.status === 'rejected';
+                const hasWatermark = user.has_watermark !== false;
+                const showQr = user.show_qr !== false;
+
+                const todayStr = new Date().toISOString().split('T')[0];
+                const isExpired = user.valid_until && user.valid_until < todayStr;
+
+                return (
+                  <div
+                    key={user.id || user.phone}
+                    className={"p-3.5 rounded-xl border transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-3 text-xs " + (isPending ? 'bg-[#1a1714] border-amber-500/30' : isApproved ? 'bg-[#17181c] border-white/5 hover:border-white/10' : 'bg-[#141518] border-white/5 opacity-60')}
+                  >
+                    
+                    {/* Left: Doctor Details */}
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-sm text-white">
+                          {user.full_name || 'Dr. User'}
+                        </span>
+                        
+                        {/* Status Badges */}
+                        {isPending && (
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-400/10 text-amber-300 border border-amber-400/20">
+                            Pending Review
+                          </span>
+                        )}
+                        {isApproved && (
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-400/10 text-emerald-300 border border-emerald-400/20 flex items-center gap-1">
+                            <CheckCircle2 className="w-2.5 h-2.5" />
+                            Approved
+                          </span>
+                        )}
+                        {isSuspended && (
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-rose-400/10 text-rose-300 border border-rose-400/20">
+                            Suspended
+                          </span>
+                        )}
+                        {isRejected && (
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-white/5 text-slate-400 border border-white/5">
+                            Rejected
+                          </span>
+                        )}
+                        {isExpired && isApproved && (
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-600 text-white">
+                            Expired
+                          </span>
+                        )}
+
+                        {/* Watermark Toggle */}
+                        <button
+                          type="button"
+                          onClick={() => handleToggleWatermark(user)}
+                          className={"px-2 py-0.5 rounded-md text-[10px] font-medium border transition-colors cursor-pointer flex items-center gap-1 " + (hasWatermark ? 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10' : 'bg-teal-500/10 text-teal-300 border-teal-500/20 hover:bg-teal-500/20')}
+                          title="Toggle watermark print visibility"
+                        >
+                          <span>Watermark: {hasWatermark ? 'On' : 'Off (Clean)'}</span>
+                        </button>
+
+                        {/* QR Code Toggle */}
+                        <button
+                          type="button"
+                          onClick={() => handleToggleQrCode(user)}
+                          className={"px-2 py-0.5 rounded-md text-[10px] font-medium border transition-colors cursor-pointer flex items-center gap-1 " + (showQr ? 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10' : 'bg-rose-500/10 text-rose-300 border-rose-500/20 hover:bg-rose-500/20')}
+                          title="Toggle QR code visibility"
+                        >
+                          <QrCode className="w-2.5 h-2.5 text-slate-400" />
+                          <span>QR: {showQr ? 'Active' : 'Off'}</span>
+                        </button>
+
+                        {/* Plan Selector Dropdown */}
+                        <div className="flex items-center gap-1 bg-[#1e2026] px-2 py-0.5 rounded-md border border-white/10">
+                          <Crown className="w-2.5 h-2.5 text-amber-400" />
+                          <select
+                            value={normalizePlanId(user.plan)}
+                            onChange={(e) => handleUpdateDoctorPlan(user, e.target.value)}
+                            className="bg-transparent text-[10px] font-semibold text-slate-200 border-none outline-hidden cursor-pointer"
+                          >
+                            <option value="free" className="bg-[#17181c] text-white">Free Plan</option>
+                            {(plansConfig.plans || []).map((p) => (
+                              <option key={p.id} value={p.id} className="bg-[#17181c] text-white">
+                                {p.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Doctor Credential Info */}
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-slate-400">
+                        <span className="font-mono text-white flex items-center gap-1">
+                          <Phone className="w-3 h-3 text-slate-500" />
+                          {user.phone}
+                        </span>
+                        {user.degrees && (
+                          <>
+                            <span className="text-slate-600">•</span>
+                            <span>{user.degrees}</span>
+                          </>
+                        )}
+                        {user.specialty && (
+                          <>
+                            <span className="text-slate-600">•</span>
+                            <span className="text-slate-300">{user.specialty}</span>
+                          </>
+                        )}
+                        {user.bmdc_reg && (
+                          <>
+                            <span className="text-slate-600">•</span>
+                            <span className="font-mono text-[11px] bg-white/5 px-1.5 py-0.5 rounded border border-white/5 text-slate-300">
+                              BMDC: {user.bmdc_reg}
+                            </span>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Dates */}
+                      <div className="text-[11px] text-slate-500 flex items-center gap-2 pt-0.5">
+                        <span>Reg: <strong className="font-mono font-normal text-slate-400">{user.created_at ? user.created_at.split('T')[0] : '—'}</strong></span>
+                        <span className="text-slate-700">•</span>
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3 text-slate-500" />
+                          Valid: 
+                          <strong className={"font-mono " + (isExpired ? 'text-rose-400 font-semibold' : 'text-slate-300')}>
+                            {user.valid_until || 'Unlimited'}
+                          </strong>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Right: Actions */}
+                    <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+                      <button
+                        onClick={() => handleOpenEditModal(user)}
+                        className="px-2.5 py-1.5 bg-[#22242a] hover:bg-[#2c2e36] text-slate-200 border border-white/5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer"
+                        title="Edit Doctor Details"
+                      >
+                        <Edit3 className="w-3 h-3 text-slate-400" />
+                        <span>Edit</span>
+                      </button>
+
+                      {isPending && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleApprove(user, 30, true)}
+                            className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition-all shadow-xs flex items-center gap-1 cursor-pointer"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Approve (30d)</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleApprove(user, 365, false)}
+                            className="px-2.5 py-1.5 bg-[#22242a] hover:bg-[#2c2e36] text-slate-200 border border-white/5 rounded-lg text-xs font-medium transition-all cursor-pointer"
+                          >
+                            1 Year (Clean)
+                          </button>
+
+                          <button
+                            onClick={() => handleReject(user)}
+                            className="p-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                            title="Reject"
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+
+                      {isApproved && (
+                        <button
+                          onClick={() => handleSuspend(user)}
+                          className="p-1.5 text-slate-500 hover:text-amber-400 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                          title="Suspend"
+                        >
+                          <Ban className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+
+                      {isSuspended && (
+                        <button
+                          onClick={() => handleSuspend(user)}
+                          className="px-2.5 py-1 bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/20 rounded-lg text-xs font-medium transition-all cursor-pointer"
+                        >
+                          Reactivate
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => handleDelete(user)}
+                        className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer ml-1"
+                        title="Delete Doctor"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                  </div>
+                );
+              })
             )}
           </div>
 
-          {/* Status Filter Buttons */}
-          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-semibold self-start md:self-auto">
+          {/* Footer Bar */}
+          <div className="px-6 py-2.5 bg-[#0d0e10] border-t border-white/5 flex items-center justify-between text-xs text-slate-500">
+            <span>
+              Doctor Verification Engine • Encrypted
+            </span>
             <button
-              onClick={() => setStatusFilter('all')}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                statusFilter === 'all'
-                  ? 'bg-white text-teal-900 shadow-2xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              onClick={onClose}
+              className="px-3 py-1 bg-[#1c1d22] hover:bg-[#25262c] text-slate-300 border border-white/5 rounded-lg text-xs font-medium transition-all cursor-pointer"
             >
-              সকল ({totalUsers})
-            </button>
-            <button
-              onClick={() => setStatusFilter('pending')}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                statusFilter === 'pending'
-                  ? 'bg-amber-500 text-white shadow-2xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              পেন্ডিং ({pendingUsers})
-            </button>
-            <button
-              onClick={() => setStatusFilter('approved')}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                statusFilter === 'approved'
-                  ? 'bg-emerald-600 text-white shadow-2xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              অনুমোদিত ({approvedUsers})
+              Close
             </button>
           </div>
 
-        </div>
-
-        {/* Toast Notification */}
-        {notification && (
-          <div className={`mx-5 mt-2 p-2.5 rounded-xl text-xs font-bold flex items-center justify-between animate-in slide-in-from-top-2 ${
-            notification.type === 'warning'
-              ? 'bg-amber-100 text-amber-900 border border-amber-300'
-              : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-          }`}>
-            <span>{notification.msg}</span>
-            <button onClick={() => setNotification(null)} className="text-slate-500 hover:text-slate-800 cursor-pointer">
-              ✕
-            </button>
-          </div>
-        )}
-
-        {/* User Accounts List Table */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3">
-          {filteredUsers.length === 0 ? (
-            <div className="py-16 text-center text-slate-400 text-xs border-2 border-dashed border-slate-200 rounded-2xl">
-              {searchTerm 
-                ? `"${searchTerm}" দিয়ে কোনো ডাক্তার অ্যাকাউন্ট খুঁজে পাওয়া যায়নি।`
-                : 'বর্তমানে কোনো ডাক্তার অ্যাকাউন্ট সংরক্ষিত নেই। ডাক্তাররা রেজিস্ট্রেশন করলে এখানে প্রদর্শিত হবে।'}
-            </div>
-          ) : (
-            filteredUsers.map((user) => {
-              const isPending = user.status === 'pending';
-              const isApproved = user.status === 'approved';
-              const isSuspended = user.status === 'suspended';
-              const isRejected = user.status === 'rejected';
-              const hasWatermark = user.has_watermark !== false; // default true
-              const showQr = user.show_qr !== false; // default true
-
-              const todayStr = new Date().toISOString().split('T')[0];
-              const isExpired = user.valid_until && user.valid_until < todayStr;
-
-              return (
-                <div
-                  key={user.id || user.phone}
-                  className={`p-4 rounded-2xl border transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-4 ${
-                    isPending
-                      ? 'bg-amber-50/70 border-amber-300 shadow-xs'
-                      : isApproved
-                        ? 'bg-white border-slate-200 shadow-2xs hover:border-teal-300'
-                        : 'bg-slate-50 border-slate-200 opacity-75'
-                  }`}
-                >
-                  
-                  {/* Left Column: Doctor Identity Details */}
-                  <div className="space-y-1.5 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-sm text-slate-900">
-                        {user.full_name || 'Dr. User'}
-                      </span>
-                      
-                      {/* Status Badges */}
-                      {isPending && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white animate-pulse">
-                          অনুমোদনের অপেক্ষায় (Pending)
-                        </span>
-                      )}
-                      {isApproved && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                          অনুমোদিত (Approved)
-                        </span>
-                      )}
-                      {isSuspended && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
-                          স্থগিত (Suspended)
-                        </span>
-                      )}
-                      {isRejected && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">
-                          বাতিল (Rejected)
-                        </span>
-                      )}
-                      {isExpired && isApproved && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white">
-                          মেয়াদ উত্তীর্ণ (Expired)
-                        </span>
-                      )}
-
-                      {/* Watermark Status Pill (Admin Controlled) */}
-                      <button
-                        type="button"
-                        onClick={() => handleToggleWatermark(user)}
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all cursor-pointer flex items-center gap-1 ${
-                          hasWatermark
-                            ? 'bg-teal-50 text-teal-800 border-teal-200 hover:bg-teal-100'
-                            : 'bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100'
-                        }`}
-                        title="ক্লিক করে এই ডাক্তারের ওয়াটারমার্ক অন/অফ করুন"
-                      >
-                        <Sparkles className="w-2.5 h-2.5" />
-                        <span>Watermark: {hasWatermark ? 'Active (ON)' : 'Removed (OFF)'}</span>
-                      </button>
-
-                      {/* QR Code Status Pill (Admin Controlled) */}
-                      <button
-                        type="button"
-                        onClick={() => handleToggleQrCode(user)}
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all cursor-pointer flex items-center gap-1 ${
-                          showQr
-                            ? 'bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100'
-                            : 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100'
-                        }`}
-                        title="ক্লিক করে প্রেসক্রিপশনের হেডার QR কোড অন/অফ করুন"
-                      >
-                        <QrCode className="w-2.5 h-2.5" />
-                        <span>QR Code: {showQr ? 'Active (ON)' : 'Hidden (OFF)'}</span>
-                      </button>
-
-                      {/* Doctor Subscription Plan Selector */}
-                      <div className="flex items-center gap-1 bg-amber-50/90 px-2 py-0.5 rounded-full border border-amber-300">
-                        <Crown className="w-2.5 h-2.5 text-amber-700" />
-                        <select
-                          value={normalizePlanId(user.plan)}
-                          onChange={(e) => handleUpdateDoctorPlan(user, e.target.value)}
-                          className="bg-transparent text-[10px] font-black text-amber-950 border-none outline-hidden cursor-pointer"
-                          title="ডাক্তারের সাবস্ক্রিপশন প্ল্যান পরিবর্তন করুন"
-                        >
-                          <option value="free">Free Plan</option>
-                          {(plansConfig.plans || []).map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                    </div>
-
-                    {/* Metadata & Contact */}
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600">
-                      <span className="font-mono font-bold text-teal-700 flex items-center gap-1">
-                        <Phone className="w-3 h-3" />
-                        {user.phone}
-                      </span>
-                      {user.degrees && (
-                        <>
-                          <span>•</span>
-                          <span>{user.degrees}</span>
-                        </>
-                      )}
-                      {user.specialty && (
-                        <>
-                          <span>•</span>
-                          <span className="font-medium text-slate-800">{user.specialty}</span>
-                        </>
-                      )}
-                      {user.bmdc_reg && (
-                        <>
-                          <span>•</span>
-                          <span className="font-mono text-[11px] bg-slate-100 px-1.5 py-0.5 rounded">
-                            BMDC: {user.bmdc_reg}
-                          </span>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Registration Date & Current Validity */}
-                    <div className="text-[11px] text-slate-500 flex items-center gap-2 pt-0.5">
-                      <span>রেজিস্ট্রেশন: <strong>{user.created_at ? user.created_at.split('T')[0] : 'N/A'}</strong></span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3 text-teal-600" />
-                        মেয়াদ (Validity): 
-                        <strong className={`font-mono ${isExpired ? 'text-rose-600 font-black' : 'text-emerald-700'}`}>
-                          {user.valid_until || 'আনলিমিটেড'}
-                        </strong>
-                      </span>
-                    </div>
-
-                  </div>
-
-                  {/* Right Column: Admin Actions */}
-                  <div className="flex items-center gap-2 flex-wrap shrink-0">
-                    
-                    {/* EDIT DOCTOR FULL DETAILS BUTTON */}
-                    <button
-                      onClick={() => handleOpenEditModal(user)}
-                      className="px-3 py-1.5 bg-slate-100 hover:bg-teal-50 hover:text-teal-900 border border-slate-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                      title="ডাক্তারের নাম, পদবী, পাসওয়ার্ড, চেম্বার ও সকল তথ্য এডিট করুন"
-                    >
-                      <Edit3 className="w-3.5 h-3.5 text-teal-600" />
-                      <span>এডিট প্রোফাইল</span>
-                    </button>
-
-                    {/* Approval Action for Pending Accounts */}
-                    {isPending && (
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleApprove(user, 30, true)}
-                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer"
-                          title="অনুমোদন দিন ও ৩০ দিনের মেয়াদ সেট করুন"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>অনুমোদন (৩০ দিন)</span>
-                        </button>
-
-                        <button
-                          onClick={() => handleApprove(user, 365, false)}
-                          className="px-2.5 py-1.5 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
-                          title="১ বছর মেয়াদ ও ওয়াটারমার্ক ছাড়া অনুমোদন"
-                        >
-                          ১ বছর (No Watermark)
-                        </button>
-
-                        <button
-                          onClick={() => handleReject(user)}
-                          className="p-1.5 text-rose-600 hover:bg-rose-100 rounded-xl transition-colors cursor-pointer"
-                          title="আবেদন বাতিল করুন"
-                        >
-                          <XCircle className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Suspend Toggle */}
-                    {isApproved && (
-                      <button
-                        onClick={() => handleSuspend(user)}
-                        className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-colors cursor-pointer"
-                        title="অ্যাকাউন্ট সাময়িকভাবে সাসপেন্ড / স্থগিত করুন"
-                      >
-                        <Ban className="w-4 h-4" />
-                      </button>
-                    )}
-
-                    {isSuspended && (
-                      <button
-                        onClick={() => handleSuspend(user)}
-                        className="px-2.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                      >
-                        পুনরায় সক্রিয় করুন
-                      </button>
-                    )}
-
-                    {/* Permanent Delete Button */}
-                    <button
-                      onClick={() => handleDelete(user)}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer ml-1"
-                      title="এই ডাক্তার অ্যাকাউন্ট সম্পূর্ণ মুছে ফেলুন"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-
-                  </div>
-
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {/* Admin Footer Bar */}
-        <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <span>
-            লগইন করা আছে: <strong className="text-slate-800">{adminUser?.full_name || 'System Admin'}</strong> ({adminUser?.phone || '01780960370'})
-          </span>
-          <button
-            onClick={onClose}
-            className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-bold transition-all cursor-pointer"
-          >
-            বন্ধ করুন
-          </button>
         </div>
 
       </div>
