@@ -474,14 +474,11 @@ export const MedicineSection = ({
           </div>
           <div>
             <h2 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-              Prescribe Medication (ঔষধ প্রেসক্রিপশন)
+              Prescribe Medication
               <span className="text-[11px] bg-teal-100/70 text-teal-800 px-2 py-0.5 rounded-full font-medium">
                 {medicines.length} added
               </span>
             </h2>
-            <p className="text-[11px] text-slate-500">
-              টাইপ না করে সরাসরি ক্লিক করে ঔষধ, ডোজ ও <span className="font-semibold text-teal-700">১/২ কাপ (Half Cup)</span> অপশন যুক্ত করুন
-            </p>
           </div>
         </div>
 
@@ -495,7 +492,7 @@ export const MedicineSection = ({
           <Coffee className="w-3.5 h-3.5 text-amber-700" />
           <span>Quick </span>
           <StackedFraction num={1} den={2} size="sm" />
-          <span> Cup (আধা কাপ অপশন)</span>
+          <span> Cup Option</span>
         </button>
       </div>
 
@@ -708,16 +705,13 @@ export const MedicineSection = ({
         <div className="bg-white rounded-xl p-3 border border-teal-100/80 shadow-2xs space-y-2.5">
           <div className="flex flex-wrap items-center justify-between gap-1 text-xs">
             <span className="font-semibold text-slate-700 flex items-center gap-1.5">
-              Dosage & Fractions Builder (ডোজ ও ভগ্নাংশ নির্বাচন):
-            </span>
-            <span className="text-[11px] text-slate-500">
-              নিচে ১-ক্লিকে <span className="font-bold text-teal-700">১/২</span> বা আধা কাপ সিলেক্ট করুন
+              Dosage & Fractions Builder:
             </span>
           </div>
 
           {/* Fractions Row with 1 Up and 2 Down Stacked Fraction & Custom Fraction Box */}
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-medium text-slate-500 mr-1">Fractions / ডোজ:</span>
+            <span className="text-[11px] font-medium text-slate-500 mr-1">Fractions / Dosage:</span>
             
             {/* Special Highlighted 1/2 Option */}
             <button
@@ -990,7 +984,7 @@ export const MedicineSection = ({
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="text-[11px] font-medium text-slate-600">
-                Instructions (খাবার নিয়ম)
+                Instructions
               </label>
               {currentMed.instruction?.trim() && (
                 <button
@@ -1000,7 +994,7 @@ export const MedicineSection = ({
                   title="ভবিষ্যতের জন্য এই নিয়মটি আপনার একাউন্টে সেভ করে রাখুন"
                 >
                   <Plus className="w-3 h-3" />
-                  <span>সেভ রাখুন (Next time)</span>
+                  <span>Save for Next Time</span>
                 </button>
               )}
             </div>
@@ -1008,7 +1002,7 @@ export const MedicineSection = ({
               type="text"
               value={currentMed.instruction}
               onChange={(e) => setCurrentMed({ ...currentMed, instruction: e.target.value })}
-              placeholder="খাবার নিয়ম লিখুন বা নিচের বাটন ক্লিক করুন..."
+              placeholder="e.g. খাবার পরে / ভরা পেটে..."
               className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium focus:ring-1 focus:ring-teal-500 mb-1.5"
             />
               <div className="flex flex-wrap gap-1.5">
@@ -1070,7 +1064,7 @@ export const MedicineSection = ({
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="text-[11px] font-medium text-slate-600">
-                Duration (স্থায়িত্ব / কতদিন)
+                Duration
               </label>
               {currentMed.duration?.trim() && (
                 <button
@@ -1080,7 +1074,7 @@ export const MedicineSection = ({
                   title="ভবিষ্যতের জন্য এই মেয়াদটি আপনার একাউন্টে সেভ করে রাখুন"
                 >
                   <Plus className="w-3 h-3" />
-                  <span>সেভ রাখুন (Next time)</span>
+                  <span>Save for Next Time</span>
                 </button>
               )}
             </div>
@@ -1089,7 +1083,7 @@ export const MedicineSection = ({
                 type="text"
                 value={currentMed.duration}
                 onChange={(e) => setCurrentMed({ ...currentMed, duration: e.target.value })}
-                placeholder="যেমন: ৩ দিন / 5 days / ১ মাস"
+                placeholder="e.g. 5 days / 1 month / ৭ দিন"
                 className="flex-1 px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium focus:ring-1 focus:ring-teal-500"
               />
               {/* Quick Custom Day selector / counter */}

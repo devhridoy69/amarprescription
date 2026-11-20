@@ -12,7 +12,7 @@ export const PatientInfoBar = ({ patient, onChange, onReset, isEditing = false, 
       <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-            Patient Information (রোগীর তথ্য)
+            Patient Information
           </span>
           {isEditing && (
             <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold border border-amber-300">
@@ -48,7 +48,7 @@ export const PatientInfoBar = ({ patient, onChange, onReset, isEditing = false, 
         {/* Row 1: Patient Name (Wider) */}
         <div className="col-span-12 sm:col-span-6">
           <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-            Patient Name * (রোগীর নাম)
+            Patient Name *
           </label>
           <input
             type="text"
@@ -63,7 +63,7 @@ export const PatientInfoBar = ({ patient, onChange, onReset, isEditing = false, 
         {/* Row 1: Age & Age Unit (Unified Input Group) */}
         <div className="col-span-6 sm:col-span-3">
           <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-            Age (বয়স)
+            Age
           </label>
           <div className="flex rounded-lg border border-slate-200 bg-slate-50 focus-within:ring-2 focus-within:ring-teal-500 focus-within:border-teal-500 focus-within:bg-white overflow-hidden">
             <input
@@ -90,12 +90,12 @@ export const PatientInfoBar = ({ patient, onChange, onReset, isEditing = false, 
         {/* Row 1: Gender */}
         <div className="col-span-6 sm:col-span-3">
           <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-            Gender (লিঙ্গ)
+            Gender
           </label>
           <div className="flex h-[38px] rounded-lg border border-slate-200 bg-slate-50 p-0.5">
             {[
-              { key: 'Male', label: 'Male (পু.)', short: 'M' },
-              { key: 'Female', label: 'Female (মহি.)', short: 'F' }
+              { key: 'Male', label: 'Male', short: 'M' },
+              { key: 'Female', label: 'Female', short: 'F' }
             ].map((g) => (
               <button
                 key={g.key}
@@ -116,7 +116,7 @@ export const PatientInfoBar = ({ patient, onChange, onReset, isEditing = false, 
         {/* Row 2: Date */}
         <div className="col-span-6 sm:col-span-3">
           <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-            Date (তারিখ)
+            Date
           </label>
           <input
             type="date"
@@ -143,7 +143,7 @@ export const PatientInfoBar = ({ patient, onChange, onReset, isEditing = false, 
         {/* Row 2: Weight & Unit (KG / Gram) */}
         <div className="col-span-6 sm:col-span-3">
           <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-            <Scale className="w-3 h-3 text-slate-400" /> Wt (ওজন)
+            <Scale className="w-3 h-3 text-slate-400" /> Weight
           </label>
           <div className="flex rounded-lg border border-slate-200 bg-slate-50 focus-within:ring-2 focus-within:ring-teal-500 focus-within:border-teal-500 focus-within:bg-white overflow-hidden">
             <input
@@ -168,7 +168,7 @@ export const PatientInfoBar = ({ patient, onChange, onReset, isEditing = false, 
         {/* Row 2: Patient Phone Number (Optional) */}
         <div className="col-span-6 sm:col-span-3">
           <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center gap-1">
-            <Phone className="w-3 h-3 text-slate-400" /> Patient Phone (রোগীর মোবাইল - ঐচ্ছিক)
+            <Phone className="w-3 h-3 text-slate-400" /> Patient Phone (Optional)
           </label>
           <input
             type="tel"

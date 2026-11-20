@@ -476,7 +476,7 @@ export const ClinicalSection = ({
             <div className="pt-2 border-t border-slate-100 space-y-2">
               <div className="flex items-center justify-between">
                 <label className="block text-xs font-bold text-slate-700">
-                  Provisional / Confirmed Diagnosis (রোগ নির্ণয়):
+                  Provisional / Confirmed Diagnosis:
                 </label>
                 {diagnosis && (
                   <button
@@ -620,7 +620,7 @@ export const ClinicalSection = ({
         >
           <div className="flex items-center gap-2">
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-              Investigations Advised (ল্যাব টেস্ট)
+              Investigations Advised
               <span className="text-[11px] bg-purple-50 text-purple-700 font-semibold px-2 py-0.5 rounded-full">
                 {investigations.length}
               </span>

@@ -54,7 +54,7 @@ export const AdviceSection = ({
       <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
         <div className="flex items-center gap-2">
           <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-            Advice & Follow-Up (উপদেশ ও পরবর্তী সাক্ষাত)
+            Advice & Follow-Up
             <span className="text-[11px] bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded-full">
               {adviceList.length} items
             </span>
@@ -67,7 +67,7 @@ export const AdviceSection = ({
         {/* Quick Advice Pills */}
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-            Medical & Dietary Advice (উপদেশ নির্বাচন করুন):
+            Medical & Dietary Advice:
           </label>
 
           {/* Recent Advices Suggestions */}
@@ -179,7 +179,7 @@ export const AdviceSection = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-teal-600" /> Next Visit (পরবর্তী সাক্ষাত)
+              <Calendar className="w-3.5 h-3.5 text-teal-600" /> Next Visit
             </label>
             <input
               type="text"
@@ -204,7 +204,7 @@ export const AdviceSection = ({
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Special Note / Referral (বিশেষ নির্দেশনা / রেফারেল)
+              Special Note / Referral
             </label>
             <textarea
               rows={3}

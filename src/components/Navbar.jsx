@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Eye, Edit3, Columns, Sun, Moon, Type,
   LayoutDashboard, LogIn, LogOut, ShieldAlert,
-  RotateCcw, Sparkles, Wifi, WifiOff, CloudUpload
+  RotateCcw, Sparkles, Wifi, WifiOff, CloudUpload,
+  ChevronDown, Building2, Plus, Check, Trash2, Settings, User
 } from 'lucide-react';
 
 export const Navbar = ({ 
@@ -25,8 +26,25 @@ export const Navbar = ({
   pendingSyncCount = 0,
   onOpenAdminPanel = () => {},
   onOpenAuth = () => {},
-  onLogout = () => {}
+  onLogout = () => {},
+  doctor = null,
+  chamberProfiles = [],
+  activeChamberId = null,
+  onSelectChamberProfile = () => {},
+  onDeleteChamberProfile = () => {}
 }) => {
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-2xs no-print transition-colors duration-200">
       <div className="max-w-[1700px] mx-auto px-3 sm:px-5 h-15 flex items-center justify-between gap-3">
@@ -215,34 +233,128 @@ export const Navbar = ({
               <span className="hidden sm:inline">Admin Panel</span>
             </button>
           ) : currentUser ? (
-            <div className="flex items-center gap-1.5 bg-teal-50 border border-teal-200 py-1 px-2.5 rounded-xl">
-              <button
-                type="button"
-                onClick={onOpenDoctorSettings}
-                className="flex items-center gap-2 hover:opacity-85 transition-opacity text-left cursor-pointer"
-                title="ডাক্তারের প্রোফাইল ও চেম্বার সেটিংস"
-              >
-                <div className="w-7 h-7 rounded-lg bg-teal-700 text-white flex items-center justify-center text-xs font-extrabold shadow-2xs shrink-0">
-                  {currentUser.full_name ? currentUser.full_name.charAt(0).toUpperCase() : 'D'}
-                </div>
-                <div className="hidden sm:block leading-tight">
-                  <span className="block text-xs font-bold text-teal-950 truncate max-w-[120px]">
-                    {currentUser.full_name || 'Dr. Chamber'}
-                  </span>
-                  <span className="block text-[10px] text-teal-700 font-mono">
-                    {currentUser.phone}
-                  </span>
-                </div>
-              </button>
+            <div className="relative" ref={profileMenuRef}>
+              <div className="flex items-center gap-1.5 bg-teal-50 border border-teal-200 py-1 px-2.5 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                  className="flex items-center gap-2 hover:opacity-85 transition-opacity text-left cursor-pointer"
+                  title="চেম্বার প্রোফাইল পরিবর্তন বা সেটিংস ওপেন করুন"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-teal-700 text-white flex items-center justify-center text-xs font-extrabold shadow-2xs shrink-0">
+                    {currentUser.full_name ? currentUser.full_name.charAt(0).toUpperCase() : 'D'}
+                  </div>
+                  <div className="hidden sm:block leading-tight">
+                    <span className="block text-xs font-bold text-teal-950 truncate max-w-[130px]">
+                      {doctor?.chamberName || currentUser.full_name || 'Dr. Chamber'}
+                    </span>
+                    <span className="block text-[10px] text-teal-700 font-mono">
+                      {currentUser.phone}
+                    </span>
+                  </div>
+                  <ChevronDown className={`w-3.5 h-3.5 text-teal-700 transition-transform ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
 
-              <button
-                type="button"
-                onClick={onLogout}
-                className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors cursor-pointer ml-1"
-                title="লগআউট"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors cursor-pointer ml-0.5"
+                  title="লগআউট"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Multiple Chamber Profiles Dropdown Menu */}
+              {isProfileMenuOpen && (
+                <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="px-3.5 pb-2 border-b border-slate-100">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        Chamber Profiles
+                      </span>
+                      <span className="text-[10px] bg-teal-50 text-teal-700 px-1.5 py-0.5 rounded font-bold">
+                        {chamberProfiles.length} টি চেম্বার
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 font-semibold truncate mt-0.5">
+                      {currentUser.full_name}
+                    </p>
+                  </div>
+
+                  {/* Profile List */}
+                  <div className="max-h-56 overflow-y-auto p-1.5 space-y-1">
+                    {chamberProfiles.map((prof) => {
+                      const isActive = prof.id === activeChamberId;
+                      return (
+                        <div
+                          key={prof.id}
+                          className={`group flex items-center justify-between p-2 rounded-xl border transition-all text-left ${
+                            isActive
+                              ? 'bg-teal-50/80 border-teal-300 shadow-2xs'
+                              : 'bg-white hover:bg-slate-50 border-transparent hover:border-slate-200'
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onSelectChamberProfile(prof);
+                              setIsProfileMenuOpen(false);
+                            }}
+                            className="flex-1 min-w-0 pr-2 cursor-pointer"
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <Building2 className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-teal-700' : 'text-slate-400'}`} />
+                              <span className={`text-xs font-bold truncate block ${isActive ? 'text-teal-900' : 'text-slate-800'}`}>
+                                {prof.chamberName || 'Unnamed Chamber'}
+                              </span>
+                            </div>
+                            {prof.chamberAddress && (
+                              <p className="text-[10px] text-slate-500 truncate pl-5">
+                                {prof.chamberAddress}
+                              </p>
+                            )}
+                          </button>
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            {isActive && (
+                              <Check className="w-4 h-4 text-teal-600 stroke-[2.5]" />
+                            )}
+                            {chamberProfiles.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onDeleteChamberProfile(prof.id);
+                                }}
+                                className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-600 rounded transition-opacity cursor-pointer"
+                                title="প্রোফাইল মুছুন"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Add New Chamber Profile / Settings Actions */}
+                  <div className="p-1.5 pt-2 border-t border-slate-100 space-y-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onOpenDoctorSettings();
+                        setIsProfileMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 rounded-xl transition-colors cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>নতুন চেম্বার প্রোফাইল যুক্ত / এডিট করুন</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <button

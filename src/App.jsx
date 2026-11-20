@@ -53,6 +53,28 @@ export function App() {
     return null;
   });
 
+  // Chamber profiles list for the logged-in doctor
+  const [chamberProfiles, setChamberProfiles] = useState(() => {
+    try {
+      const userPhone = JSON.parse(localStorage.getItem('amar_rx_current_user') || '{}')?.phone || 'default';
+      const savedList = localStorage.getItem(`amar_rx_chambers_${userPhone}`);
+      if (savedList) {
+        const parsed = JSON.parse(savedList);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [];
+  });
+
+  const [activeChamberId, setActiveChamberId] = useState(() => {
+    try {
+      const userPhone = JSON.parse(localStorage.getItem('amar_rx_current_user') || '{}')?.phone || 'default';
+      return localStorage.getItem(`amar_rx_active_chamber_${userPhone}`) || null;
+    } catch (e) {
+      return null;
+    }
+  });
+
   // Doctor state: initialize from user account if logged in, else default
   const [doctor, setDoctor] = useState(() => {
     try {
@@ -513,10 +535,61 @@ export function App() {
     localStorage.setItem('amar_rx_print_settings', JSON.stringify(newSettings));
   };
 
-  // Persist doctor profile
+  // Persist doctor profile and sync with chamber profiles
   const handleSaveDoctor = (updatedDoctor) => {
     setDoctor(updatedDoctor);
     localStorage.setItem('amar_rx_doctor', JSON.stringify(updatedDoctor));
+
+    // Also update or add to doctor's chamber profiles
+    const userPhone = currentUser?.phone || 'default';
+    const chamberId = activeChamberId || ('chamber_' + Date.now());
+
+    setChamberProfiles(prev => {
+      const idx = prev.findIndex(p => p.id === chamberId || p.chamberName === updatedDoctor.chamberName);
+      let updatedList;
+      if (idx >= 0) {
+        updatedList = [...prev];
+        updatedList[idx] = { ...updatedDoctor, id: prev[idx].id };
+      } else {
+        updatedList = [...prev, { ...updatedDoctor, id: chamberId }];
+      }
+      try {
+        localStorage.setItem(`amar_rx_chambers_${userPhone}`, JSON.stringify(updatedList));
+      } catch (e) {}
+      return updatedList;
+    });
+
+    if (!activeChamberId) {
+      setActiveChamberId(chamberId);
+      try {
+        localStorage.setItem(`amar_rx_active_chamber_${userPhone}`, chamberId);
+      } catch (e) {}
+    }
+  };
+
+  // Switch Active Chamber Profile
+  const handleSelectChamberProfile = (profile) => {
+    setActiveChamberId(profile.id);
+    setDoctor(profile);
+    const userPhone = currentUser?.phone || 'default';
+    try {
+      localStorage.setItem(`amar_rx_active_chamber_${userPhone}`, profile.id);
+      localStorage.setItem('amar_rx_doctor', JSON.stringify(profile));
+    } catch (e) {}
+  };
+
+  // Delete a Chamber Profile
+  const handleDeleteChamberProfile = (profileId) => {
+    const userPhone = currentUser?.phone || 'default';
+    const remaining = chamberProfiles.filter(p => p.id !== profileId);
+    setChamberProfiles(remaining);
+    try {
+      localStorage.setItem(`amar_rx_chambers_${userPhone}`, JSON.stringify(remaining));
+    } catch (e) {}
+
+    if (activeChamberId === profileId && remaining.length > 0) {
+      handleSelectChamberProfile(remaining[0]);
+    }
   };
 
   // Medicine handlers
@@ -600,21 +673,40 @@ export function App() {
     
     // Auto populate doctor profile with registered doctor details
     if (userData.full_name) {
-      setDoctor(prev => ({
-        ...prev,
+      const initialDoc = {
         name: userData.full_name,
-        degrees: userData.degrees || prev.degrees,
-        specialty: userData.specialty || prev.specialty,
-        bmdcReg: userData.bmdc_reg || prev.bmdcReg,
-        phone: userData.phone || prev.phone,
-        workplace: userData.workplace || prev.workplace,
-        chamberName: userData.chamber_name || prev.chamberName,
-        chamberAddress: userData.chamber_address || prev.chamberAddress,
-        visitingHours: userData.visiting_hours || prev.visitingHours,
-        appointmentPhone: userData.appointment_phone || prev.appointmentPhone,
+        degrees: userData.degrees || DEFAULT_DOCTOR.degrees,
+        specialty: userData.specialty || DEFAULT_DOCTOR.specialty,
+        bmdcReg: userData.bmdc_reg || DEFAULT_DOCTOR.bmdcReg,
+        phone: userData.phone || DEFAULT_DOCTOR.phone,
+        workplace: userData.workplace || DEFAULT_DOCTOR.workplace,
+        chamberName: userData.chamber_name || DEFAULT_DOCTOR.chamberName,
+        chamberAddress: userData.chamber_address || DEFAULT_DOCTOR.chamberAddress,
+        visitingHours: userData.visiting_hours || DEFAULT_DOCTOR.visitingHours,
+        appointmentPhone: userData.appointment_phone || DEFAULT_DOCTOR.appointmentPhone,
         has_watermark: userData.has_watermark !== false,
         show_qr: userData.show_qr !== false
-      }));
+      };
+      setDoctor(initialDoc);
+
+      // Load or initialize user's chamber profiles
+      const userPhone = userData.phone || 'default';
+      let userChambers = [];
+      try {
+        const raw = localStorage.getItem(`amar_rx_chambers_${userPhone}`);
+        if (raw) userChambers = JSON.parse(raw);
+      } catch (e) {}
+
+      if (!userChambers || userChambers.length === 0) {
+        const defaultProfile = { ...initialDoc, id: 'chamber_main' };
+        userChambers = [defaultProfile];
+        try {
+          localStorage.setItem(`amar_rx_chambers_${userPhone}`, JSON.stringify(userChambers));
+          localStorage.setItem(`amar_rx_active_chamber_${userPhone}`, 'chamber_main');
+        } catch (e) {}
+      }
+      setChamberProfiles(userChambers);
+      setActiveChamberId(userChambers[0].id);
     }
   };
 
@@ -731,6 +823,11 @@ export function App() {
             onOpenAdminPanel={() => setIsAdminPanelOpen(true)}
             onOpenAuth={() => setIsAuthModalOpen(true)}
             onLogout={handleLogout}
+            doctor={doctor}
+            chamberProfiles={chamberProfiles}
+            activeChamberId={activeChamberId}
+            onSelectChamberProfile={handleSelectChamberProfile}
+            onDeleteChamberProfile={handleDeleteChamberProfile}
           />
 
       {/* Main Content Area */}
