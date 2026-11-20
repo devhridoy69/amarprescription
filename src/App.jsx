@@ -71,7 +71,8 @@ export function App() {
           chamberAddress: u.chamber_address || DEFAULT_DOCTOR.chamberAddress,
           visitingHours: u.visiting_hours || DEFAULT_DOCTOR.visitingHours,
           appointmentPhone: u.appointment_phone || DEFAULT_DOCTOR.appointmentPhone,
-          has_watermark: u.has_watermark !== false
+          has_watermark: u.has_watermark !== false,
+          show_qr: u.show_qr !== false
         };
       }
       const savedDoc = localStorage.getItem('amar_rx_doctor');
@@ -611,7 +612,8 @@ export function App() {
         chamberAddress: userData.chamber_address || prev.chamberAddress,
         visitingHours: userData.visiting_hours || prev.visitingHours,
         appointmentPhone: userData.appointment_phone || prev.appointmentPhone,
-        has_watermark: userData.has_watermark !== false
+        has_watermark: userData.has_watermark !== false,
+        show_qr: userData.show_qr !== false
       }));
     }
   };

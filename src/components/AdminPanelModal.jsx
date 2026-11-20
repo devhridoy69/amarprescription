@@ -3,7 +3,7 @@ import {
   ShieldAlert, ShieldCheck, Users, Clock, CheckCircle2, 
   XCircle, Ban, Trash2, Calendar, Search, RefreshCw, 
   X, Phone, Award, Stethoscope, AlertTriangle, Key, LogOut,
-  Sliders, UserCheck, UserX, FileText, ChevronRight, Edit3, Save, Sparkles, Building, Lock, UserPlus
+  Sliders, UserCheck, UserX, FileText, ChevronRight, Edit3, Save, Sparkles, Building, Lock, UserPlus, QrCode
 } from 'lucide-react';
 import { 
   adminFetchAllUsers, 
@@ -95,6 +95,14 @@ export const AdminPanelModal = ({
     loadUsers();
   };
 
+  const handleToggleQrCode = async (user) => {
+    const currentVal = user.show_qr !== false; // Default true if not set
+    const newVal = !currentVal;
+    await adminUpdateUserFullDetails(user.id, user.phone, { show_qr: newVal });
+    showToast(`"${user.full_name}"-এর প্রেসক্রিপশনে QR Code ${newVal ? 'অন (Active)' : 'বন্ধ (Disabled)'} করা হয়েছে।`);
+    loadUsers();
+  };
+
   const handleReject = async (user) => {
     if (!window.confirm(`আপনি কি "${user.full_name}"-এর রেজিস্ট্রেশন আবেদন বাতিল করতে চান?`)) return;
     await adminUpdateUserStatus(user.id, user.phone, 'rejected');
@@ -132,6 +140,7 @@ export const AdminPanelModal = ({
       appointment_phone: user.appointment_phone || '',
       valid_until: user.valid_until || '',
       has_watermark: user.has_watermark !== false,
+      show_qr: user.show_qr !== false,
       status: user.status || 'approved'
     });
   };
@@ -459,6 +468,7 @@ export const AdminPanelModal = ({
               const isSuspended = user.status === 'suspended';
               const isRejected = user.status === 'rejected';
               const hasWatermark = user.has_watermark !== false; // default true
+              const showQr = user.show_qr !== false; // default true
 
               const todayStr = new Date().toISOString().split('T')[0];
               const isExpired = user.valid_until && user.valid_until < todayStr;
@@ -523,6 +533,21 @@ export const AdminPanelModal = ({
                       >
                         <Sparkles className="w-2.5 h-2.5" />
                         <span>Watermark: {hasWatermark ? 'Active (ON)' : 'Removed (OFF)'}</span>
+                      </button>
+
+                      {/* QR Code Status Pill (Admin Controlled) */}
+                      <button
+                        type="button"
+                        onClick={() => handleToggleQrCode(user)}
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all cursor-pointer flex items-center gap-1 ${
+                          showQr
+                            ? 'bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100'
+                            : 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100'
+                        }`}
+                        title="ক্লিক করে প্রেসক্রিপশনের হেডার QR কোড অন/অফ করুন"
+                      >
+                        <QrCode className="w-2.5 h-2.5" />
+                        <span>QR Code: {showQr ? 'Active (ON)' : 'Hidden (OFF)'}</span>
                       </button>
 
                     </div>
@@ -788,31 +813,52 @@ export const AdminPanelModal = ({
                 </div>
               </div>
 
-              {/* Validity Date & Watermark Toggle */}
-              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">মেয়াদ শেষ হওয়ার তারিখ (Valid Until)</label>
-                  <input
-                    type="date"
-                    value={editFormData.valid_until}
-                    onChange={(e) => setEditFormData({ ...editFormData, valid_until: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold"
-                  />
+              {/* Validity Date, Watermark & QR Code Toggle */}
+              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">মেয়াদ শেষ হওয়ার তারিখ (Valid Until)</label>
+                    <input
+                      type="date"
+                      value={editFormData.valid_until}
+                      onChange={(e) => setEditFormData({ ...editFormData, valid_until: e.target.value })}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-2 bg-white rounded-xl border border-slate-200">
+                    <div>
+                      <span className="font-bold text-slate-800 block">প্রেসক্রিপশন ওয়াটারমার্ক</span>
+                      <span className="text-[10px] text-slate-500">Ayan Tech Software Branding</span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editFormData.has_watermark}
+                        onChange={(e) => setEditFormData({ ...editFormData, has_watermark: e.target.checked })}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-slate-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-teal-600"></div>
+                    </label>
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between p-2 bg-white rounded-xl border border-slate-200">
                   <div>
-                    <span className="font-bold text-slate-800 block">প্রেসক্রিপশন ওয়াটারমার্ক</span>
-                    <span className="text-[10px] text-slate-500">Ayan Tech Software Branding</span>
+                    <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                      <QrCode className="w-3.5 h-3.5 text-blue-600" />
+                      <span>প্রেসক্রিপশন QR কোড (Prescription QR Code)</span>
+                    </span>
+                    <span className="text-[10px] text-slate-500">রোগীর স্ক্যান করে প্রেসক্রিপশন ডাউনলোড ও ভেরিফিকেশন QR কোড</span>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={editFormData.has_watermark}
-                      onChange={(e) => setEditFormData({ ...editFormData, has_watermark: e.target.checked })}
+                      checked={editFormData.show_qr}
+                      onChange={(e) => setEditFormData({ ...editFormData, show_qr: e.target.checked })}
                       className="sr-only peer"
                     />
-                    <div className="w-9 h-5 bg-slate-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-teal-600"></div>
+                    <div className="w-9 h-5 bg-slate-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
                   </label>
                 </div>
               </div>

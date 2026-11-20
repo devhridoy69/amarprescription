@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Activity, Stethoscope, FileText, Plus, X, HeartPulse, 
-  Thermometer, CheckCircle2, ChevronDown, ChevronUp, History, Sparkles
+  Thermometer, CheckCircle2, ChevronDown, ChevronUp, History, Sparkles, Search
 } from 'lucide-react';
 import { COMMON_COMPLAINTS, COMPLAINT_DURATIONS } from '../data/complaintsData';
 import { COMMON_INVESTIGATIONS, COMMON_DIAGNOSES } from '../data/investigationsData';
@@ -21,6 +21,7 @@ export const ClinicalSection = ({
   const [selectedDuration, setSelectedDuration] = useState('3 days');
   const [customDiagnosis, setCustomDiagnosis] = useState('');
   const [customInvestigation, setCustomInvestigation] = useState('');
+  const [investigationSearch, setInvestigationSearch] = useState('');
   
   // Collapse toggles for mobile compactness
   const [isComplaintsOpen, setIsComplaintsOpen] = useState(true);
@@ -143,6 +144,7 @@ export const ClinicalSection = ({
       onUpdateInvestigations([...investigations, clean]);
     }
     setCustomInvestigation('');
+    setInvestigationSearch('');
   };
 
   const removeInvestigation = (index) => {
@@ -649,6 +651,93 @@ export const ClinicalSection = ({
                 </div>
               </div>
             )}
+
+            {/* Search Investigations */}
+            <div className="relative">
+              <div className="relative flex items-center">
+                <Search className="w-3.5 h-3.5 text-purple-600 absolute left-3 pointer-events-none" />
+                <input
+                  type="text"
+                  value={investigationSearch}
+                  onChange={(e) => setInvestigationSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && investigationSearch.trim()) {
+                      const query = investigationSearch.trim().toLowerCase();
+                      const match = COMMON_INVESTIGATIONS.find(t => t.toLowerCase() === query) 
+                                 || COMMON_INVESTIGATIONS.find(t => t.toLowerCase().includes(query));
+                      addInvestigation(match || investigationSearch.trim());
+                    }
+                  }}
+                  placeholder="ল্যাব টেস্ট বা এক্স-রে সার্চ করুন (যেমন: CBC, Sugar, Lipid, X-Ray)..."
+                  className="w-full pl-8.5 pr-8 py-2 bg-purple-50/50 hover:bg-purple-50 focus:bg-white border border-purple-200 focus:border-purple-500 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-200 transition-all shadow-2xs"
+                />
+                {investigationSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setInvestigationSearch('')}
+                    className="absolute right-2.5 text-slate-400 hover:text-slate-600 p-0.5 rounded-full"
+                    title="ক্লিয়ার করুন"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Autocomplete / Filtered Dropdown results when searching */}
+              {investigationSearch.trim() && (
+                <div className="mt-1.5 p-2 bg-white rounded-xl border border-purple-200 shadow-md max-h-48 overflow-y-auto space-y-1 z-20">
+                  {(() => {
+                    const query = investigationSearch.trim().toLowerCase();
+                    const filtered = COMMON_INVESTIGATIONS.filter(test => test.toLowerCase().includes(query));
+                    const exactMatch = filtered.some(t => t.toLowerCase() === query);
+
+                    return (
+                      <>
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1 pb-1">
+                          সার্চ ফলাফল ({filtered.length})
+                        </div>
+                        {filtered.length > 0 ? (
+                          filtered.map((test) => {
+                            const isSelected = investigations.includes(test);
+                            return (
+                              <button
+                                key={test}
+                                type="button"
+                                onClick={() => isSelected ? removeInvestigation(investigations.indexOf(test)) : addInvestigation(test)}
+                                className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-between cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-purple-600 text-white font-bold'
+                                    : 'hover:bg-purple-50 text-slate-700'
+                                }`}
+                              >
+                                <span>{test}</span>
+                                {isSelected ? (
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                ) : (
+                                  <Plus className="w-3.5 h-3.5 text-purple-600" />
+                                )}
+                              </button>
+                            );
+                          })
+                        ) : null}
+
+                        {/* Option to add custom test directly if not found */}
+                        {!exactMatch && (
+                          <button
+                            type="button"
+                            onClick={() => addInvestigation(investigationSearch.trim())}
+                            className="w-full text-left px-2.5 py-2 mt-1 rounded-lg text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 transition-all flex items-center justify-between border border-dashed border-purple-300 cursor-pointer"
+                          >
+                            <span>যুক্ত করুন: <strong>"{investigationSearch.trim()}"</strong></span>
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
 
             <p className="text-xs text-slate-500 font-medium">
               প্রয়োজনীয় ল্যাব টেস্টে ক্লিক করে প্রেসক্রিপশনে যুক্ত করুন:

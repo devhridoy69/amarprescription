@@ -105,9 +105,9 @@ export const PrescriptionPreview = ({
                 )}
               </div>
 
-              {/* Middle: Smart Auto QR Code */}
+              {/* Middle: Smart Auto QR Code (Controlled by Admin via doctor.show_qr) */}
               <div className="col-span-2 flex flex-col items-center justify-center text-center">
-                {patient.rxId && (
+                {patient.rxId && doctor.show_qr !== false && (
                   <div className="flex flex-col items-center">
                     <div className="p-1 bg-white border border-slate-300 rounded shadow-2xs">
                       <QRCodeSVG

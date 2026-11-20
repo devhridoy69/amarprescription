@@ -424,6 +424,8 @@ const DB_USER_COLUMNS = new Set([
   'password_hash',
   'status',
   'valid_until',
+  'has_watermark',
+  'show_qr',
   'created_at'
 ]);
 
@@ -688,10 +690,11 @@ export async function adminUpdateUserFullDetails(userId, phone, updatedFields) {
   return true;
 }
 
-export async function adminUpdateUserStatus(userId, phone, newStatus, newValidUntil = null, hasWatermark = null) {
+export async function adminUpdateUserStatus(userId, phone, newStatus, newValidUntil = null, hasWatermark = null, showQr = null) {
   const updateData = { status: newStatus };
   if (newValidUntil) updateData.valid_until = newValidUntil;
   if (hasWatermark !== null) updateData.has_watermark = hasWatermark;
+  if (showQr !== null) updateData.show_qr = showQr;
 
   return adminUpdateUserFullDetails(userId, phone, updateData);
 }
