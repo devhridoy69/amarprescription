@@ -317,10 +317,9 @@ export const AdminPanelModal = ({
   const rejectedUsers = users.filter(u => u.status === 'rejected' || u.status === 'suspended').length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-      
-      {/* Ember-style Dark Sleek Container */}
-      <div className="bg-[#111214] text-slate-200 rounded-3xl shadow-2xl border border-white/5 w-full max-w-6xl max-h-[92vh] flex flex-col md:flex-row overflow-hidden font-sans">
+    <div className="fixed inset-0 z-50 flex items-stretch justify-stretch bg-[#0d0e10] animate-in fade-in duration-200 overflow-hidden">
+      {/* Ember-style Dark Sleek Full Screen Container */}
+      <div className="bg-[#111214] text-slate-200 w-full h-full flex flex-col md:flex-row overflow-hidden font-sans">
         
         {/* ======================= LEFT SIDEBAR (Ember Navigation) ======================= */}
         <div className={`${isMobileSidebarOpen ? 'flex' : 'hidden'} md:flex w-full md:w-64 bg-[#0d0e10] border-b md:border-b-0 md:border-r border-white/5 p-4 flex-col justify-between shrink-0 transition-all`}>
