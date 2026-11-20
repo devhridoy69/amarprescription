@@ -8,7 +8,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // Master Admin Credentials: Default fallback credentials
 export const MASTER_ADMIN_CREDENTIALS = {
   phone: '01780960370', // Ayan Tech Official Phone
-  password: 'admin'       // Secret admin key (also supports 'admin123' & 'ayan7809')
+  password: 'admin'       // Secret admin key
 };
 
 const ADMIN_PASS_STORAGE_KEY = 'amar_rx_custom_admin_pass';
@@ -18,25 +18,52 @@ export function getCustomAdminPassword() {
   return localStorage.getItem(ADMIN_PASS_STORAGE_KEY);
 }
 
-export function isMasterAdmin(phone, password) {
+/**
+ * Checks whether the given phone and password are for Master Admin.
+ * Verifies against:
+ * 1. Supabase 'doctor_users' table row for phone '01780960370'
+ * 2. LocalStorage custom password if set
+ * 3. Default fallback password 'admin'
+ */
+export async function isMasterAdmin(phone, password) {
   const cleanPhone = (phone || '').trim().replace(/\s+/g, '');
   const pass = (password || '').trim();
-  const customPass = getCustomAdminPassword();
+  if (!cleanPhone || !pass) return false;
 
   const isPhoneAdmin = (cleanPhone === '01780960370' || cleanPhone === 'admin' || cleanPhone === '01700000000');
   if (!isPhoneAdmin) return false;
 
-  // If a custom password has been set, check against it
+  // 1. Check custom password in localStorage first (fastest)
+  const customPass = getCustomAdminPassword();
   if (customPass && pass === customPass) {
     return true;
   }
 
-  // Fallback defaults for safety / recovery
-  return (pass === 'admin' || pass === 'admin123' || pass === 'ayan7809');
+  // 2. Check Supabase cloud record for official admin phone
+  try {
+    const { data, error } = await supabase
+      .from('doctor_users')
+      .select('password_hash')
+      .eq('phone', '01780960370')
+      .maybeSingle();
+
+    if (!error && data?.password_hash) {
+      if (pass === data.password_hash) {
+        // Cache in localStorage for offline resiliency
+        try {
+          localStorage.setItem(ADMIN_PASS_STORAGE_KEY, data.password_hash);
+        } catch (e) {}
+        return true;
+      }
+    }
+  } catch (e) {}
+
+  // 3. Fallback default password if not changed yet
+  return pass === 'admin';
 }
 
 /**
- * Updates Master Admin password in localStorage and synchronizes with doctor_users if table exists
+ * Updates Master Admin password in both Supabase cloud and localStorage
  */
 export async function updateAdminMasterPassword(currentPassword, newPassword) {
   const cleanCurrent = (currentPassword || '').trim();
@@ -46,22 +73,20 @@ export async function updateAdminMasterPassword(currentPassword, newPassword) {
     return { success: false, error: 'নতুন পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে।' };
   }
 
-  // Validate current password
-  const customPass = getCustomAdminPassword();
-  const isCurrentValid = customPass 
-    ? (cleanCurrent === customPass) 
-    : (cleanCurrent === 'admin' || cleanCurrent === 'admin123' || cleanCurrent === 'ayan7809');
-
+  // Validate current password using isMasterAdmin check
+  const isCurrentValid = await isMasterAdmin('01780960370', cleanCurrent);
   if (!isCurrentValid) {
     return { success: false, error: 'বর্তমান এডমিন পাসওয়ার্ডটি সঠিক নয়।' };
   }
 
   // 1. Store in localStorage
   if (typeof window !== 'undefined') {
-    localStorage.setItem(ADMIN_PASS_STORAGE_KEY, cleanNew);
+    try {
+      localStorage.setItem(ADMIN_PASS_STORAGE_KEY, cleanNew);
+    } catch (e) {}
   }
 
-  // 2. Also attempt to sync to Supabase doctor_users under official admin phone
+  // 2. Synchronize to Supabase 'doctor_users' table
   try {
     const adminPhone = '01780960370';
     const { data: existingAdmin } = await supabase
@@ -73,7 +98,11 @@ export async function updateAdminMasterPassword(currentPassword, newPassword) {
     if (existingAdmin) {
       await supabase
         .from('doctor_users')
-        .update({ password_hash: cleanNew })
+        .update({ 
+          password_hash: cleanNew,
+          full_name: 'Master Super Admin',
+          specialty: 'System Administrator'
+        })
         .eq('phone', adminPhone);
     } else {
       await supabase
@@ -84,10 +113,9 @@ export async function updateAdminMasterPassword(currentPassword, newPassword) {
           full_name: 'Master Super Admin',
           specialty: 'System Administrator',
           degrees: 'Dev Admin',
-          bmdc_reg_no: 'ADMIN-01',
+          bmdc_reg: 'ADMIN-01',
           status: 'approved',
           password_hash: cleanNew,
-          has_watermark: false,
           created_at: new Date().toISOString()
         }]);
     }
@@ -833,7 +861,8 @@ export async function loginDoctorOnline(phone, password) {
   }
 
   // 0. Check Master Admin Credentials
-  if (isMasterAdmin(phone, password)) {
+  const isAdminValid = await isMasterAdmin(phone, password);
+  if (isAdminValid) {
     return {
       success: true,
       isAdmin: true,
