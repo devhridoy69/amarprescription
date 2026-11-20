@@ -1,0 +1,9 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /*?rx=*
+Disallow: /*?id=*
+
+# Host & Sitemap
+Sitemap: https://hridoyislam.me/sitemap.xml
