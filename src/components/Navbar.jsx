@@ -543,7 +543,7 @@ export const Navbar = ({
             </button>
           )}
 
-          {/* Group 3: Quick Utilities (Dark mode & New Rx) */}
+          {/* Group 3: Quick Utilities (Dark mode) */}
           <div className="flex items-center gap-1">
             <button
               type="button"
@@ -556,15 +556,6 @@ export const Navbar = ({
               title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
             >
               {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
-            </button>
-
-            <button
-              type="button"
-              onClick={onNewPrescription}
-              className="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer border border-transparent hover:border-rose-200"
-              title="New Prescription"
-            >
-              <RotateCcw className="w-4 h-4" />
             </button>
           </div>
 

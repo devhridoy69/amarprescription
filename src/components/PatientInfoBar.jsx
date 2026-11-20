@@ -34,10 +34,11 @@ export const PatientInfoBar = ({ patient, onChange, onReset, isEditing = false, 
           <button
             type="button"
             onClick={onReset}
-            className="text-[11px] text-slate-500 hover:text-rose-600 flex items-center gap-1 transition-colors px-2 py-1 rounded-md hover:bg-rose-50 font-medium cursor-pointer"
-            title="Reset Patient Details"
+            className="text-[11px] text-teal-700 hover:text-teal-900 bg-teal-50 hover:bg-teal-100 border border-teal-200/80 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+            title="Reset and start fresh New Prescription"
           >
-            <RefreshCw className="w-3 h-3" /> New Patient
+            <RefreshCw className="w-3.5 h-3.5 text-teal-600" />
+            <span>New Prescription</span>
           </button>
         </div>
       </div>

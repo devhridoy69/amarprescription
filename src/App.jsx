@@ -771,9 +771,9 @@ export function App() {
   };
 
   // Reset entire prescription for new patient (Auto-saves current to history if has data)
-  const handleNewPrescription = () => {
-    // If current prescription has patient name or medicines, save to history before reset
-    if (patient.name || medicines.length > 0) {
+  const handleNewPrescription = (forceReset = false) => {
+    // If current prescription has patient name or medicines and not forced, save to history before reset
+    if (!forceReset && (patient.name || medicines.length > 0)) {
       saveCurrentPrescriptionToHistory();
     }
 
@@ -1038,17 +1038,7 @@ export function App() {
                   onChange={setPatient}
                   isEditing={Boolean(editingRecordId)}
                   onCancelEdit={() => setEditingRecordId(null)}
-                  onReset={() => {
-                    setEditingRecordId(null);
-                    setPatient(prev => ({
-                      ...prev,
-                      name: '',
-                      age: '',
-                      weight: '',
-                      bp: '',
-                      rxId: 'RX-' + Math.floor(1000 + Math.random() * 9000)
-                    }));
-                  }}
+                  onReset={() => handleNewPrescription(true)}
                 />
               </div>
 
