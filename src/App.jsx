@@ -952,62 +952,6 @@ export function App() {
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[34rem] h-[34rem] bg-teal-400/10 rounded-full blur-3xl"></div>
           </div>
 
-          {/* Ember-style Top Landing Navigation Bar */}
-          <div className="absolute top-4 sm:top-6 left-0 right-0 z-20 flex justify-center px-4">
-            <nav className="w-full max-w-4xl bg-[#0d0e10]/85 backdrop-blur-xl border border-white/10 rounded-2xl px-4 sm:px-6 py-2.5 sm:py-3 shadow-2xl flex items-center justify-between gap-4">
-              {/* Brand Logo & Name */}
-              <div className="flex items-center gap-2.5 shrink-0">
-                <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-white to-slate-400 flex items-center justify-center shadow-xs shrink-0">
-                  <div className="w-2 rounded-full bg-black h-2"></div>
-                </div>
-                <span className="font-bold text-sm tracking-tight text-white">Ember</span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-white/10 text-slate-400 font-mono border border-white/5 hidden sm:inline">Rx</span>
-              </div>
-
-              {/* Navigation Links */}
-              <div className="hidden md:flex items-center gap-6 text-xs font-medium text-slate-300">
-                <button type="button" onClick={() => setIsPricingModalOpen(true)} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
-                  <span>Product</span>
-                  <svg className="w-3 h-3 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg>
-                </button>
-                <button type="button" onClick={() => setIsPricingModalOpen(true)} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
-                  <span>Use cases</span>
-                  <svg className="w-3 h-3 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg>
-                </button>
-                <button type="button" onClick={() => setIsPricingModalOpen(true)} className="hover:text-white transition-colors cursor-pointer">
-                  Pricing
-                </button>
-                <span className="text-slate-500 hover:text-slate-300 transition-colors cursor-pointer">
-                  Changelog
-                </span>
-              </div>
-
-              {/* CTA Buttons */}
-              <div className="flex items-center gap-3 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const el = document.getElementById('auth-login-tab-btn');
-                    if (el) el.click();
-                  }}
-                  className="text-xs font-medium text-slate-300 hover:text-white transition-colors cursor-pointer px-2"
-                >
-                  Log in
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const el = document.getElementById('auth-register-tab-btn');
-                    if (el) el.click();
-                  }}
-                  className="px-3.5 py-1.5 bg-white hover:bg-slate-100 text-black rounded-xl text-xs font-semibold transition-all shadow-xs cursor-pointer"
-                >
-                  Get started
-                </button>
-              </div>
-            </nav>
-          </div>
-
           <AuthModal
             isOpen={true}
             onClose={() => {}}
