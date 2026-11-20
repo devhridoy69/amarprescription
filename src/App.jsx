@@ -13,7 +13,7 @@ import AdminPanelModal from './components/AdminPanelModal';
 import MobileSectionTabs from './components/MobileSectionTabs';
 import PublicPrescriptionView from './components/PublicPrescriptionView';
 import PricingModal from './components/PricingModal';
-import { getPlansConfig, getPlanPermissions } from './data/plansConfig';
+import { getPlansConfig, getPlanPermissions, normalizePlanId } from './data/plansConfig';
 import { DEFAULT_DOCTOR } from './data/defaultDoctor';
 import { PRESCRIPTION_TEMPLATES } from './data/templatesData';
 import { FONT_PAIR_PRESETS } from './data/fontPresets';
@@ -1069,7 +1069,7 @@ export function App() {
       <PricingModal
         isOpen={isPricingModalOpen}
         onClose={() => setIsPricingModalOpen(false)}
-        currentPlan={currentUser?.plan || 'free'}
+        currentPlan={normalizePlanId(currentUser?.plan)}
         plansConfig={plansConfig}
       />
 

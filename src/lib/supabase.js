@@ -576,7 +576,7 @@ export function saveLocalUsers(users) {
   } catch (e) {}
 }
 
-// Valid columns in Supabase 'doctor_users' table
+// Valid columns in Supabase 'doctor_users' table (physical columns only)
 const DB_USER_COLUMNS = new Set([
   'id',
   'phone',
@@ -587,9 +587,6 @@ const DB_USER_COLUMNS = new Set([
   'password_hash',
   'status',
   'valid_until',
-  'has_watermark',
-  'show_qr',
-  'plan',
   'created_at'
 ]);
 
@@ -601,6 +598,101 @@ function filterDbUserFields(dataObj) {
     }
   }
   return clean;
+}
+
+// System doctor plan persistence (Cloud + LocalStorage)
+const DOCTOR_PLANS_CACHE_KEY = 'amar_rx_doctor_plans_cache';
+
+export function getLocalDoctorPlans() {
+  try {
+    const raw = localStorage.getItem(DOCTOR_PLANS_CACHE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+export function saveLocalDoctorPlans(plansMap) {
+  try {
+    localStorage.setItem(DOCTOR_PLANS_CACHE_KEY, JSON.stringify(plansMap));
+  } catch (e) {}
+}
+
+export async function fetchDoctorPlansFromCloud() {
+  const localMap = getLocalDoctorPlans();
+  try {
+    const { data, error } = await supabase
+      .from('prescriptions')
+      .select('full_data')
+      .eq('id', 'sys_doctor_plans')
+      .maybeSingle();
+
+    if (!error && data && data.full_data) {
+      const merged = { ...localMap, ...data.full_data };
+      saveLocalDoctorPlans(merged);
+      return merged;
+    }
+  } catch (e) {
+    console.warn('Fetch sys_doctor_plans notice:', e);
+  }
+  return localMap;
+}
+
+export async function saveDoctorPlanToCloud(phone, planData) {
+  if (!phone) return false;
+  const cleanPhone = String(phone).trim().replace(/\s+/g, '');
+  
+  // 1. Update local cache
+  const localMap = getLocalDoctorPlans();
+  localMap[cleanPhone] = { ...(localMap[cleanPhone] || {}), ...planData };
+  saveLocalDoctorPlans(localMap);
+
+  // 2. Update local registered doctors list
+  const localUsers = getLocalUsers();
+  const uIdx = localUsers.findIndex(u => u.phone === cleanPhone);
+  if (uIdx >= 0) {
+    localUsers[uIdx] = { ...localUsers[uIdx], ...planData };
+    saveLocalUsers(localUsers);
+  }
+
+  // 3. Upsert to Supabase prescriptions row 'sys_doctor_plans'
+  try {
+    let cloudMap = {};
+    try {
+      const { data } = await supabase
+        .from('prescriptions')
+        .select('full_data')
+        .eq('id', 'sys_doctor_plans')
+        .maybeSingle();
+      if (data && data.full_data) {
+        cloudMap = data.full_data;
+      }
+    } catch (e) {}
+
+    const updatedCloudMap = {
+      ...cloudMap,
+      ...localMap,
+      [cleanPhone]: {
+        ...(cloudMap[cleanPhone] || {}),
+        ...(localMap[cleanPhone] || {}),
+        ...planData
+      }
+    };
+
+    const payload = {
+      id: 'sys_doctor_plans',
+      date: new Date().toISOString().split('T')[0],
+      full_data: updatedCloudMap
+    };
+
+    await supabase
+      .from('prescriptions')
+      .upsert(payload, { onConflict: 'id' });
+  } catch (err) {
+    console.warn('saveDoctorPlanToCloud cloud sync notice:', err);
+  }
+
+  return true;
 }
 
 /**
@@ -743,7 +835,17 @@ export async function loginDoctorOnline(phone, password) {
         }
       }
 
-      return { success: true, doctor: data };
+      // Attach plan & feature permissions from plans map
+      const plansMap = await fetchDoctorPlansFromCloud();
+      const planInfo = plansMap[cleanPhone] || {};
+      const enrichedDoctor = {
+        ...data,
+        plan: planInfo.plan || 'free',
+        has_watermark: planInfo.has_watermark !== undefined ? planInfo.has_watermark : true,
+        show_qr: planInfo.show_qr !== undefined ? planInfo.show_qr : false
+      };
+
+      return { success: true, doctor: enrichedDoctor };
     }
   } catch (err) {}
 
@@ -794,7 +896,16 @@ export async function loginDoctorOnline(phone, password) {
     }
   }
 
-  return { success: true, doctor: user };
+  const plansMap = getLocalDoctorPlans();
+  const planInfo = plansMap[cleanPhone] || {};
+  const enrichedUser = {
+    ...user,
+    plan: planInfo.plan || user.plan || 'free',
+    has_watermark: planInfo.has_watermark !== undefined ? planInfo.has_watermark : (user.has_watermark !== undefined ? user.has_watermark : true),
+    show_qr: planInfo.show_qr !== undefined ? planInfo.show_qr : (user.show_qr !== undefined ? user.show_qr : false)
+  };
+
+  return { success: true, doctor: enrichedUser };
 }
 
 /**
@@ -815,36 +926,87 @@ export async function adminFetchAllUsers() {
     }
   } catch (e) {}
 
+  const plansMap = await fetchDoctorPlansFromCloud();
   const localUsers = getLocalUsers();
 
-  const map = new Map();
-  cloudUsers.forEach(u => map.set(u.phone, u));
+  const userMap = new Map();
+
+  // 1. Add all cloud users with plan enrichment
+  cloudUsers.forEach(u => {
+    const phone = u.phone;
+    const planInfo = plansMap[phone] || {};
+    userMap.set(phone, {
+      ...u,
+      plan: planInfo.plan || 'free',
+      has_watermark: planInfo.has_watermark !== undefined ? planInfo.has_watermark : true,
+      show_qr: planInfo.show_qr !== undefined ? planInfo.show_qr : false
+    });
+  });
+
+  // 2. Merge local users (preserving custom local properties)
   localUsers.forEach(u => {
-    if (!map.has(u.phone)) {
-      map.set(u.phone, u);
+    const phone = u.phone;
+    const planInfo = plansMap[phone] || {};
+    if (userMap.has(phone)) {
+      const existing = userMap.get(phone);
+      userMap.set(phone, {
+        ...u,
+        ...existing,
+        plan: planInfo.plan || u.plan || existing.plan || 'free',
+        has_watermark: planInfo.has_watermark !== undefined 
+          ? planInfo.has_watermark 
+          : (u.has_watermark !== undefined ? u.has_watermark : existing.has_watermark),
+        show_qr: planInfo.show_qr !== undefined 
+          ? planInfo.show_qr 
+          : (u.show_qr !== undefined ? u.show_qr : existing.show_qr)
+      });
+    } else {
+      userMap.set(phone, {
+        ...u,
+        plan: planInfo.plan || u.plan || 'free',
+        has_watermark: planInfo.has_watermark !== undefined 
+          ? planInfo.has_watermark 
+          : (u.has_watermark !== undefined ? u.has_watermark : true),
+        show_qr: planInfo.show_qr !== undefined 
+          ? planInfo.show_qr 
+          : (u.show_qr !== undefined ? u.show_qr : false)
+      });
     }
   });
 
-  return Array.from(map.values());
+  return Array.from(userMap.values());
 }
 
 export async function adminUpdateUserFullDetails(userId, phone, updatedFields) {
-  // Update in localStorage
+  const cleanPhone = String(phone).trim().replace(/\s+/g, '');
+
+  // 1. Update in localStorage
   const localList = getLocalUsers();
-  const idx = localList.findIndex(u => u.id === userId || u.phone === phone);
+  const idx = localList.findIndex(u => u.id === userId || u.phone === cleanPhone);
   if (idx >= 0) {
     localList[idx] = { ...localList[idx], ...updatedFields };
     saveLocalUsers(localList);
   }
 
-  // Update in Supabase cloud (only passing columns that exist in the database schema)
+  // 2. If plan or feature toggles are updated, save to cloud & local plan mapping
+  if (updatedFields.plan !== undefined || updatedFields.has_watermark !== undefined || updatedFields.show_qr !== undefined) {
+    const planData = {};
+    if (updatedFields.plan !== undefined) planData.plan = updatedFields.plan;
+    if (updatedFields.has_watermark !== undefined) planData.has_watermark = updatedFields.has_watermark;
+    if (updatedFields.show_qr !== undefined) planData.show_qr = updatedFields.show_qr;
+    if (updatedFields.valid_until !== undefined) planData.valid_until = updatedFields.valid_until;
+    
+    await saveDoctorPlanToCloud(cleanPhone, planData);
+  }
+
+  // 3. Update in Supabase cloud (only passing physical columns that exist in schema)
   try {
     const dbFields = filterDbUserFields(updatedFields);
     if (Object.keys(dbFields).length > 0) {
       const { error } = await supabase
         .from('doctor_users')
         .update(dbFields)
-        .eq('phone', phone);
+        .eq('phone', cleanPhone);
       
       if (error) {
         console.error('Supabase admin update error:', error);

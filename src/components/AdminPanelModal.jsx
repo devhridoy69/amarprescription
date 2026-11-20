@@ -13,7 +13,7 @@ import {
   updateAdminMasterPassword,
   adminCreateUser
 } from '../lib/supabase';
-import { getPlansConfig, savePlansConfig, getPlanPermissions } from '../data/plansConfig';
+import { getPlansConfig, savePlansConfig, getPlanPermissions, normalizePlanId } from '../data/plansConfig';
 
 export const AdminPanelModal = ({ 
   isOpen, 
@@ -97,6 +97,14 @@ export const AdminPanelModal = ({
           window.dispatchEvent(new CustomEvent('amar_rx_user_updated', { detail: updated }));
         }
       }
+      const docRaw = localStorage.getItem('amar_rx_doctor');
+      if (docRaw) {
+        const doc = JSON.parse(docRaw);
+        if (doc.phone === phone) {
+          const updatedDoc = { ...doc, ...updates };
+          localStorage.setItem('amar_rx_doctor', JSON.stringify(updatedDoc));
+        }
+      }
     } catch (e) {}
   };
 
@@ -105,25 +113,29 @@ export const AdminPanelModal = ({
     const validUntil = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     await adminUpdateUserStatus(user.id, user.phone, 'approved', validUntil, withWatermark);
     showToast(`ডাক্তার "${user.full_name}"-কে অনুমোদন দেওয়া হয়েছে (${days} দিন, Watermark: ${withWatermark ? 'On' : 'Off'})।`);
-    loadUsers();
+    await loadUsers();
   };
 
   const handleToggleWatermark = async (user) => {
     const currentVal = user.has_watermark !== false; // Default true if not set
     const newVal = !currentVal;
-    await adminUpdateUserFullDetails(user.id, user.phone, { has_watermark: newVal });
-    syncActiveUserIfMatches(user.phone, { has_watermark: newVal });
+    const updates = { has_watermark: newVal };
+    setUsers(prev => prev.map(u => (u.phone === user.phone ? { ...u, ...updates } : u)));
+    await adminUpdateUserFullDetails(user.id, user.phone, updates);
+    syncActiveUserIfMatches(user.phone, updates);
     showToast(`"${user.full_name}"-এর প্রেসক্রিপশনে Watermark ${newVal ? 'যুক্ত করা হয়েছে' : 'মুছে ফেলা হয়েছে (Clean Paper)'}।`);
-    loadUsers();
+    await loadUsers();
   };
 
   const handleToggleQrCode = async (user) => {
     const currentVal = user.show_qr !== false; // Default true if not set
     const newVal = !currentVal;
-    await adminUpdateUserFullDetails(user.id, user.phone, { show_qr: newVal });
-    syncActiveUserIfMatches(user.phone, { show_qr: newVal });
+    const updates = { show_qr: newVal };
+    setUsers(prev => prev.map(u => (u.phone === user.phone ? { ...u, ...updates } : u)));
+    await adminUpdateUserFullDetails(user.id, user.phone, updates);
+    syncActiveUserIfMatches(user.phone, updates);
     showToast(`"${user.full_name}"-এর প্রেসক্রিপশনে QR Code ${newVal ? 'অন (Active)' : 'বন্ধ (Disabled)'} করা হয়েছে।`);
-    loadUsers();
+    await loadUsers();
   };
 
   const handleUpdateDoctorPlan = async (user, newPlan) => {
@@ -136,10 +148,11 @@ export const AdminPanelModal = ({
       updates.has_watermark = !perms.canRemoveWatermark;
       updates.show_qr = perms.canUseQrCode;
     }
+    setUsers(prev => prev.map(u => (u.phone === user.phone ? { ...u, ...updates } : u)));
     await adminUpdateUserFullDetails(user.id, user.phone, updates);
     syncActiveUserIfMatches(user.phone, updates);
-    showToast(`"${user.full_name}"-কে ${newPlan} প্ল্যান অ্যাসাইন করা হয়েছে।`);
-    loadUsers();
+    showToast(`"${user.full_name}"-কে ${newPlan} প্ল্যান সফলভাবে অ্যাসাইন করা হয়েছে।`);
+    await loadUsers();
   };
 
   const handleSavePlanConfig = (e) => {
@@ -615,7 +628,7 @@ export const AdminPanelModal = ({
                       <div className="flex items-center gap-1 bg-amber-50/90 px-2 py-0.5 rounded-full border border-amber-300">
                         <Crown className="w-2.5 h-2.5 text-amber-700" />
                         <select
-                          value={user.plan || 'free'}
+                          value={normalizePlanId(user.plan)}
                           onChange={(e) => handleUpdateDoctorPlan(user, e.target.value)}
                           className="bg-transparent text-[10px] font-black text-amber-950 border-none outline-hidden cursor-pointer"
                           title="ডাক্তারের সাবস্ক্রিপশন প্ল্যান পরিবর্তন করুন"
@@ -895,7 +908,7 @@ export const AdminPanelModal = ({
               <div>
                 <label className="block font-bold text-slate-700 mb-1">সাবস্ক্রিপশন প্ল্যান (Subscription Plan)</label>
                 <select
-                  value={editFormData.plan || 'free'}
+                  value={normalizePlanId(editFormData.plan)}
                   onChange={(e) => {
                     const newPlan = e.target.value;
                     const updates = { plan: newPlan };

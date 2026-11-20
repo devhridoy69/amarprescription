@@ -101,9 +101,17 @@ export function savePlansConfig(config) {
   } catch (e) {}
 }
 
+export function normalizePlanId(planId) {
+  if (!planId) return 'free';
+  const lower = String(planId).toLowerCase().trim();
+  if (lower === 'standard_pro' || lower === 'pro') return 'standard';
+  if (lower === 'enterprise_vip' || lower === 'vip') return 'enterprise';
+  return lower;
+}
+
 export function getPlanPermissions(planId) {
   const cfg = getPlansConfig();
-  const id = (planId || 'free').toLowerCase();
+  const id = normalizePlanId(planId);
 
   // 1. Free plan check
   if (id === 'free') {
