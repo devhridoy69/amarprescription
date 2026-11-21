@@ -1083,37 +1083,37 @@ export function App() {
             </div>
           )}
 
-          {/* RIGHT: Live Prescription Preview (WYSIWYG) */}
-          {(viewMode === 'preview' || viewMode === 'split') && (
-            <div className={`print:w-full print:max-w-full print:block ${
-              viewMode === 'split' 
-                ? 'lg:col-span-6 xl:col-span-6 h-full overflow-y-auto pl-1' 
-                : 'max-w-[210mm] mx-auto w-full'
-            }`}>
-              <div className="print:static">
-                <PrescriptionPreview
-                  doctor={doctor}
-                  patient={patient}
-                  complaints={complaints}
-                  vitals={vitals}
-                  diagnosis={diagnosis}
-                  investigations={investigations}
-                  medicines={medicines}
-                  adviceList={adviceList}
-                  nextVisit={nextVisit}
-                  specialNote={specialNote}
-                  printSettings={printSettings}
-                  onUpdatePrintSettings={handleUpdatePrintSettings}
-                  selectedFont={selectedFont}
-                  onSelectFontId={handleSelectFontId}
-                  fontPresets={FONT_PAIR_PRESETS}
-                  onPrint={handlePrint}
-                  currentUser={currentUser}
-                  onOpenPricing={() => setIsPricingModalOpen(true)}
-                />
-              </div>
+          {/* RIGHT: Live Prescription Preview (WYSIWYG) - Always mounted for seamless print */}
+          <div className={`${
+            viewMode === 'preview' || viewMode === 'split' ? 'block' : 'hidden print:block'
+          } print:w-full print:max-w-full print:block ${
+            viewMode === 'split' 
+              ? 'lg:col-span-6 xl:col-span-6 h-full overflow-y-auto pl-1' 
+              : 'max-w-[210mm] mx-auto w-full'
+          }`}>
+            <div className="print:static">
+              <PrescriptionPreview
+                doctor={doctor}
+                patient={patient}
+                complaints={complaints}
+                vitals={vitals}
+                diagnosis={diagnosis}
+                investigations={investigations}
+                medicines={medicines}
+                adviceList={adviceList}
+                nextVisit={nextVisit}
+                specialNote={specialNote}
+                printSettings={printSettings}
+                onUpdatePrintSettings={handleUpdatePrintSettings}
+                selectedFont={selectedFont}
+                onSelectFontId={handleSelectFontId}
+                fontPresets={FONT_PAIR_PRESETS}
+                onPrint={handlePrint}
+                currentUser={currentUser}
+                onOpenPricing={() => setIsPricingModalOpen(true)}
+              />
             </div>
-          )}
+          </div>
 
         </div>
 

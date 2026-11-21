@@ -212,10 +212,11 @@
     -webkit-print-color-adjust: exact !important;
   }
 
-  /* Hide editor and navigation elements during print */
+  /* Hide editor, tabs, navbar and non-printable elements during print */
   .no-print,
   nav,
-  header {
+  header,
+  .print\:hidden {
     display: none !important;
   }
 
