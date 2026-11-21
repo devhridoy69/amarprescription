@@ -62,7 +62,8 @@ export const PrescriptionPreview = ({
     footerHeightMm: printSettings?.footerHeightMm ?? 25,
     pageCount: printSettings?.pageCount ?? 1,
     paperSize: printSettings?.paperSize ?? 'A4', // 'A4' (210x297mm) or 'Letter' (216x279mm)
-    scale: printSettings?.scale ?? 100 // 80% to 120%
+    scale: printSettings?.scale ?? 100, // 80% to 120%
+    printMode: printSettings?.printMode ?? 'color' // 'color' or 'bw' (Black & White high-contrast)
   };
 
   const handlePrint = () => {
@@ -90,10 +91,12 @@ export const PrescriptionPreview = ({
         key={`page-${pageNumber}`}
         style={{
           ...(selectedFont ? { fontFamily: selectedFont.fontFamily } : {}),
-          maxWidth: paperDimensions.maxW,
+          maxWidth: `min(100%, ${paperDimensions.maxW})`,
           minHeight: paperDimensions.minH,
         }}
         className={`prescription-paper bg-white w-full shadow-xl rounded-xl border border-slate-200/80 p-6 sm:p-8 md:p-9 flex flex-col justify-between text-slate-800 transition-all text-xs print:border-none print:shadow-none print:rounded-none relative ${
+          settings.printMode === 'bw' ? 'print-bw' : 'print-color'
+        } ${
           !isLastPage ? 'mb-8 print:mb-0 print:page-break' : ''
         }`}
       >
@@ -436,16 +439,9 @@ export const PrescriptionPreview = ({
                             </div>
                           )}
 
-                          {/* Unit e.g. 1/2 কাপ / চামচ (অপ্রয়োজনীয় রিপিটেটিভ Tablet, Capsule, ফোঁটা বাদ দিয়ে পরিচ্ছন্ন রাখা) */}
-                          {med.unit && 
-                           med.unit.toLowerCase() !== 'tablet' && 
-                           med.unit.toLowerCase() !== 'tab' && 
-                           med.unit.toLowerCase() !== 'capsule' && 
-                           med.unit.toLowerCase() !== 'cap' && 
-                           med.unit !== 'ফোঁটা' && 
-                           med.unit !== 'drops' && 
-                           med.unit !== 'ড্রপ' && (
-                            <span className="text-slate-700 font-semibold">
+                          {/* Unit e.g. চামচ, ফোঁটা, মিলি, পাম্প, কাপ */}
+                          {med.unit && (
+                            <span className="text-slate-800 font-bold">
                               {renderWithFractions(med.unit, 'sm')}
                             </span>
                           )}
@@ -605,6 +601,8 @@ export const PrescriptionPreview = ({
             background: #ffffff !important;
             width: 100% !important;
             height: 100% !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           .prescription-paper {
             width: 100% !important;
@@ -623,7 +621,56 @@ export const PrescriptionPreview = ({
             page-break-inside: avoid !important;
             break-inside: avoid !important;
             overflow: hidden !important;
+            -webkit-font-smoothing: subpixel-antialiased !important;
+            text-rendering: geometricPrecision !important;
           }
+
+          /* Super Sharp & Dark Print Rendering for Laser Printers */
+          .prescription-paper * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            text-shadow: none !important;
+          }
+
+          /* High Contrast Black & White Laser Mode */
+          .prescription-paper.print-bw {
+            color: #000000 !important;
+            filter: grayscale(100%) contrast(140%) !important;
+          }
+          .prescription-paper.print-bw * {
+            color: #000000 !important;
+            border-color: #000000 !important;
+          }
+          .prescription-paper.print-bw h1,
+          .prescription-paper.print-bw h2,
+          .prescription-paper.print-bw h3,
+          .prescription-paper.print-bw h4,
+          .prescription-paper.print-bw .font-bold,
+          .prescription-paper.print-bw .font-black,
+          .prescription-paper.print-bw .font-semibold {
+            color: #000000 !important;
+            font-weight: 800 !important;
+          }
+          .prescription-paper.print-bw .text-slate-400,
+          .prescription-paper.print-bw .text-slate-500,
+          .prescription-paper.print-bw .text-slate-600,
+          .prescription-paper.print-bw .text-slate-700 {
+            color: #111111 !important;
+          }
+
+          /* Enhanced Contrast for Standard Color Mode Laser Print */
+          .prescription-paper.print-color h1 {
+            color: #0f4c47 !important;
+            font-weight: 800 !important;
+          }
+          .prescription-paper.print-color .text-slate-500,
+          .prescription-paper.print-color .text-slate-600 {
+            color: #334155 !important;
+          }
+          .prescription-paper.print-color .text-slate-400 {
+            color: #475569 !important;
+          }
+
           /* Strictly prevent accidental 2nd page when 1 page is chosen */
           .prescription-paper:last-child {
             page-break-after: avoid !important;
@@ -655,6 +702,34 @@ export const PrescriptionPreview = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Quick Print Mode Switcher (Color / Black & White Laser) */}
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs">
+              <button
+                type="button"
+                onClick={() => onUpdatePrintSettings({ ...settings, printMode: 'color' })}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  settings.printMode !== 'bw'
+                    ? 'bg-white text-teal-800 shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+                title="Color Print"
+              >
+                Color
+              </button>
+              <button
+                type="button"
+                onClick={() => onUpdatePrintSettings({ ...settings, printMode: 'bw' })}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  settings.printMode === 'bw'
+                    ? 'bg-slate-900 text-white shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+                title="Black & White (গাঢ় ও স্পষ্ট লেজার প্রিন্ট)"
+              >
+                B&W (লেজার)
+              </button>
+            </div>
+
             <button
               type="button"
               onClick={() => setShowConfig(!showConfig)}
@@ -843,6 +918,36 @@ export const PrescriptionPreview = ({
               </div>
               <p className="text-[10px] text-slate-400">
                 প্যাডে লেখা বড়/ছোট করতে ৮০% থেকে ১২০% স্কেল করুন
+              </p>
+            </div>
+
+            {/* 6. Print Color Mode (Color vs Black & White Laser) */}
+            <div className="space-y-1.5 bg-white p-2.5 rounded-lg border border-slate-200">
+              <span className="font-bold text-slate-700 flex items-center gap-1">
+                <Printer className="w-3.5 h-3.5 text-teal-600" />
+                Print Color (প্রিন্ট মোড)
+              </span>
+              <div className="flex rounded-md border border-slate-200 bg-slate-50 p-0.5">
+                {[
+                  { id: 'color', label: 'Color (রঙিন)' },
+                  { id: 'bw', label: 'B&W (গাঢ় লেজার)' }
+                ].map((mode) => (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    onClick={() => onUpdatePrintSettings({ ...settings, printMode: mode.id })}
+                    className={`flex-1 py-1 text-xs font-bold rounded transition-all cursor-pointer ${
+                      settings.printMode === mode.id
+                        ? 'bg-teal-600 text-white shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-slate-400">
+                {settings.printMode === 'bw' ? 'লেজার প্রিন্টারের জন্য ১০০% কুচকুচে কালো ও স্পষ্ট লেখা' : 'রঙিন প্যাড বা কালার প্রিন্টারের জন্য স্ট্যান্ডার্ড কালার'}
               </p>
             </div>
 

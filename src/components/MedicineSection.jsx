@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useTransition } from 'react';
 import { 
   Pill, Plus, Trash2, Search, ArrowUp, ArrowDown, Sparkles, 
-  Coffee, HelpCircle, Check, X, Layers, Clock, Database, Loader2, History
+  Coffee, HelpCircle, Check, X, Layers, Clock, Database, Loader2, History,
+  Edit3, PlusCircle, GripVertical
 } from 'lucide-react';
 import { 
   COMMON_MEDICINES, 
@@ -17,6 +18,556 @@ import { StackedFraction, renderWithFractions } from './StackedFraction';
 
 const RECENT_MEDICINES_KEY = 'amar_rx_recent_medicines';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// MedicineEditModal – opens after selecting a medicine from search
+// White-mode, matches Admin Panel aesthetic
+// ─────────────────────────────────────────────────────────────────────────────
+const MEAL_TIMES = ['সকাল', 'দুপুর', 'রাত', 'বিকাল'];
+const TAKE_FOR_OPTIONS = [3, 5, 7, 14, 30];
+const DEFAULT_INSTRUCTIONS = [
+  'খাবার পরে (ভরা পেটে)',
+  'খাবার ৩০ মিনিট আগে (খালি পেটে)',
+  'জ্বর বা ব্যথা থাকলে',
+  'রাতে ঘুমানোর পূর্বে',
+  'প্রতিদিন একই নির্দিষ্ট সময়ে',
+  'প্রচুর পরিমাণে পানি পান করবেন',
+  'ঠান্ডা পানি ও তৈলাক্ত খাবার পরিহার করবেন',
+  'চুষে খাবেন',
+  'কুসুম গরম পানিতে মিশিয়ে খাবেন',
+  'বমি বা অস্বস্তি অনুভূত হলে'
+];
+const DEFAULT_QUICK_DOSES = ['1/4', '1/2', '3/4', '1', '1 1/2', '2', '2 1/2', '3', '5'];
+const DEFAULT_UNITS = ['চামচ', 'ফোঁটা', 'মিলি', 'পাম্প', 'কাপ'];
+
+function MedicineEditModal({ med, onClose, onConfirm, isEdit = false, userPhone = 'default' }) {
+  const INST_KEY = `amar_rx_instructions_${userPhone}`;
+  const DOSE_KEY = `amar_rx_quick_doses_${userPhone}`;
+
+  // Load custom instructions list with defaults from localStorage
+  const [customInsts, setCustomInsts] = React.useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(INST_KEY) || 'null');
+      if (Array.isArray(saved) && saved.length > 0) {
+        const merged = [...saved];
+        DEFAULT_INSTRUCTIONS.forEach(inst => {
+          if (!merged.includes(inst)) merged.push(inst);
+        });
+        return merged;
+      }
+      return DEFAULT_INSTRUCTIONS;
+    } catch {
+      return DEFAULT_INSTRUCTIONS;
+    }
+  });
+
+  // Load quick doses list with defaults from localStorage
+  const [quickDoses, setQuickDoses] = React.useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(DOSE_KEY) || 'null');
+      if (Array.isArray(saved) && saved.length > 0) {
+        const merged = [...saved];
+        DEFAULT_QUICK_DOSES.forEach(d => {
+          if (!merged.includes(d)) merged.push(d);
+        });
+        return merged;
+      }
+      return DEFAULT_QUICK_DOSES;
+    } catch {
+      return DEFAULT_QUICK_DOSES;
+    }
+  });
+
+  const [newDoseInput, setNewDoseInput] = useState('');
+
+  const handleAddQuickDose = () => {
+    const val = newDoseInput.trim();
+    if (!val || quickDoses.includes(val)) return;
+    const updated = [...quickDoses, val];
+    setQuickDoses(updated);
+    try { localStorage.setItem(DOSE_KEY, JSON.stringify(updated)); } catch {}
+    setNewDoseInput('');
+  };
+
+  const handleRemoveQuickDose = (val, e) => {
+    e.stopPropagation();
+    const updated = quickDoses.filter(d => d !== val);
+    setQuickDoses(updated);
+    try { localStorage.setItem(DOSE_KEY, JSON.stringify(updated)); } catch {}
+  };
+
+  const UNIT_KEY = `amar_rx_units_${userPhone}`;
+  const [unitsList, setUnitsList] = React.useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(UNIT_KEY) || 'null');
+      if (Array.isArray(saved) && saved.length > 0) {
+        const merged = [...saved];
+        DEFAULT_UNITS.forEach(u => {
+          if (!merged.includes(u)) merged.push(u);
+        });
+        return merged;
+      }
+      return DEFAULT_UNITS;
+    } catch {
+      return DEFAULT_UNITS;
+    }
+  });
+
+  const [newUnitInput, setNewUnitInput] = useState('');
+
+  const handleAddUnit = () => {
+    const val = newUnitInput.trim();
+    if (!val || unitsList.includes(val)) return;
+    const updated = [...unitsList, val];
+    setUnitsList(updated);
+    try { localStorage.setItem(UNIT_KEY, JSON.stringify(updated)); } catch {}
+    setNewUnitInput('');
+    setForm(f => ({ ...f, unit: val }));
+  };
+
+  const handleRemoveUnit = (val, e) => {
+    e.stopPropagation();
+    const updated = unitsList.filter(u => u !== val);
+    setUnitsList(updated);
+    try { localStorage.setItem(UNIT_KEY, JSON.stringify(updated)); } catch {}
+    if (form.unit === val) {
+      setForm(f => ({ ...f, unit: '' }));
+    }
+  };
+
+  const [form, setForm] = useState({
+    type:        med.type        || 'Tab',
+    brandName:   med.brandName   || '',
+    genericName: med.genericName || '',
+    strength:    med.strength    || '',
+    slots: {
+      'সকাল':  med.slots?.['সকাল']  ?? true,
+      'দুপুর': med.slots?.['দুপুর'] ?? true,
+      'রাত':   med.slots?.['রাত']   ?? true,
+      'বিকাল': med.slots?.['বিকাল'] ?? false,
+    },
+    doses: {
+      'সকাল':  med.doses?.['সকাল']  ?? '1',
+      'দুপুর': med.doses?.['দুপুর'] ?? '1',
+      'রাত':   med.doses?.['রাত']   ?? '1',
+      'বিকাল': med.doses?.['বিকাল'] ?? '0',
+    },
+    unit:         med.unit        || (med.type === 'Syp' ? 'চামচ' : med.type === 'Drop' ? 'ফোঁটা' : ''),
+    instruction:  med.instruction || '',
+    duration:     med.duration    || '',
+    takeForDays:  med.takeForDays || null,
+    setAsDefault: false,
+  });
+
+  const MEAL_TIMES = ['সকাল', 'দুপুর', 'রাত', 'বিকাল'];
+  const TAKE_FOR_OPTIONS = [3, 5, 7, 14, 30];
+
+  const buildDosage = (slots, doses) => {
+    const parts = MEAL_TIMES.map(t => slots[t] ? (doses[t] || '1') : '0');
+    return parts.slice(0, 3).join('+') + (slots['বিকাল'] ? `+${parts[3]}` : '');
+  };
+
+  const handleSlotToggle = (t) => setForm(f => ({ ...f, slots: { ...f.slots, [t]: !f.slots[t] } }));
+  const handleDoseChange = (t, val) => setForm(f => ({ ...f, doses: { ...f.doses, [t]: val } }));
+
+  // Auto-save instruction to recent list on blur (if non-empty & not duplicate)
+  const handleInstructionBlur = () => {
+    const text = (form.instruction || '').trim();
+    if (!text || customInsts.includes(text)) return;
+    const updated = [text, ...customInsts.filter(i => i !== text)].slice(0, 20);
+    setCustomInsts(updated);
+    try { localStorage.setItem(INST_KEY, JSON.stringify(updated)); } catch {}
+  };
+
+  // Remove from custom list
+  const removeCustomInst = (item, e) => {
+    e.stopPropagation();
+    const updated = customInsts.filter(i => i !== item);
+    setCustomInsts(updated);
+    try { localStorage.setItem(INST_KEY, JSON.stringify(updated)); } catch {}
+  };
+
+  const handleConfirm = () => {
+    // Auto-save instruction on confirm too
+    const text = (form.instruction || '').trim();
+    if (text && !customInsts.includes(text)) {
+      const updated = [text, ...customInsts].slice(0, 20);
+      setCustomInsts(updated);
+      try { localStorage.setItem(INST_KEY, JSON.stringify(updated)); } catch {}
+    }
+    const dosage = buildDosage(form.slots, form.doses);
+    onConfirm({ ...form, dosage, id: med.id || ('rx-med-' + Date.now()) });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 p-2 sm:p-4 md:p-6 overflow-y-auto">
+      <div className="bg-white w-full max-w-2xl mx-auto rounded-2xl shadow-2xl border border-slate-200/90 overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[88vh]">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-slate-100 bg-slate-50/80 shrink-0">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800 uppercase tracking-wide">
+                {form.type}
+              </span>
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                {isEdit ? 'Edit' : 'Configure'} — <span className="text-teal-700">{form.brandName}</span>
+              </h2>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {form.strength ? `${form.strength}` : ''}
+              {form.genericName ? ` • ${form.genericName}` : ''}
+            </p>
+          </div>
+          <button 
+            type="button" 
+            onClick={onClose} 
+            className="p-2 hover:bg-slate-200/70 rounded-xl text-slate-400 hover:text-slate-700 cursor-pointer transition-colors"
+            title="বন্ধ করুন (Close)"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Modal Scrollable Body */}
+        <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
+
+          {/* Strength (পাওয়ার) */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Strength (পাওয়ার / সাইজ)</label>
+            <input 
+              type="text" 
+              value={form.strength} 
+              onChange={e => setForm(f => ({ ...f, strength: e.target.value }))}
+              placeholder="e.g. 500mg, 20mg, 10ml, 1 puff..."
+              className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm font-medium focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all shadow-2xs" 
+            />
+          </div>
+
+          {/* সময় ও ডোজ নির্বাচন (Morning, Noon, Night, Evening) */}
+          <div className="bg-slate-50/90 rounded-2xl p-4 border border-slate-200/80 shadow-2xs">
+            <label className="block text-xs font-bold text-slate-800 mb-2.5">
+              সময় ও ডোজ নির্বাচন করুন (ডোজ পরিবর্তন করতে ঘরে টাইপ করুন)
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              {MEAL_TIMES.map(t => (
+                <div 
+                  key={t} 
+                  className={`rounded-xl border p-2.5 transition-all ${
+                    form.slots[t] 
+                      ? 'border-teal-500 bg-white shadow-xs ring-1 ring-teal-400/30' 
+                      : 'border-slate-200 bg-slate-100/60 opacity-60'
+                  }`}
+                >
+                  <label className="flex items-center gap-2 cursor-pointer mb-2">
+                    <input 
+                      type="checkbox" 
+                      checked={form.slots[t]} 
+                      onChange={() => handleSlotToggle(t)} 
+                      className="accent-teal-600 w-4 h-4 rounded cursor-pointer" 
+                    />
+                    <span className={`text-xs font-bold ${form.slots[t] ? 'text-teal-900' : 'text-slate-500'}`}>
+                      {t}
+                    </span>
+                  </label>
+                  <input 
+                    type="text" 
+                    value={form.doses[t]} 
+                    disabled={!form.slots[t]} 
+                    onChange={e => handleDoseChange(t, e.target.value)}
+                    className="w-full text-center px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-extrabold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 transition-all" 
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Quick Dosage Buttons with custom add and remove */}
+            <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-2.5 border-t border-slate-200/80">
+              <span className="text-xs font-bold text-slate-500 mr-1 shrink-0">Quick Dose:</span>
+              {quickDoses.map(v => (
+                <div 
+                  key={v} 
+                  className="inline-flex items-center rounded-lg border border-teal-200 bg-white hover:bg-teal-50 transition-all shadow-2xs group"
+                >
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      const enabled = Object.keys(form.slots).filter(t => form.slots[t]);
+                      const newDoses = { ...form.doses };
+                      enabled.forEach(t => { newDoses[t] = v; });
+                      setForm(f => ({ ...f, doses: newDoses }));
+                    }}
+                    className="px-2.5 py-1 text-xs font-bold text-teal-900 cursor-pointer"
+                    title={`সব ঘরে ${v} ডোজ বসান`}
+                  >
+                    {v}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => handleRemoveQuickDose(v, e)}
+                    className="pr-1.5 pl-0.5 text-slate-300 hover:text-rose-500 transition-colors text-xs font-bold cursor-pointer"
+                    title="ডোজটি তালিকা থেকে মুছে ফেলুন"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+
+              {/* Add custom quick dose input & button */}
+              <div className="flex items-center gap-1 bg-white border border-slate-300 rounded-lg px-2 py-0.5 shadow-2xs ml-1">
+                <input
+                  type="text"
+                  value={newDoseInput}
+                  onChange={e => setNewDoseInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddQuickDose(); } }}
+                  placeholder="+ ডোজ..."
+                  className="w-14 sm:w-16 text-center text-xs font-bold text-teal-800 outline-none bg-transparent"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddQuickDose}
+                  className="text-xs font-bold text-teal-700 hover:text-teal-900 px-1 py-0.5 hover:bg-teal-50 rounded cursor-pointer transition-colors"
+                  title="নতুন ডোজ যোগ করুন"
+                >
+                  + Add
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Unit / পরিমাপ */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700">Unit / পরিমাপ</label>
+              {form.unit && (
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, unit: '' }))}
+                  className="text-[11px] text-slate-500 hover:text-rose-600 font-semibold cursor-pointer transition-colors"
+                  title="পরিমাপ বাদ দিন"
+                >
+                  ✕ পরিমাপ বাদ দিন (Clear)
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1.5 items-center">
+              {/* None button */}
+              <button 
+                type="button"
+                onClick={() => setForm(f => ({ ...f, unit: '' }))}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold border cursor-pointer transition-all ${
+                  !form.unit 
+                    ? 'bg-slate-700 text-white border-slate-800 shadow-2xs' 
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                None
+              </button>
+
+              {/* Units from list: চামচ, ফোঁটা, মিলি, পাম্প, কাপ + custom */}
+              {unitsList.map(u => (
+                <div 
+                  key={u}
+                  className={`inline-flex items-center rounded-lg border transition-all shadow-2xs group ${
+                    form.unit === u 
+                      ? 'bg-teal-600 text-white border-teal-700 shadow-2xs ring-1 ring-teal-500' 
+                      : 'bg-white border-slate-200 text-slate-700 hover:bg-teal-50 hover:border-teal-300 hover:text-teal-900'
+                  }`}
+                >
+                  <button 
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, unit: f.unit === u ? '' : u }))}
+                    className="px-3 py-1.5 text-xs font-bold cursor-pointer"
+                  >
+                    {u}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => handleRemoveUnit(u, e)}
+                    className={`pr-1.5 pl-0.5 text-xs font-bold cursor-pointer transition-colors ${
+                      form.unit === u ? 'text-teal-200 hover:text-white' : 'text-slate-300 hover:text-rose-500'
+                    }`}
+                    title="তালিকা থেকে মুছে ফেলুন"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+
+              {/* Add custom unit input & button */}
+              <div className="flex items-center gap-1 bg-white border border-slate-300 rounded-lg px-2 py-0.5 shadow-2xs ml-1">
+                <input
+                  type="text"
+                  value={newUnitInput}
+                  onChange={e => setNewUnitInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddUnit(); } }}
+                  placeholder="+ ইউনিট..."
+                  className="w-16 sm:w-20 text-center text-xs font-bold text-teal-800 outline-none bg-transparent"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddUnit}
+                  className="text-xs font-bold text-teal-700 hover:text-teal-900 px-1.5 py-1 hover:bg-teal-50 rounded cursor-pointer transition-colors"
+                  title="নতুন ইউনিট যোগ করুন"
+                >
+                  + Add
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Take For (কতদিন) */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Take For (কতদিন চলবে)</label>
+            <div className="flex flex-wrap gap-1.5 items-center">
+              {TAKE_FOR_OPTIONS.map(d => (
+                <button 
+                  key={d} 
+                  type="button"
+                  onClick={() => setForm(f => ({ 
+                    ...f, 
+                    takeForDays: f.takeForDays === d ? null : d, 
+                    duration: f.takeForDays === d ? '' : `${d} দিন` 
+                  }))}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold border cursor-pointer transition-all ${
+                    form.takeForDays === d 
+                      ? 'bg-teal-600 text-white border-teal-700 shadow-2xs' 
+                      : 'bg-white border-slate-200 text-slate-700 hover:bg-teal-50 hover:border-teal-300 hover:text-teal-900'
+                  }`}
+                >
+                  {d} দিন
+                </button>
+              ))}
+              <div className="flex items-center gap-1 bg-white border border-slate-300 rounded-lg px-2.5 py-1 shadow-2xs">
+                <input 
+                  type="number" 
+                  min="1" 
+                  max="365" 
+                  value={form.takeForDays || ''}
+                  onChange={e => { 
+                    const v = e.target.value; 
+                    setForm(f => ({ 
+                      ...f, 
+                      takeForDays: v ? Number(v) : null, 
+                      duration: v ? `${v} দিন` : '' 
+                    })); 
+                  }}
+                  placeholder="কাস্টম"
+                  className="w-12 text-center text-xs font-bold text-teal-800 outline-none bg-transparent" 
+                />
+                <span className="text-xs text-slate-500 font-semibold">দিন</span>
+              </div>
+              <label className="flex items-center gap-1.5 cursor-pointer ml-1 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100">
+                <input 
+                  type="checkbox"
+                  checked={!!form.duration && form.duration.trim().toLowerCase() === 'n/a'}
+                  onChange={e => setForm(f => ({ ...f, duration: e.target.checked ? 'N/A' : '', takeForDays: null }))}
+                  className="accent-teal-600 w-4 h-4 cursor-pointer" 
+                />
+                <span className="text-xs text-slate-700 font-bold">চলবে (N/A)</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Instruction — auto-saves on blur/confirm, custom list with Add option */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700">Instruction or custom time (খাবার নিয়ম / পরামর্শ)</label>
+              {form.instruction?.trim() && !customInsts.includes(form.instruction.trim()) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const text = form.instruction.trim();
+                    if (!text || customInsts.includes(text)) return;
+                    const updated = [text, ...customInsts].slice(0, 20);
+                    setCustomInsts(updated);
+                    try { localStorage.setItem(INST_KEY, JSON.stringify(updated)); } catch {}
+                  }}
+                  className="text-xs text-teal-700 hover:text-teal-900 font-bold bg-teal-50 hover:bg-teal-100 px-2.5 py-1 rounded-lg border border-teal-200 flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                  title="এই নিয়মটি নিচের তালিকায় সেভ করে রাখুন"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>তালিকায় সেভ রাখুন (+ Add)</span>
+                </button>
+              )}
+            </div>
+            <input
+              type="text"
+              value={form.instruction}
+              onChange={e => setForm(f => ({ ...f, instruction: e.target.value }))}
+              onBlur={handleInstructionBlur}
+              placeholder="যেমন: জ্বর থাকলে, খাবার পরে, ভরা পেটে..."
+              className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm font-medium focus:ring-2 focus:ring-teal-500 focus:border-teal-500 mb-2 transition-all shadow-2xs"
+            />
+            {/* Custom / preset instruction pills with click-to-select and delete */}
+            {customInsts.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1.5 bg-slate-50/70 rounded-xl border border-slate-200/80">
+                {customInsts.map(inst => (
+                  <span 
+                    key={inst} 
+                    className={`group flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full border text-xs font-semibold transition-all cursor-pointer ${
+                      form.instruction === inst 
+                        ? 'bg-teal-600 text-white border-teal-700 shadow-2xs ring-1 ring-teal-500' 
+                        : 'bg-white border-slate-200 text-slate-700 hover:bg-teal-50 hover:border-teal-300 hover:text-teal-900'
+                    }`}
+                    onClick={() => setForm(f => ({ ...f, instruction: f.instruction === inst ? '' : inst }))}
+                  >
+                    <span>{inst}</span>
+                    <button 
+                      type="button" 
+                      onClick={e => removeCustomInst(inst, e)}
+                      className={`font-bold cursor-pointer transition-colors p-0.5 rounded-full ${
+                        form.instruction === inst 
+                          ? 'text-teal-200 hover:text-white' 
+                          : 'text-slate-400 hover:text-rose-500 hover:bg-rose-50'
+                      }`}
+                      title="তালিকা থেকে মুছে ফেলুন"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            {customInsts.length === 0 && (
+              <p className="text-[11px] text-slate-400 italic">উপরে নিয়ম লিখুন — অটোমেটিক সেভ হবে অথবা (+ Add) বাটনে চাপুন</p>
+            )}
+          </div>
+
+          {/* Set as default */}
+          <label className="flex items-center gap-2 cursor-pointer pt-1">
+            <input 
+              type="checkbox" 
+              checked={form.setAsDefault}
+              onChange={e => setForm(f => ({ ...f, setAsDefault: e.target.checked }))}
+              className="accent-teal-600 w-4 h-4 rounded cursor-pointer" 
+            />
+            <span className="text-xs font-medium text-slate-600">ভবিষ্যতের জন্য এই ওষুধের ডিফল্ট সেটিং হিসেবে রাখুন</span>
+          </label>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 px-5 sm:px-6 py-4 border-t border-slate-100 bg-slate-50/80 shrink-0">
+          <button 
+            type="button" 
+            onClick={onClose}
+            className="px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-100 cursor-pointer transition-all shadow-2xs"
+          >
+            Close (বন্ধ করুন)
+          </button>
+          <button 
+            type="button" 
+            onClick={handleConfirm}
+            className="flex items-center gap-2 px-5 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 cursor-pointer transition-all shadow-md hover:shadow-lg"
+          >
+            {isEdit ? <Edit3 className="w-4 h-4" /> : <PlusCircle className="w-4 h-4" />}
+            {isEdit ? 'Update Medicine' : 'Add to Prescription'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export const MedicineSection = ({ 
   medicines, 
   onAddMedicine, 
@@ -29,6 +580,9 @@ export const MedicineSection = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
+
+  // Modal state: null = closed; { med, isEdit, editIdx } = open
+  const [medModal, setMedModal] = useState(null);
 
   // User-specific custom instructions storage key
   const userPhone = currentUser?.phone || 'default';
@@ -277,7 +831,7 @@ export const MedicineSection = ({
     return rawType || 'Tab';
   };
 
-  // Quick select a medicine from database
+  // Quick select a medicine from database -> open configure modal
   const handleSelectMedicine = (med) => {
     if (!med) return;
     const rawType = med.type || med.Type || '';
@@ -285,51 +839,31 @@ export const MedicineSection = ({
     const gName = med.genericName || med.generic_name || '';
     const str = med.strength || '';
     const medType = normalizeType(rawType);
-    const defaultUnit = medType === 'Cap' ? '' : 
-                        medType === 'Syp' ? 'চামচ' :
-                        medType === 'Drop' ? '' :
-                        medType === 'Supp' ? 'টি' : '';
+    const defaultUnit = medType === 'Syp' ? 'চামচ' : medType === 'Supp' ? 'টি' : '';
+    const initialUnit = (med.defaultUnit && med.defaultUnit !== 'Tablet' && med.defaultUnit !== 'Capsule') ? med.defaultUnit : defaultUnit;
 
-    let initialDosage = med.defaultDosage || '1+0+1';
-    let initialUnit = med.defaultUnit && med.defaultUnit !== 'Tablet' && med.defaultUnit !== 'Capsule' ? med.defaultUnit : defaultUnit;
-    let initialInstruction = '';
-    if (medType === 'Drop') {
-      const bnNums = { '1': '১', '2': '২', '3': '৩', '4': '৪', '5': '৫', '6': '৬', '7': '৭', '8': '৮', '9': '৯', '10': '১০', '15': '১৫' };
-      if (dropLang === 'bn') {
-        const bnCount = bnNums[dropCount] || dropCount;
-        initialInstruction = `প্রতিবার ${bnCount} ফোঁটা করে`;
-        initialUnit = ''; // Keep unit empty so redundant "ফোঁটা" doesn't show next to dosage
-      } else {
-        initialInstruction = `${dropCount} drops each time`;
-        initialUnit = '';
-      }
-    } else if (medType === 'Supp') {
-      initialInstruction = 'পায়খানার রাস্তায় ব্যবহার করবেন';
-      initialDosage = 'SOS';
-      initialUnit = 'টি';
-    } else if (medType === 'Inj') {
-      initialInstruction = 'মাংসে বা শিরায় পুশ করবেন (IM/IV)';
-      initialDosage = '0+0+1';
-      initialUnit = 'ভায়াল';
-    }
-
-    setCurrentMed({
-      type: medType,
-      brandName: bName,
-      genericName: gName,
-      strength: str,
-      dosage: initialDosage,
-      unit: initialUnit,
-      instruction: initialInstruction, // Auto-populated with drop guidance for Drop
-      duration: '', // Blank by default as requested
-      isFraction: med.defaultDosage?.includes('1/2') || med.defaultUnit?.includes('১/২') || false,
-      fractionDetail: med.defaultDosage?.includes('1/2') ? { num: 1, den: 2, label: '1/2' } : null
-    });
-    setSearchTerm(bName);
     setShowSuggestions(false);
+    setMedModal({
+      isEdit: false,
+      editIdx: null,
+      med: {
+        type: medType,
+        brandName: bName,
+        genericName: gName,
+        strength: str,
+        dosage: med.defaultDosage || '1+0+1',
+        unit: initialUnit,
+        instruction: '',
+        duration: '',
+        slots: { 'সকাল': true, 'দুপুর': true, 'রাত': true, 'বিকাল': false },
+        doses: { 'সকাল': '1', 'দুপুর': '1', 'রাত': '1', 'বিকাল': '0' },
+      }
+    });
+    setCurrentMed(prev => ({ ...prev, brandName: '', genericName: '', strength: '' }));
+    setSearchTerm('');
   };
 
-  // Add the medicine to prescription list
+    // Add the medicine to prescription list
   const handleAdd = (e) => {
     if (e) e.preventDefault();
     if (!currentMed.brandName.trim()) {
@@ -359,6 +893,40 @@ export const MedicineSection = ({
     if (searchInputRef.current) {
       searchInputRef.current.focus();
     }
+  };
+
+  // Modal: confirm add new medicine
+  const handleModalConfirm = (medData) => {
+    onAddMedicine({ ...medData, id: 'rx-med-' + Date.now() });
+    setMedModal(null);
+    if (searchInputRef.current) searchInputRef.current.focus();
+  };
+
+  // Modal: confirm update existing medicine
+  const handleModalUpdate = (medData) => {
+    if (medModal && medModal.editIdx !== null) {
+      onUpdateMedicine(medModal.editIdx, medData);
+    }
+    setMedModal(null);
+  };
+
+  // Open edit modal for an existing medicine
+  const handleEditMedicine = (idx) => {
+    const med = medicines[idx];
+    const parts = (med.dosage || '1+0+1').split('+');
+    const slots = {
+      'সকাল': parts[0] !== '0',
+      'দুপুর': (parts[1] || '0') !== '0',
+      'রাত': (parts[2] || '0') !== '0',
+      'বিকাল': parts.length > 3 && parts[3] !== '0',
+    };
+    const doses = {
+      'সকাল': parts[0] || '1',
+      'দুপুর': parts[1] || '0',
+      'রাত': parts[2] || '0',
+      'বিকাল': parts[3] || '0',
+    };
+    setMedModal({ isEdit: true, editIdx: idx, med: { ...med, slots, doses } });
   };
 
   // Apply fraction to dosage (e.g. 1/2) with toggle unselect support
@@ -463,6 +1031,48 @@ export const MedicineSection = ({
     onReorderMedicines(updated);
   };
 
+  // Drag & drop reorder states and handlers
+  const [draggedMedIdx, setDraggedMedIdx] = useState(null);
+  const [dragOverMedIdx, setDragOverMedIdx] = useState(null);
+
+  const handleMedDragStart = (e, index) => {
+    if (e.target.closest('button')) {
+      e.preventDefault();
+      return;
+    }
+    setDraggedMedIdx(index);
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', String(index)); } catch {}
+  };
+
+  const handleMedDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverMedIdx !== index) {
+      setDragOverMedIdx(index);
+    }
+  };
+
+  const handleMedDrop = (e, targetIndex) => {
+    e.preventDefault();
+    if (draggedMedIdx === null || draggedMedIdx === targetIndex) {
+      setDraggedMedIdx(null);
+      setDragOverMedIdx(null);
+      return;
+    }
+    const updated = [...medicines];
+    const [moved] = updated.splice(draggedMedIdx, 1);
+    updated.splice(targetIndex, 0, moved);
+    onReorderMedicines(updated);
+    setDraggedMedIdx(null);
+    setDragOverMedIdx(null);
+  };
+
+  const handleMedDragEnd = () => {
+    setDraggedMedIdx(null);
+    setDragOverMedIdx(null);
+  };
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 sm:p-5 mb-5 transition-all">
       
@@ -482,19 +1092,7 @@ export const MedicineSection = ({
           </div>
         </div>
 
-        {/* Half Cup Quick Feature Badge */}
-        <button
-          type="button"
-          onClick={handleSelectHalfCup}
-          className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
-          title="Quick 1/2 Cup Option"
-        >
-          <Coffee className="w-3.5 h-3.5 text-amber-700" />
-          <span>Quick </span>
-          <StackedFraction num={1} den={2} size="sm" />
-          <span> Cup Option</span>
-        </button>
-      </div>
+        </div>
 
       {/* Recent Medicines Quick Suggestions (Limit 10) */}
       {recentMedicines.length > 0 && (
@@ -556,634 +1154,109 @@ export const MedicineSection = ({
         </div>
       )}
 
-      {/* Input Builder Form */}
-      <div className="bg-slate-50/70 rounded-xl p-3.5 sm:p-4 border border-slate-200/60 mb-5 space-y-3.5">
-        
-        {/* Row 1: Search & Autocomplete with Type Selector inside */}
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 relative">
-          
-          {/* Medicine Search & Name Input with Type Selector attached */}
-          <div className="col-span-12 sm:col-span-9 relative">
-            <label className="block text-[11px] font-medium text-slate-600 mb-1 flex items-center justify-between">
-              <span>Medicine Name * (ব্র্যান্ড বা জেনেরিকের নাম)</span>
-              <span className="text-[10px] text-teal-600 font-semibold flex items-center gap-1">
-                <Database className="w-3 h-3 text-teal-600 inline" />
-                ২১,০০০+ লাইভ ডেটাবেজ
-              </span>
-            </label>
-            <div className="relative flex items-center">
-              {/* Type selector inside / attached to left of medicine search */}
-              <select
-                value={currentMed.type}
-                onChange={(e) => setCurrentMed({ ...currentMed, type: e.target.value })}
-                className="h-[38px] px-2.5 py-1.5 bg-teal-50 border border-r-0 border-slate-300 rounded-l-lg text-xs font-bold text-teal-900 hover:bg-teal-100/70 focus:ring-2 focus:ring-teal-500 cursor-pointer shrink-0 transition-colors"
-                title="ঔষধের ধরণ (যেমন: Tab, Cap, Syp, Drop, Inj ইত্যাদি)"
+      {/* Search & Select Medicine Bar */}
+      <div className="bg-white rounded-xl p-3 sm:p-4 border border-slate-200/80 mb-5 shadow-2xs">
+        <div className="relative">
+          <label className="block text-[11px] font-medium text-slate-600 mb-1.5 flex items-center justify-between">
+            <span className="font-semibold text-slate-700">Search Medicine (ঔষধের নাম বা জেনেরিক দিয়ে খুঁজুন)</span>
+            <span className="text-[10px] text-teal-600 font-semibold flex items-center gap-1">
+              <Database className="w-3 h-3 text-teal-600 inline" />
+              ২১,০০০+ লাইভ ডেটাবেজ
+            </span>
+          </label>
+          <div className="relative flex items-center">
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onFocus={() => setShowSuggestions(true)}
+              placeholder="ঔষধের নাম লিখুন ও সিলেক্ট করুন (যেমন: Napa, Cef-3, Ace, Sergel)..."
+              className="w-full pl-9 pr-9 py-2.5 bg-slate-50/60 hover:bg-white focus:bg-white border border-slate-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all shadow-2xs"
+            />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+            
+            {isSearchingOnline ? (
+              <Loader2 className="w-4 h-4 text-teal-600 animate-spin absolute right-3 top-3" />
+            ) : searchTerm ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm('');
+                }}
+                className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
               >
-                <option value="Tab">Tab</option>
-                <option value="Cap">Cap</option>
-                <option value="Syp">Syp</option>
-                <option value="Supp">Supp</option>
-                <option value="Drop">Drop</option>
-                <option value="Inj">Inj</option>
-                <option value="Inhaler">Inhaler</option>
-                <option value="Sachet">Sachet</option>
-                <option value="Ointment">Oint</option>
-              </select>
+                <X className="w-3.5 h-3.5" />
+              </button>
+            ) : null}
+          </div>
 
-              <div className="relative flex-1">
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={currentMed.brandName}
-                  onChange={(e) => {
-                    setCurrentMed({ ...currentMed, brandName: e.target.value });
-                    setSearchTerm(e.target.value);
-                    setShowSuggestions(true);
-                  }}
-                  onFocus={() => setShowSuggestions(true)}
-                  placeholder="ঔষধের নাম বা ধরণ লিখুন (যেমন: Napa, Napa Drop, Napa Syrup, Cef-3, Ace)..."
-                  className="w-full pl-8 pr-8 py-2 bg-white border border-slate-300 rounded-r-lg text-xs font-medium focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                />
-                <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5" />
-                
-                {isSearchingOnline ? (
-                  <Loader2 className="w-4 h-4 text-teal-600 animate-spin absolute right-2.5 top-2.5" />
-                ) : currentMed.brandName ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCurrentMed({ ...currentMed, brandName: '', genericName: '', strength: '' });
-                      setSearchTerm('');
-                    }}
-                    className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                ) : null}
+          {/* Suggestions Dropdown */}
+          {showSuggestions && (
+            <div 
+              ref={suggestionsRef}
+              className="absolute z-30 left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl max-h-72 overflow-y-auto"
+            >
+              <div className="p-2.5 border-b border-slate-100 flex items-center justify-between bg-slate-50 text-[11px] text-slate-500 sticky top-0 z-10">
+                <span className="flex items-center gap-1 font-medium">
+                  <Database className="w-3 h-3 text-teal-600" />
+                  <span>{navigator.onLine ? 'ক্লিক করলেই Configure/Dose উইন্ডো চালু হবে (21k+ DB)' : 'অফলাইন সার্চ (Offline Mode)'}</span>
+                </span>
+                <span className="font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-100">
+                  {combinedSuggestions.length} টি পাওয়া গেছে
+                </span>
               </div>
-            </div>
-
-            {/* Suggestions Dropdown */}
-            {showSuggestions && (
-              <div 
-                ref={suggestionsRef}
-                className="absolute z-30 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-72 overflow-y-auto"
-              >
-                <div className="p-2 border-b border-slate-100 flex items-center justify-between bg-slate-50 text-[11px] text-slate-500 sticky top-0 z-10">
-                  <span className="flex items-center gap-1">
-                    <Database className="w-3 h-3 text-teal-600" />
-                    <span>{navigator.onLine ? 'ক্লিক করে সিলেক্ট করুন (21k+ DB)' : 'অফলাইন সার্চ (Offline Mode)'}</span>
-                  </span>
-                  <span className="font-semibold text-teal-700">
-                    {combinedSuggestions.length} টি পাওয়া গেছে
-                  </span>
-                </div>
-                {combinedSuggestions.length > 0 ? (
-                  combinedSuggestions.map((item, idx) => (
-                    <button
-                      key={item.id ? `med-${item.id}-${idx}` : `med-idx-${idx}`}
-                      type="button"
-                      onMouseDown={(e) => {
-                        // Prevent search input from losing focus prematurely
-                        e.preventDefault();
-                        handleSelectMedicine(item);
-                      }}
-                      onClick={() => handleSelectMedicine(item)}
-                      className="w-full text-left px-3 py-2 hover:bg-teal-50/90 transition-colors flex items-center justify-between border-b border-slate-50 last:border-none cursor-pointer group"
-                    >
-                      <div className="flex items-center gap-2 max-w-[70%]">
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800 whitespace-nowrap">
-                          {normalizeType(item.type)}
+              {combinedSuggestions.length > 0 ? (
+                combinedSuggestions.map((item, idx) => (
+                  <button
+                    key={item.id ? `med-${item.id}-${idx}` : `med-idx-${idx}`}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      handleSelectMedicine(item);
+                    }}
+                    onClick={() => handleSelectMedicine(item)}
+                    className="w-full text-left px-3.5 py-2.5 hover:bg-teal-50/90 transition-colors flex items-center justify-between border-b border-slate-50 last:border-none cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-2.5 max-w-[70%]">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800 whitespace-nowrap">
+                        {normalizeType(item.type)}
+                      </span>
+                      <div className="truncate">
+                        <span className="font-semibold text-xs text-slate-900 group-hover:text-teal-900">
+                          {item.brandName}
                         </span>
-                        <div className="truncate">
-                          <span className="font-semibold text-xs text-slate-900 group-hover:text-teal-900">
-                            {item.brandName}
+                        {item.genericName && (
+                          <span className="text-[11px] text-slate-500 ml-1.5 font-normal truncate">
+                            ({item.genericName})
                           </span>
-                          {item.genericName && (
-                            <span className="text-[11px] text-slate-500 ml-1.5 font-normal truncate">
-                              ({item.genericName})
-                            </span>
-                          )}
-                          {item.company && (
-                            <span className="block text-[10px] text-slate-400 truncate">
-                              {item.company}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-right whitespace-nowrap pl-2">
-                        <span className="text-[11px] font-bold text-teal-700 block">{item.strength || ''}</span>
-                        {item.defaultDosage && (
-                          <span className="text-[10px] text-slate-400">{item.defaultDosage}</span>
+                        )}
+                        {item.company && (
+                          <span className="block text-[10px] text-slate-400 truncate mt-0.5">
+                            {item.company}
+                          </span>
                         )}
                       </div>
-                    </button>
-                  ))
-                ) : (
-                  <div className="p-3 text-center text-xs text-slate-500">
-                    {isSearchingOnline ? 'খোঁজা হচ্ছে...' : 'কোনো তথ্য পাওয়া যায়নি, আপনি সরাসরি নতুন নাম টাইপ করতে পারেন'}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Strength */}
-          <div className="col-span-12 sm:col-span-3">
-            <label className="block text-[11px] font-semibold text-slate-600 mb-1">Strength (পাওয়ার)</label>
-            <input
-              type="text"
-              value={currentMed.strength}
-              onChange={(e) => setCurrentMed({ ...currentMed, strength: e.target.value })}
-              placeholder="e.g. 500 mg / 20 mg"
-              className="w-full px-2.5 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium focus:ring-2 focus:ring-teal-500"
-            />
-          </div>
-        </div>
-
-        {/* Row 2: Dosage Fraction Builder & Half Cup Feature (Highlight) */}
-        <div className="bg-white rounded-xl p-3 border border-teal-100/80 shadow-2xs space-y-2.5">
-          <div className="flex flex-wrap items-center justify-between gap-1 text-xs">
-            <span className="font-semibold text-slate-700 flex items-center gap-1.5">
-              Dosage & Fractions Builder:
-            </span>
-          </div>
-
-          {/* Fractions Row with 1 Up and 2 Down Stacked Fraction & Custom Fraction Box */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-medium text-slate-500 mr-1">Fractions / Dosage:</span>
-            
-            {/* Special Highlighted 1/2 Option */}
-            <button
-              type="button"
-              onClick={() => applyFractionDosage({ label: '1/2' })}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 border cursor-pointer ${
-                currentMed.dosage?.includes('1/2')
-                  ? 'bg-teal-700 text-white border-teal-800 shadow-xs'
-                  : 'bg-teal-50 text-teal-900 border-teal-200 hover:bg-teal-100'
-              }`}
-              title="Half (1 up and 2 down)"
-            >
-              <StackedFraction num={1} den={2} size="md" />
-              <span>(আধা / Half)</span>
-            </button>
-
-            {/* Other fractions */}
-            {FRACTION_PRESETS.filter(f => f.label !== '1/2').map((frac) => (
-              <button
-                key={frac.label}
-                type="button"
-                onClick={() => applyFractionDosage(frac)}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all border cursor-pointer ${
-                  currentMed.dosage === frac.label || currentMed.dosage?.startsWith(frac.label + '+')
-                    ? 'bg-teal-600 text-white border-teal-700'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                }`}
-              >
-                {frac.label === '1/4' ? (
-                  <StackedFraction num={1} den={4} size="sm" />
-                ) : frac.label === '3/4' ? (
-                  <StackedFraction num={3} den={4} size="sm" />
-                ) : frac.label === '1 1/2' ? (
-                  <StackedFraction num={1} den={2} whole={1} size="sm" />
-                ) : frac.label === '2 1/2' ? (
-                  <StackedFraction num={1} den={2} whole={2} size="sm" />
-                ) : (
-                  frac.label
-                )}
-              </button>
-            ))}
-
-            {/* Custom Dosage / Fraction Input Box */}
-            <div className="inline-flex items-center gap-1 ml-auto sm:ml-2 bg-slate-50 px-2 py-1 rounded-lg border border-slate-300">
-              <span className="text-[11px] font-semibold text-slate-600">কাস্টম ডোজ:</span>
-              <input
-                type="text"
-                value={currentMed.dosage}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const isFrac = val.includes('/');
-                  setCurrentMed({
-                    ...currentMed,
-                    dosage: val,
-                    isFraction: isFrac
-                  });
-                }}
-                placeholder="যেমন: 5 drops বা 1/2+0+1/2"
-                className="w-32 sm:w-40 px-2 py-0.5 bg-white border border-slate-300 rounded text-xs font-bold text-teal-900 focus:ring-1 focus:ring-teal-500"
-                title="ডোজ বেশি হলে বা ড্রপের সংখ্যা কাস্টম লিখতে এখানে টাইপ করুন"
-              />
-            </div>
-          </div>
-
-          {/* Special Drop (ড্রপ / ফোঁটা) Interactive Builder Bar - Only shown when medicine type is Drop */}
-          {currentMed.type === 'Drop' && (
-            <div className="pt-2 pb-2.5 px-3 border border-sky-200/90 bg-gradient-to-r from-sky-50 via-teal-50/40 to-sky-50/60 -mx-1 sm:-mx-2 rounded-xl space-y-2 shadow-2xs">
-              <div className="flex flex-wrap items-center justify-between gap-1 text-[11px]">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-sky-950 flex items-center gap-1.5">
-                    <span>Drop Builder (ড্রপ ও পরিমাণ নির্বাচন):</span>
-                  </span>
-
-                  {/* Language Switch: বাংলা / English */}
-                  <div className="inline-flex items-center bg-white p-0.5 rounded-lg border border-sky-200 shadow-2xs text-[10px]">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDropLang('bn');
-                        applyDropDosage(dropCount, 'bn');
-                      }}
-                      className={`px-2 py-0.5 rounded-md font-bold transition-all cursor-pointer ${
-                        dropLang === 'bn'
-                          ? 'bg-teal-700 text-white shadow-2xs'
-                          : 'text-slate-600 hover:text-teal-900'
-                      }`}
-                      title="বাংলা ভাষায় প্রেসক্রিপশনে লিখুন"
-                    >
-                      বাংলা
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDropLang('en');
-                        applyDropDosage(dropCount, 'en');
-                      }}
-                      className={`px-2 py-0.5 rounded-md font-bold transition-all cursor-pointer ${
-                        dropLang === 'en'
-                          ? 'bg-teal-700 text-white shadow-2xs'
-                          : 'text-slate-600 hover:text-teal-900'
-                      }`}
-                      title="Write in English on prescription"
-                    >
-                      English
-                    </button>
-                  </div>
+                    </div>
+                    <div className="text-right whitespace-nowrap pl-2">
+                      <span className="text-[11px] font-bold text-teal-700 block">{item.strength || ''}</span>
+                      {item.defaultDosage && (
+                        <span className="text-[10px] text-slate-400">{item.defaultDosage}</span>
+                      )}
+                    </div>
+                  </button>
+                ))
+              ) : (
+                <div className="p-4 text-center text-xs text-slate-500">
+                  {isSearchingOnline ? 'খোঁজা হচ্ছে...' : 'কোনো তথ্য পাওয়া যায়নি, নতুন কোনো ঔষধ থাকলে টাইপ করে এন্টার চাপুন'}
                 </div>
-
-                <span className="text-[10.5px] font-semibold text-sky-900 bg-white/90 px-2.5 py-0.5 rounded-lg border border-sky-200 shadow-2xs">
-                  {currentMed.instruction ? `${currentMed.dosage} • ${currentMed.instruction}` : `প্রতিবার ${dropCount} ফোঁটা করে`}
-                </span>
-              </div>
-
-              {/* কত ফোঁটা নির্বাচন */}
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[11px] font-semibold text-slate-700 min-w-[70px]">
-                  {dropLang === 'bn' ? 'কত ফোঁটা:' : 'Drop count:'}
-                </span>
-                {[
-                  { count: '1', bnLabel: '১ ফোঁটা', enLabel: '1 drop' },
-                  { count: '2', bnLabel: '২ ফোঁটা', enLabel: '2 drops' },
-                  { count: '3', bnLabel: '৩ ফোঁটা', enLabel: '3 drops' },
-                  { count: '4', bnLabel: '৪ ফোঁটা', enLabel: '4 drops' },
-                  { count: '5', bnLabel: '৫ ফোঁটা', enLabel: '5 drops' },
-                  { count: '6', bnLabel: '৬ ফোঁটা', enLabel: '6 drops' },
-                  { count: '8', bnLabel: '৮ ফোঁটা', enLabel: '8 drops' },
-                  { count: '10', bnLabel: '১০ ফোঁটা', enLabel: '10 drops' },
-                  { count: '15', bnLabel: '১৫ ফোঁটা', enLabel: '15 drops' },
-                ].map(dp => {
-                  const bnNums = { '1': '১', '2': '২', '3': '৩', '4': '৪', '5': '৫', '6': '৬', '7': '৭', '8': '৮', '9': '৯', '10': '১০', '15': '১৫' };
-                  const isSelected = (dropCount === dp.count || currentMed.instruction?.includes(`${bnNums[dp.count] || dp.count} ফোঁটা`) || currentMed.instruction?.includes(`${dp.count} drops`)) && currentMed.type === 'Drop';
-                  const label = dropLang === 'bn' ? dp.bnLabel : dp.enLabel;
-                  return (
-                    <button
-                      key={dp.count}
-                      type="button"
-                      onClick={() => {
-                        setDropCount(dp.count);
-                        applyDropDosage(dp.count, dropLang);
-                      }}
-                      className={`px-2 py-1 rounded-md text-[11px] font-semibold border transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-sky-700 text-white border-sky-800 shadow-xs ring-1 ring-sky-400'
-                          : 'bg-white text-sky-900 border-sky-200 hover:bg-sky-100'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
+              )}
             </div>
           )}
-
-          {/* Frequency Presets */}
-          <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-100">
-            <span className="text-xs font-semibold text-slate-600 mr-1">Frequency:</span>
-            {FREQUENCY_PRESETS.map((freq) => (
-              <button
-                key={freq.code}
-                type="button"
-                onClick={() => {
-                  if (currentMed.dosage === freq.code) {
-                    // Unselect if clicked again
-                    setCurrentMed({
-                      ...currentMed,
-                      dosage: '',
-                      isFraction: false,
-                      fractionDetail: null
-                    });
-                  } else {
-                    const isFrac = freq.code.includes('1/2');
-                    const isDrop = currentMed.type === 'Drop';
-                    const unitVal = isDrop ? (currentMed.unit || '') : currentMed.unit;
-                    
-                    // If Drop type, preserve or ensure drop instructions
-                    let inst = currentMed.instruction;
-                    if (isDrop && (!inst || !inst.includes('ফোঁটা'))) {
-                      const bnNums = { '1': '১', '2': '২', '3': '৩', '4': '৪', '5': '৫', '6': '৬', '7': '৭', '8': '৮', '9': '৯', '10': '১০', '15': '১৫' };
-                      const bnCount = bnNums[dropCount] || dropCount;
-                      inst = `প্রতিবার ${bnCount} ফোঁটা করে`;
-                    }
-
-                    setCurrentMed({ 
-                      ...currentMed, 
-                      dosage: freq.code,
-                      unit: unitVal,
-                      instruction: inst,
-                      isFraction: isFrac,
-                      fractionDetail: isFrac ? { num: 1, den: 2, label: '1/2' } : null
-                    });
-                  }
-                }}
-                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all border cursor-pointer ${
-                  currentMed.dosage === freq.code
-                    ? 'bg-teal-600 text-white border-teal-700 font-bold'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-teal-50 hover:text-teal-900'
-                }`}
-                title={freq.bn}
-              >
-                {renderWithFractions(freq.code, 'sm')}
-              </button>
-            ))}
-          </div>
-
-          {/* Unit Selector including 1/2 Cup (Half Cup) and 1 Cup */}
-          <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-100">
-            <span className="text-xs font-semibold text-slate-600 mr-1">Unit / পরিমাপ:</span>
-            
-            {/* Special Highlighted 1/2 Cup Unit */}
-            <button
-              type="button"
-              onClick={() => {
-                if (currentMed.unit?.includes('১/২ কাপ')) {
-                  setCurrentMed({ ...currentMed, unit: '' });
-                } else {
-                  setCurrentMed({ ...currentMed, unit: '১/২ কাপ (Half Cup)' });
-                }
-              }}
-              className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all border flex items-center gap-1 cursor-pointer ${
-                currentMed.unit?.includes('১/২ কাপ')
-                  ? 'bg-amber-600 text-white border-amber-700 shadow-xs'
-                  : 'bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100'
-              }`}
-            >
-              <StackedFraction num={1} den={2} size="sm" />
-              <span>কাপ (Half Cup)</span>
-            </button>
-
-            {UNIT_PRESETS.filter(u => u.id !== 'half_cup').map((u) => (
-              <button
-                key={u.id}
-                type="button"
-                onClick={() => {
-                  if (currentMed.unit === u.label) {
-                    setCurrentMed({ ...currentMed, unit: '' });
-                  } else {
-                    setCurrentMed({ ...currentMed, unit: u.label });
-                  }
-                }}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all border cursor-pointer ${
-                  currentMed.unit === u.label
-                    ? 'bg-teal-600 text-white border-teal-700 font-bold'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                }`}
-              >
-                {u.isFraction ? renderWithFractions(u.short, 'sm') : u.short}
-              </button>
-            ))}
-
-            {/* Custom Unit Input Box */}
-            <div className="inline-flex items-center gap-1 ml-auto sm:ml-2 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-300">
-              <span className="text-[11px] font-semibold text-slate-600">কাস্টম পরিমাপ:</span>
-              <input
-                type="text"
-                value={currentMed.unit}
-                onChange={(e) => setCurrentMed({ ...currentMed, unit: e.target.value })}
-                placeholder="যেমন: ফোঁটা বা চামচ"
-                className="w-28 sm:w-32 px-1.5 py-0.5 bg-white border border-slate-300 rounded text-xs font-semibold text-teal-900 focus:ring-1 focus:ring-teal-500"
-                title="নিজের মতো পরিমাপের একক লিখতে এখানে টাইপ করুন"
-              />
-            </div>
-          </div>
         </div>
-
-        {/* Row 3: Instructions & Duration Pills */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          
-          {/* Instructions */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-[11px] font-medium text-slate-600">
-                Instructions
-              </label>
-              {currentMed.instruction?.trim() && (
-                <button
-                  type="button"
-                  onClick={handleSaveCustomInstruction}
-                  className="text-[10.5px] text-teal-700 hover:text-teal-900 font-bold bg-teal-50 hover:bg-teal-100 px-2 py-0.5 rounded border border-teal-200 flex items-center gap-1 cursor-pointer transition-colors"
-                  title="ভবিষ্যতের জন্য এই নিয়মটি আপনার একাউন্টে সেভ করে রাখুন"
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>Save for Next Time</span>
-                </button>
-              )}
-            </div>
-            <input
-              type="text"
-              value={currentMed.instruction}
-              onChange={(e) => setCurrentMed({ ...currentMed, instruction: e.target.value })}
-              placeholder="e.g. খাবার পরে / ভরা পেটে..."
-              className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium focus:ring-1 focus:ring-teal-500 mb-1.5"
-            />
-              <div className="flex flex-wrap gap-1.5">
-                {/* Doctor's Custom Saved Instructions */}
-                {customInstructionsList.map((cInst) => (
-                  <button
-                    key={cInst}
-                    type="button"
-                    onClick={() => {
-                      if (currentMed.instruction === cInst) {
-                        setCurrentMed({ ...currentMed, instruction: '' });
-                      } else {
-                        setCurrentMed({ ...currentMed, instruction: cInst });
-                      }
-                    }}
-                    className={`group px-2.5 py-1 rounded-md text-xs font-semibold border transition-all flex items-center gap-1.5 cursor-pointer ${
-                      currentMed.instruction === cInst
-                        ? 'bg-teal-700 text-white border-teal-800 shadow-xs'
-                        : 'bg-emerald-50 text-emerald-950 border-emerald-300 hover:bg-emerald-100 shadow-2xs'
-                    }`}
-                    title="আপনার ব্যক্তিগত কাস্টম নিয়ম"
-                  >
-                    <span>{cInst}</span>
-                    <span
-                      onClick={(e) => handleRemoveCustomInstruction(cInst, e)}
-                      className="text-slate-400 group-hover:text-rose-600 hover:scale-125 transition-transform"
-                      title="মুছে ফেলুন"
-                    >
-                      ×
-                    </span>
-                  </button>
-                ))}
-
-                {/* Default Preset Instructions */}
-                {INSTRUCTION_PRESETS.slice(0, 14).map((inst) => (
-                  <button
-                    key={inst}
-                    type="button"
-                    onClick={() => {
-                      if (currentMed.instruction === inst) {
-                        setCurrentMed({ ...currentMed, instruction: '' });
-                      } else {
-                        setCurrentMed({ ...currentMed, instruction: inst });
-                      }
-                    }}
-                    className={`px-2.5 py-1 rounded-md text-xs font-semibold border transition-colors cursor-pointer ${
-                      currentMed.instruction === inst
-                        ? 'bg-teal-600 text-white border-teal-700 font-bold'
-                        : 'bg-white border-slate-200 text-slate-800 hover:bg-teal-50 hover:text-teal-900 shadow-2xs'
-                    }`}
-                  >
-                    {inst.split(' (')[0]}
-                  </button>
-                ))}
-              </div>
-          </div>
-
-          {/* Duration */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-[11px] font-medium text-slate-600">
-                Duration
-              </label>
-              {currentMed.duration?.trim() && (
-                <button
-                  type="button"
-                  onClick={handleSaveCustomDuration}
-                  className="text-[10.5px] text-teal-700 hover:text-teal-900 font-bold bg-teal-50 hover:bg-teal-100 px-2 py-0.5 rounded border border-teal-200 flex items-center gap-1 cursor-pointer transition-colors"
-                  title="ভবিষ্যতের জন্য এই মেয়াদটি আপনার একাউন্টে সেভ করে রাখুন"
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>Save for Next Time</span>
-                </button>
-              )}
-            </div>
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <input
-                type="text"
-                value={currentMed.duration}
-                onChange={(e) => setCurrentMed({ ...currentMed, duration: e.target.value })}
-                placeholder="e.g. 5 days / 1 month / ৭ দিন"
-                className="flex-1 px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium focus:ring-1 focus:ring-teal-500"
-              />
-              {/* Quick Custom Day selector / counter */}
-              <div className="flex items-center gap-0.5 bg-white border border-slate-300 rounded-lg px-1 py-1 shrink-0">
-                <input
-                  type="number"
-                  min="1"
-                  max="365"
-                  placeholder="দিন"
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val) {
-                      setCurrentMed({ ...currentMed, duration: `${val} দিন` });
-                    }
-                  }}
-                  className="w-12 text-center text-xs font-bold text-teal-800 bg-transparent outline-none"
-                  title="কাস্টম দিন লিখুন (যেমন: ৪, ৮, ১২)"
-                />
-                <span className="text-[10px] text-slate-500 font-semibold pr-1">দিন</span>
-              </div>
-            </div>
-              <div className="flex flex-wrap gap-1.5">
-                {/* Doctor's Custom Saved Durations */}
-                {customDurationsList.map((cDur) => (
-                  <button
-                    key={cDur}
-                    type="button"
-                    onClick={() => {
-                      if (currentMed.duration === cDur) {
-                        setCurrentMed({ ...currentMed, duration: '' });
-                      } else {
-                        setCurrentMed({ ...currentMed, duration: cDur });
-                      }
-                    }}
-                    className={`group px-2.5 py-1 rounded-md text-xs font-semibold border transition-all flex items-center gap-1.5 cursor-pointer ${
-                      currentMed.duration === cDur
-                        ? 'bg-teal-700 text-white border-teal-800 shadow-xs'
-                        : 'bg-emerald-50 text-emerald-950 border-emerald-300 hover:bg-emerald-100 shadow-2xs'
-                    }`}
-                    title="আপনার ব্যক্তিগত কাস্টম স্থায়িত্ব"
-                  >
-                    <span>{cDur}</span>
-                    <span
-                      onClick={(e) => handleRemoveCustomDuration(cDur, e)}
-                      className="text-slate-400 group-hover:text-rose-600 hover:scale-125 transition-transform"
-                      title="মুছে ফেলুন"
-                    >
-                      ×
-                    </span>
-                  </button>
-                ))}
-
-                {/* Default Preset Durations */}
-                {DURATION_PRESETS.slice(0, 7).map((dur) => (
-                  <button
-                    key={dur}
-                    type="button"
-                    onClick={() => {
-                      if (currentMed.duration === dur) {
-                        setCurrentMed({ ...currentMed, duration: '' });
-                      } else {
-                        setCurrentMed({ ...currentMed, duration: dur });
-                      }
-                    }}
-                    className={`px-2.5 py-1 rounded-md text-xs font-bold border transition-colors cursor-pointer ${
-                      currentMed.duration === dur
-                        ? 'bg-teal-600 text-white border-teal-700 font-bold'
-                        : 'bg-white border-slate-200 text-slate-800 hover:bg-teal-50 hover:text-teal-900 shadow-2xs'
-                    }`}
-                  >
-                    {dur}
-                  </button>
-                ))}
-              </div>
-          </div>
-
-        </div>
-
-        {/* Add Button */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-3 border-t border-slate-200/60">
-          <div className="text-xs text-slate-600 flex flex-wrap items-center gap-1.5 bg-white sm:bg-transparent p-2 sm:p-0 rounded-lg border sm:border-none border-slate-200">
-            <span className="font-semibold text-slate-700">Preview:</span>
-            <span className="font-bold text-teal-800">{currentMed.type} {currentMed.brandName || '...'}</span>
-            <span>-</span>
-            <span className="font-mono text-teal-900 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">
-              {renderWithFractions(currentMed.dosage, 'sm')}
-            </span>
-            <span className="text-slate-600 font-medium">({renderWithFractions(currentMed.unit, 'sm')})</span>
-            <span className="text-slate-500 font-medium">[{currentMed.duration}]</span>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleAdd}
-            className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold shadow-xs hover:shadow-md transition-all shrink-0 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" /> Add to Prescription (প্রেসক্রিপশনে যুক্ত করুন)
-          </button>
-        </div>
-
       </div>
 
       {/* Added Medicines List */}
@@ -1192,7 +1265,7 @@ export const MedicineSection = ({
           <span>Prescribed Medicines List ({medicines.length})</span>
           {medicines.length > 0 && (
             <span className="text-[11px] text-slate-400 font-normal">
-              তীরচিহ্ন দিয়ে ক্রম সাজাতে পারেন
+              টেনে (Drag) বা তীরচিহ্ন দিয়ে ক্রম সাজাতে পারেন
             </span>
           )}
         </h3>
@@ -1210,14 +1283,29 @@ export const MedicineSection = ({
             {medicines.map((med, idx) => (
               <div
                 key={med.id || idx}
-                className="group flex items-center justify-between p-3 bg-white hover:bg-teal-50/40 border border-slate-200 hover:border-teal-200 rounded-xl transition-all shadow-2xs"
+                draggable
+                onDragStart={(e) => handleMedDragStart(e, idx)}
+                onDragOver={(e) => handleMedDragOver(e, idx)}
+                onDragLeave={() => { if (dragOverMedIdx === idx) setDragOverMedIdx(null); }}
+                onDrop={(e) => handleMedDrop(e, idx)}
+                onDragEnd={handleMedDragEnd}
+                className={`group flex items-center justify-between p-3 bg-white hover:bg-teal-50/40 border rounded-xl transition-all shadow-2xs cursor-grab active:cursor-grabbing select-none ${
+                  draggedMedIdx === idx
+                    ? 'opacity-40 scale-[0.99] border-dashed border-teal-400 bg-teal-50/50'
+                    : dragOverMedIdx === idx
+                      ? 'border-teal-500 ring-2 ring-teal-400/40 bg-teal-50/30'
+                      : 'border-slate-200 hover:border-teal-200'
+                }`}
               >
-                <div className="flex items-start gap-3 min-w-0 flex-1">
+                <div className="flex items-start gap-2.5 sm:gap-3 min-w-0 flex-1">
                   
-                  {/* Sequence number */}
-                  <span className="w-6 h-6 rounded-full bg-slate-100 group-hover:bg-teal-600 group-hover:text-white text-slate-600 font-bold text-xs flex items-center justify-center shrink-0 transition-colors">
-                    {idx + 1}
-                  </span>
+                  {/* Drag Handle & Sequence number */}
+                  <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+                    <GripVertical className="w-4 h-4 text-slate-300 group-hover:text-teal-600 transition-colors" />
+                    <span className="w-6 h-6 rounded-full bg-slate-100 group-hover:bg-teal-600 group-hover:text-white text-slate-600 font-bold text-xs flex items-center justify-center transition-colors">
+                      {idx + 1}
+                    </span>
+                  </div>
 
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline gap-2">
@@ -1246,15 +1334,8 @@ export const MedicineSection = ({
                           {renderWithFractions(med.dosage, 'sm')}
                         </span>
                       )}
-                      {med.unit && 
-                       med.unit.toLowerCase() !== 'tablet' && 
-                       med.unit.toLowerCase() !== 'tab' && 
-                       med.unit.toLowerCase() !== 'capsule' && 
-                       med.unit.toLowerCase() !== 'cap' && 
-                       med.unit !== 'ফোঁটা' && 
-                       med.unit !== 'drops' && 
-                       med.unit !== 'ড্রপ' && (
-                        <span className="text-slate-600 font-medium">
+                      {med.unit && (
+                        <span className="text-slate-800 font-bold">
                           {renderWithFractions(med.unit, 'sm')}
                         </span>
                       )}
@@ -1278,8 +1359,16 @@ export const MedicineSection = ({
                   </div>
                 </div>
 
-                {/* Actions: Reorder & Delete */}
+                {/* Actions: Edit, Reorder & Delete */}
                 <div className="flex items-center gap-1 ml-3 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleEditMedicine(idx)}
+                    className="p-1 text-slate-400 hover:text-teal-700 hover:bg-teal-50 rounded transition-colors cursor-pointer"
+                    title="Edit Medicine"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                  </button>
                   <button
                     type="button"
                     onClick={() => moveMed(idx, -1)}
@@ -1313,6 +1402,17 @@ export const MedicineSection = ({
         )}
       </div>
 
+      {/* Medicine Configure / Edit Modal */}
+      {medModal && (
+        <MedicineEditModal
+          key={medModal.editIdx !== null ? 'edit-' + medModal.editIdx : 'add-new'}
+          med={medModal.med}
+          isEdit={medModal.isEdit}
+          onClose={() => setMedModal(null)}
+          onConfirm={medModal.isEdit ? handleModalUpdate : handleModalConfirm}
+          userPhone={userPhone}
+        />
+      )}
     </div>
   );
 };

@@ -533,7 +533,7 @@ export function App() {
     setDarkMode(prev => !prev);
   };
 
-  // Multi-Font Typography State with localStorage persistence (Default: Noto Sans Bengali + Noto Sans)
+  // Multi-Font Typography State with localStorage persistence (Default: Hind Siliguri + Roboto)
   const [selectedFontId, setSelectedFontId] = useState(() => {
     try {
       const saved = localStorage.getItem('amar_rx_font_id');
@@ -543,7 +543,7 @@ export function App() {
     } catch (e) {
       // fallback
     }
-    return 'noto-noto'; // Default font: Noto Sans Bengali + Noto Sans
+    return 'hind-roboto'; // Default font: Hind Siliguri + Roboto
   });
 
   const selectedFont = FONT_PAIR_PRESETS.find(f => f.id === selectedFontId) || FONT_PAIR_PRESETS[0];
@@ -594,7 +594,8 @@ export function App() {
       footerHeightMm: 25, // height of blank footer space in mm
       pageCount: 1, // 1 or 2 pages
       paperSize: 'A4', // 'A4' or 'Letter'
-      scale: 100 // zoom/scale percentage: 80 to 120%
+      scale: 100, // zoom/scale percentage: 80 to 120%
+      printMode: 'color' // 'color' or 'bw' (Black & White high-contrast for laser printer)
     };
   });
 
@@ -997,7 +998,7 @@ export function App() {
           />
 
       {/* Main Content Area */}
-      <main className={`w-full mx-auto p-3 sm:p-5 lg:p-6 ${
+      <main className={`w-full mx-auto p-2 sm:p-4 md:p-5 lg:p-6 ${
         viewMode === 'split' 
           ? 'max-w-[1600px] flex-1 flex flex-col min-h-0 overflow-hidden' 
           : 'flex-1 max-w-7xl'

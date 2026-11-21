@@ -815,8 +815,24 @@ export async function registerDoctorOnline({ fullName, phone, password, degrees 
     created_at: new Date().toISOString()
   };
 
-  // 1. Try Supabase cloud insert first
+  // 1. Check if phone already registered in cloud
+  try {
+    const { data: existingUser, error: checkErr } = await supabase
+      .from('doctor_users')
+      .select('phone')
+      .eq('phone', cleanPhone)
+      .maybeSingle();
+
+    if (existingUser && existingUser.phone) {
+      return { success: false, error: 'এই ফোন নম্বর দিয়ে ইতিমধ্যে একটি অ্যাকাউন্ট তৈরি করা হয়েছে।' };
+    }
+  } catch (e) {
+    console.warn('Pre-registration phone check warning:', e);
+  }
+
+  // 2. Insert into Supabase cloud table (Required for Admin to see the user)
   let supabaseSuccess = false;
+  let supabaseErrorMsg = '';
   try {
     const dbPayload = filterDbUserFields(payload);
     const { data, error } = await supabase
@@ -831,24 +847,33 @@ export async function registerDoctorOnline({ fullName, phone, password, degrees 
         return { success: false, error: 'এই ফোন নম্বর দিয়ে ইতিমধ্যে একটি অ্যাকাউন্ট তৈরি করা হয়েছে।' };
       }
       console.error('Supabase registration insert error:', error);
+      supabaseErrorMsg = error.message || 'ক্লাউড ডাটাবেজে সংরক্ষণ করা সম্ভব হয়নি।';
     }
   } catch (e) {
     console.error('Supabase registration exception:', e);
+    supabaseErrorMsg = e.message || 'নেটওয়ার্ক বা সার্ভার সমস্যা।';
   }
 
-  // 2. Always persist to localStorage mirror (for offline and fast UI sync)
+  // If cloud insert failed, do NOT falsely report success to the registrant!
+  if (!supabaseSuccess) {
+    return {
+      success: false,
+      error: `রেজিস্ট্রেশন সার্ভারে পাঠাতে ব্যর্থ হয়েছে (${supabaseErrorMsg})। অনুগ্রহ করে ইন্টারনেট সংযোগ চেক করে আবার চেষ্টা করুন।`
+    };
+  }
+
+  // 3. Persist to registrant local mirror
   const localList = getLocalUsers();
   const existingLocal = localList.find(u => u.phone === cleanPhone);
-  if (existingLocal) {
-    return { success: false, error: 'এই ফোন নম্বর দিয়ে ইতিমধ্যে রেজিস্ট্রেশন করা হয়েছে।' };
+  if (!existingLocal) {
+    localList.unshift(payload);
+    saveLocalUsers(localList);
   }
-  localList.unshift(payload);
-  saveLocalUsers(localList);
 
   return { 
     success: true, 
     data: payload,
-    syncedCloud: supabaseSuccess
+    syncedCloud: true
   };
 }
 

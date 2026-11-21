@@ -52,7 +52,7 @@ export const Navbar = ({
   }, []);
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-2xs no-print transition-colors duration-200">
-      <div className="max-w-[1700px] mx-auto px-3 sm:px-5 h-15 flex items-center justify-between gap-3">
+      <div className="max-w-[1700px] mx-auto px-2 sm:px-4 lg:px-5 h-14 sm:h-15 flex items-center justify-between gap-1.5 sm:gap-2.5 overflow-x-auto scrollbar-none">
         
         {/* LEFT: Brand Logo & Title */}
         <div className="flex items-center gap-3 shrink-0">
@@ -61,7 +61,7 @@ export const Navbar = ({
             alt="Amar Prescription" 
             className="h-9 sm:h-10 w-auto object-contain drop-shadow-xs"
           />
-          <div className="hidden xl:block">
+          <div className="hidden 2xl:block">
             <div className="flex items-center gap-1.5 leading-none">
               <span className="text-[11px] font-extrabold tracking-wider text-teal-800 uppercase">
                 Doctor Rx Suite
@@ -75,7 +75,7 @@ export const Navbar = ({
         </div>
 
         {/* CENTER: Clean View Switcher (Desktop) */}
-        <div className="hidden lg:flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold shrink-0">
+        <div className="hidden xl:flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold shrink-0">
           <button
             type="button"
             onClick={() => onSetViewMode('editor')}
@@ -120,7 +120,7 @@ export const Navbar = ({
         </div>
 
         {/* Mobile View Toggle */}
-        <div className="flex lg:hidden items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs shrink-0">
+        <div className="flex xl:hidden items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs shrink-0">
           <button
             type="button"
             onClick={() => onSetViewMode('editor')}
@@ -146,7 +146,7 @@ export const Navbar = ({
           
           {/* Network & Offline Auto-Sync Badge */}
           <div 
-            className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all ${
+            className={`hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold border transition-all ${
               !isOnline
                 ? 'bg-amber-50 text-amber-800 border-amber-300 animate-pulse'
                 : pendingSyncCount > 0
@@ -188,7 +188,7 @@ export const Navbar = ({
               title="Chamber Dashboard & Patient Records"
             >
               <LayoutDashboard className="w-3.5 h-3.5 text-teal-200" />
-              <span>Dashboard</span>
+              <span className="hidden sm:inline">Dashboard</span>
               {savedCount > 0 && (
                 <span className="px-1.5 py-0.2 rounded-full bg-teal-500 text-white text-[10px] font-bold">
                   {savedCount}
@@ -204,11 +204,11 @@ export const Navbar = ({
               title="1-Click Clinical Templates & Custom Builder"
             >
               <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-              <span className="hidden sm:inline">Templates</span>
+              <span className="hidden md:inline">Templates</span>
             </button>
 
             {/* Typography Font Selector */}
-            <div className="hidden md:flex items-center gap-1 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700">
+            <div className="hidden 2xl:flex items-center gap-1 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700">
               <Type className="w-3.5 h-3.5 text-teal-600 shrink-0" />
               <select
                 value={selectedFontId}
@@ -262,7 +262,7 @@ export const Navbar = ({
                     title="Click to view plan details and usage limits"
                   >
                     <Crown className={`w-3.5 h-3.5 ${isEnterprise ? 'fill-slate-950 text-slate-950' : isStandard ? 'text-teal-200 fill-teal-200' : 'text-slate-400'}`} />
-                    <span>
+                    <span className="hidden sm:inline">
                       {perms.name}
                     </span>
                     <span className={`text-[10px] px-1.5 py-0.2 rounded font-black font-mono ${
@@ -285,7 +285,7 @@ export const Navbar = ({
               })()}
 
               <div className="relative" ref={profileMenuRef}>
-              <div className="flex items-center gap-1.5 bg-teal-50 border border-teal-200 py-1 px-2.5 rounded-xl">
+              <div className="flex items-center gap-1.5 bg-teal-50 border border-teal-200 py-1 px-2 sm:px-2.5 rounded-xl shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
@@ -303,7 +303,7 @@ export const Navbar = ({
                       return firstChar;
                     })()}
                   </div>
-                  <div className="hidden sm:block leading-tight">
+                  <div className="hidden lg:block leading-tight">
                     <span className="block text-xs font-bold text-teal-950 truncate max-w-[130px]">
                       {(() => {
                         if (doctor?.name && !/^\d+$/.test(doctor.name.trim())) {
