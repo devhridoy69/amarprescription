@@ -10,7 +10,7 @@ export const MobileSectionTabs = ({ activeTab, onSelectTab, counts }) => {
   ];
 
   return (
-    <div className="flex md:hidden items-center justify-around bg-white border border-slate-200/90 rounded-2xl p-1 mb-4 shadow-xs sticky top-20 z-30">
+    <div className="flex md:hidden items-center justify-around bg-white border border-slate-200/90 rounded-2xl p-1 mb-4 shadow-xs sticky top-20 z-30 no-print">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
